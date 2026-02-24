@@ -581,6 +581,11 @@
                   <span class="w-1.5 h-1.5 rounded-full {stateConfig[deployment.state]?.dot || 'bg-gray-400'}"></span>
                   {stateConfig[deployment.state]?.label || deployment.state}
                 </span>
+                {#if deployment.config?.is_spot_instance}
+                  <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
+                    抢占式
+                  </span>
+                {/if}
               </td>
               <td class="date-cell">{formatDate(deployment.created_at)}</td>
               <td class="px-5 py-3.5 text-right" onclick={(e) => e.stopPropagation()}>
