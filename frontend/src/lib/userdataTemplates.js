@@ -29,3 +29,24 @@ export function getVulhubScenarios(templates) {
   if (!Array.isArray(templates)) return [];
   return templates.filter(t => t.category === 'vulhub');
 }
+
+export function getGroupedTemplates(templates) {
+  if (!Array.isArray(templates)) return {};
+  const groups = {};
+  for (const template of templates) {
+    const cat = template.category || 'other';
+    if (!groups[cat]) {
+      groups[cat] = [];
+    }
+    groups[cat].push(template);
+  }
+  return groups;
+}
+
+export const userdataCategoryNames = {
+  basic: '基础环境',
+  ai: 'AI 应用',
+  security: '安全工具',
+  vulhub: '漏洞环境',
+  other: '其他'
+};

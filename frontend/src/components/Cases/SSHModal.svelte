@@ -3,7 +3,7 @@
   import { ExecCommand, ExecUserdata, UploadFile, DownloadFile, SelectFile, SelectDirectory, SelectSaveFile } from '../../../wailsjs/go/main/App.js';
   import WebTerminal from './WebTerminal.svelte';
   import FileManager from './FileManager.svelte';
-  import { loadUserdataTemplates, getTemplatesByCategory } from '../../lib/userdataTemplates.js';
+  import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
 
   let { t, caseId, caseName, onClose } = $props();
 
@@ -28,6 +28,12 @@
   let selectedTemplate = $state(null);
   let userdataExecLoading = $state(false);
   let userdataExecResult = $state(null);
+  let expandedCategories = $state({});
+
+  // Grouped templates by category
+  let groupedUserdataTemplates = $derived(() => {
+    return getGroupedTemplates(userdataTemplates);
+  });
 
   onMount(async () => {
     userdataTemplates = await loadUserdataTemplates();
@@ -472,18 +478,38 @@
               {t.noTemplates || '暂无可用模板'}
             </div>
           {:else}
-            <div>
-              <label for="userdataTemplate" class="block text-[12px] font-medium text-gray-700 mb-2">{t.selectTemplate || '选择模板'}</label>
-              <select
-                id="userdataTemplate"
-                class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent"
-                bind:value={selectedTemplate}
-              >
-                <option value={null}>{t.selectTemplate || '请选择模板'}</option>
-                {#each userdataTemplates as template}
-                  <option value={template}>{template.nameZh || template.name}</option>
-                {/each}
-              </select>
+            <div class="space-y-2 max-h-64 overflow-y-auto">
+              {#each Object.entries(groupedUserdataTemplates()) as [category, categoryTemplates]}
+                <div class="border border-gray-200 rounded-lg overflow-hidden">
+                  <button
+                    class="w-full flex items-center justify-between px-3 py-2 bg-gray-50 hover:bg-gray-100 transition-colors"
+                    onclick={() => expandedCategories[category] = !expandedCategories[category]}
+                  >
+                    <span class="text-[12px] font-medium text-gray-700">
+                      {userdataCategoryNames[category] || category}
+                      <span class="ml-1 text-gray-500">({categoryTemplates.length})</span>
+                    </span>
+                    <svg class="w-4 h-4 text-gray-500 transition-transform {expandedCategories[category] ? 'rotate-180' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  {#if expandedCategories[category]}
+                    <div class="space-y-1 p-2 bg-white">
+                      {#each categoryTemplates as template}
+                        <button
+                          class="w-full text-left px-3 py-2 text-[12px] bg-white hover:bg-blue-50 border border-gray-200 hover:border-blue-300 rounded transition-colors {selectedTemplate === template ? 'border-blue-500 bg-blue-50' : ''}"
+                          onclick={() => selectedTemplate = template}
+                        >
+                          <span class="font-medium text-gray-900">{template.nameZh || template.name}</span>
+                          {#if template.description}
+                            <span class="block text-gray-500 text-[10px] truncate">{template.description}</span>
+                          {/if}
+                        </button>
+                      {/each}
+                    </div>
+                  {/if}
+                </div>
+              {/each}
             </div>
 
             {#if selectedTemplate}
