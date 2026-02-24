@@ -1,7 +1,7 @@
 <script>
 
   import { onMount } from 'svelte';
-  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles } from '../../../wailsjs/go/main/App.js';
+  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, SelectFile, SelectSaveFile, CopyFileTo, ExportTemplates, ImportTemplates } from '../../../wailsjs/go/main/App.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
   // Translation object passed from parent component
@@ -327,6 +327,70 @@
 
   let hasSelection = $derived(selectedTemplates.size > 0);
 
+  // Export/Import state
+  let exporting = $state(false);
+  let importing = $state(false);
+  let exportMessage = $state('');
+  
+  // Export selected templates
+  async function handleExportTemplates() {
+    if (selectedTemplates.size === 0) return;
+    
+    exporting = true;
+    exportMessage = '';
+    try {
+      const templateNames = Array.from(selectedTemplates);
+      const savePath = await SelectSaveFile(
+        t.exportTemplates || '导出模板',
+        'templates.zip'
+      );
+      
+      if (!savePath) {
+        exporting = false;
+        return;
+      }
+      
+      const zipPath = await ExportTemplates(templateNames);
+      if (zipPath) {
+        await CopyFileTo(zipPath, savePath);
+        exportMessage = t.exportSuccess || '模板导出成功';
+        setTimeout(() => { exportMessage = ''; }, 3000);
+      }
+    } catch (e) {
+      console.error('Export failed:', e);
+      exportMessage = '导出失败: ' + String(e);
+    } finally {
+      exporting = false;
+    }
+  }
+
+  // Import templates
+  async function handleImportTemplates() {
+    importing = true;
+    exportMessage = '';
+    try {
+      const filePath = await SelectFile(t.importTemplates || '导入模板');
+      
+      if (!filePath) {
+        importing = false;
+        return;
+      }
+      
+      const imported = await ImportTemplates(filePath);
+      if (imported && imported.length > 0) {
+        exportMessage = `${t.importSuccess || '模板导入成功'}: ${imported.join(', ')}`;
+        // Refresh templates
+        await loadLocalTemplates();
+      }
+      setTimeout(() => { exportMessage = ''; }, 5000);
+    } catch (e) {
+      console.error('Import failed:', e);
+      exportMessage = '导入失败: ' + String(e);
+    } finally {
+      importing = false;
+    }
+  }
+
 
   // ============================================================================
   // Lifecycle
@@ -371,8 +435,28 @@
       >
         {localTemplatesLoading ? t.loading : t.refresh}
       </button>
+      <button 
+        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        onclick={handleImportTemplates}
+        disabled={importing}
+      >
+        {importing ? t.loading : (t.importTemplates || '导入')}
+      </button>
+      <button 
+        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        onclick={handleExportTemplates}
+        disabled={exporting || !hasSelection}
+      >
+        {exporting ? t.loading : (t.exportTemplates || '导出')}
+      </button>
     </div>
   </div>
+
+  {#if exportMessage}
+    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-[13px] text-blue-700">
+      {exportMessage}
+    </div>
+  {/if}
 
   <!-- Tabs -->
   <div class="flex gap-2 border-b border-gray-200 mb-4">

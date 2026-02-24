@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bufio"
 	"context"
 	"encoding/json"
@@ -2524,6 +2525,159 @@ func (a *App) SaveTemplateFiles(templateName string, files map[string]string) er
 	}
 	a.emitLog(fmt.Sprintf("模板保存成功: %s", templateName))
 	return nil
+}
+
+// ExportTemplates exports selected templates to a zip file
+func (a *App) ExportTemplates(templateNames []string) (string, error) {
+	if len(templateNames) == 0 {
+		return "", fmt.Errorf("no templates selected")
+	}
+
+	// Create temp zip file
+	tmpFile, err := os.CreateTemp("", "redc-templates-*.zip")
+	if err != nil {
+		return "", err
+	}
+	tmpFile.Close()
+	zipPath := tmpFile.Name()
+
+	zipFile, err := os.OpenFile(zipPath, os.O_WRONLY|os.O_TRUNC, 0644)
+	if err != nil {
+		os.Remove(zipPath)
+		return "", err
+	}
+	defer zipFile.Close()
+	// Note: Don't remove zipPath here, let the frontend copy it first
+
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	for _, name := range templateNames {
+		path, err := redc.GetTemplatePath(name)
+		if err != nil {
+			continue // Skip if template not found
+		}
+
+		// Walk through template directory
+		err = filepath.Walk(path, func(filePath string, info os.FileInfo, err error) error {
+			if err != nil {
+				return err
+			}
+			if info.IsDir() {
+				return nil
+			}
+
+			relPath, err := filepath.Rel(redc.TemplateDir, filePath)
+			if err != nil {
+				return nil
+			}
+
+			// Read file content
+			content, err := os.ReadFile(filePath)
+			if err != nil {
+				return nil
+			}
+
+			// Add to zip - use relPath directly (already includes template name)
+			w, err := zipWriter.Create(relPath)
+			if err != nil {
+				return nil
+			}
+			w.Write(content)
+			return nil
+		})
+		if err != nil {
+			continue
+		}
+	}
+
+	zipWriter.Close()
+	zipFile.Close()
+
+	return zipPath, nil
+}
+
+// ImportTemplates imports templates from a zip file
+func (a *App) ImportTemplates(zipPath string) ([]string, error) {
+	reader, err := zip.OpenReader(zipPath)
+	if err != nil {
+		return nil, err
+	}
+	defer reader.Close()
+
+	imported := []string{}
+	importedSet := make(map[string]bool)
+
+	for _, file := range reader.File {
+		// Skip directories
+		if file.FileInfo().IsDir() {
+			continue
+		}
+
+		name := file.Name
+		// ZIP path is already correct, e.g., "aliyun/ecs/case.json"
+		// Extract template name for tracking
+		parts := strings.Split(name, "/")
+		if len(parts) < 2 {
+			continue
+		}
+		templateName := strings.Join(parts[:len(parts)-1], "/")
+
+		// Extract file to TemplateDir
+		destPath := filepath.Join(redc.TemplateDir, name)
+		srcFile, err := file.Open()
+		if err != nil {
+			continue
+		}
+		defer srcFile.Close()
+
+		// Create parent directories
+		if err := os.MkdirAll(filepath.Dir(destPath), 0755); err != nil {
+			continue
+		}
+
+		destFile, err := os.Create(destPath)
+		if err != nil {
+			continue
+		}
+		defer destFile.Close()
+
+		if _, err := io.Copy(destFile, srcFile); err != nil {
+			continue
+		}
+
+		// Track imported templates (use full template path)
+		if !importedSet[templateName] {
+			importedSet[templateName] = true
+			imported = append(imported, templateName)
+		}
+	}
+
+	return imported, nil
+}
+
+// CopyFileTo copies a file to a destination path
+func (a *App) CopyFileTo(sourcePath string, destPath string) error {
+	sourceFile, err := os.Open(sourcePath)
+	if err != nil {
+		return err
+	}
+	defer sourceFile.Close()
+
+	// Create destination directory if not exists
+	destDir := filepath.Dir(destPath)
+	if err := os.MkdirAll(destDir, 0755); err != nil {
+		return err
+	}
+
+	destFile, err := os.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer destFile.Close()
+
+	_, err = io.Copy(destFile, sourceFile)
+	return err
 }
 
 // MCPStatus represents the MCP server status for frontend display
