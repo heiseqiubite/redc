@@ -265,6 +265,9 @@ let { t } = $props();
       accessKey: 'Access Key',
       secretKey: 'Secret Key',
       secretId: 'Secret ID',
+      publicKey: 'Public Key',
+      privateKey: 'Private Key',
+      projectId: 'Project ID',
       region: 'Region',
       credentials: '凭据 JSON',
       project: '项目 ID',
@@ -280,6 +283,44 @@ let { t } = $props();
       apiKey: 'API Key',
     };
     return labels[key] || key;
+  }
+  
+  // 定义字段显示顺序
+  const fieldOrder = {
+    'alibaba': ['accessKey', 'secretKey', 'region'],
+    '阿里云': ['accessKey', 'secretKey', 'region'],
+    'AWS': ['accessKey', 'secretKey', 'region'],
+    '腾讯云': ['secretId', 'secretKey', 'region'],
+    '火山引擎': ['accessKey', 'secretKey', 'region'],
+    '华为云': ['accessKey', 'secretKey', 'region'],
+    'UCloud': ['publicKey', 'privateKey', 'projectId', 'region'],
+    'Vultr': ['apiKey'],
+    'Google Cloud': ['credentials', 'project', 'region'],
+    'Azure': ['clientId', 'clientSecret', 'subscriptionId', 'tenantId'],
+    'Oracle Cloud': ['user', 'tenancy', 'fingerprint', 'keyFile', 'region'],
+    'Cloudflare': ['email', 'apiKey'],
+  };
+  
+  function getOrderedFields(providerName, fields) {
+    const order = fieldOrder[providerName] || [];
+    const ordered = [];
+    const remaining = [];
+    
+    // 按顺序添加字段
+    for (const key of order) {
+      if (fields[key] !== undefined) {
+        ordered.push([key, fields[key]]);
+      }
+    }
+    
+    // 添加不在顺序中的字段
+    for (const [key, value] of Object.entries(fields)) {
+      if (!order.includes(key)) {
+        remaining.push([key, value]);
+      }
+    }
+    
+    return [...ordered, ...remaining];
   }
 
   function isSecretField(key) {
@@ -557,7 +598,7 @@ let { t } = $props();
             {/if}
           </div>
           <div class="p-5 space-y-3">
-            {#each Object.entries(provider.fields) as [key, value]}
+            {#each getOrderedFields(provider.name, provider.fields) as [key, value]}
               <div>
                 <label for="field-{provider.name}-{key}" class="block text-[11px] font-medium text-gray-500 mb-1">
                   {getFieldLabel(key)}

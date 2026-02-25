@@ -168,7 +168,17 @@ func ensureProviderVars(templateName string, vars map[string]string) map[string]
 			gologger.Info().Msgf("已自动生成火山引擎实例密码")
 		}
 	}
-	
+
+	// 处理 UCloud
+	// UCloud 使用环境变量 UCLOUD_PUBLIC_KEY 和 UCLOUD_PRIVATE_KEY，不需要通过 -var 传递
+	if provider == "ucloud" {
+		// 如果模板需要 instance_password 且用户未提供，则自动生成
+		if vars["instance_password"] == "" {
+			vars["instance_password"] = generateInstancePassword()
+			gologger.Info().Msgf("已自动生成 UCloud 实例密码")
+		}
+	}
+
 	return vars
 }
 

@@ -772,6 +772,19 @@ func (a *App) GetProvidersConfig(customPath string) (ProvidersConfigInfo, error)
 			},
 		},
 		{
+			Name: "UCloud",
+			Fields: map[string]string{
+				"publicKey":  maskValue(conf.Providers.UCloud.PublicKey),
+				"privateKey": maskValue(conf.Providers.UCloud.PrivateKey),
+				"projectId":  conf.Providers.UCloud.ProjectId,
+				"region":     conf.Providers.UCloud.Region,
+			},
+			HasSecrets: map[string]bool{
+				"publicKey":  conf.Providers.UCloud.PublicKey != "",
+				"privateKey": conf.Providers.UCloud.PrivateKey != "",
+			},
+		},
+		{
 			Name: "Cloudflare",
 			Fields: map[string]string{
 				"email":  conf.Cloudflare.Email,
@@ -889,6 +902,19 @@ func (a *App) SaveProvidersConfig(providerName string, fields map[string]string,
 		}
 		if v, ok := fields["region"]; ok {
 			conf.Providers.Oracle.Region = v
+		}
+	case "UCloud":
+		if v, ok := fields["publicKey"]; ok && v != "" {
+			conf.Providers.UCloud.PublicKey = v
+		}
+		if v, ok := fields["privateKey"]; ok && v != "" {
+			conf.Providers.UCloud.PrivateKey = v
+		}
+		if v, ok := fields["projectId"]; ok {
+			conf.Providers.UCloud.ProjectId = v
+		}
+		if v, ok := fields["region"]; ok {
+			conf.Providers.UCloud.Region = v
 		}
 	case "Cloudflare":
 		if v, ok := fields["email"]; ok {

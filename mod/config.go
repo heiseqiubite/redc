@@ -15,7 +15,7 @@ var commonCachePath = "./tf-plugin-cache" // Provider 插件缓存目录
 var RedcPath = ""
 var ProjectPath = "redc-taskresult"
 var ActiveConfigPath = ""
-var LoadedConfig *Config = nil // 全局配置对象
+var LoadedConfig *Config = nil           // 全局配置对象
 var LoadedGUISettings *GUISettings = nil // 全局 GUI 设置
 
 const ProjectFile = "project.json"
@@ -24,9 +24,9 @@ const MaxTfDepth = 2
 
 // GUISettings GUI 配置结构体
 type GUISettings struct {
-	DisableRightClick bool `json:"disableRightClick"`
+	DisableRightClick   bool `json:"disableRightClick"`
 	NotificationEnabled bool `json:"notificationEnabled"`
-	DebugEnabled bool `json:"debugEnabled"`
+	DebugEnabled        bool `json:"debugEnabled"`
 }
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加
@@ -53,6 +53,12 @@ type Config struct {
 			SecretKey string `yaml:"VOLCENGINE_SECRET_KEY" env:"VOLCENGINE_SECRET_KEY"`
 			Region    string `yaml:"region"`
 		} `yaml:"volcengine"`
+		UCloud struct {
+			PublicKey  string `yaml:"UCLOUD_PUBLIC_KEY" env:"UCLOUD_PUBLIC_KEY"`
+			PrivateKey string `yaml:"UCLOUD_PRIVATE_KEY" env:"UCLOUD_PRIVATE_KEY"`
+			Region     string `yaml:"region"`
+			ProjectId  string `yaml:"project_id" env:"UCLOUD_PROJECT_ID"`
+		} `yaml:"ucloud"`
 		Huaweicloud struct {
 			AccessKey string `yaml:"HUAWEICLOUD_ACCESS_KEY" env:"HUAWEICLOUD_ACCESS_KEY"`
 			SecretKey string `yaml:"HUAWEICLOUD_SECRET_KEY" env:"HUAWEICLOUD_SECRET_KEY"`
@@ -96,7 +102,7 @@ func LoadConfig(path string) error {
 	os.Setenv("TF_PLUGIN_CACHE_DIR", filepath.Join(home, ".terraform.d", "plugin-cache"))
 	// 设置 Terraform 插件缓存可能需要的环境变量
 	os.Setenv("TF_PLUGIN_CACHE_MAY_BREAK_DEPENDENCY_LOCK_FILE", "1")
-	
+
 	if RedcPath == "" {
 		RedcPath = filepath.Join(home, "redc")
 	}
@@ -152,10 +158,10 @@ func LoadConfig(path string) error {
 	if loadedPath != "" {
 		ActiveConfigPath = loadedPath
 	}
-	
+
 	// 保存到全局变量
 	LoadedConfig = &conf
-	
+
 	return nil
 }
 
@@ -255,10 +261,10 @@ func SaveConfig(conf *Config, customPath string) error {
 
 	// Rebind environment variables after saving
 	bindEnv(*conf)
-	
+
 	// 更新全局配置对象
 	LoadedConfig = conf
-	
+
 	return nil
 }
 
@@ -267,7 +273,7 @@ func GetProviderCredentials(provider string) (accessKey, secretKey string) {
 	if LoadedConfig == nil {
 		return "", ""
 	}
-	
+
 	switch provider {
 	case "volcengine":
 		return LoadedConfig.Providers.Volcengine.AccessKey, LoadedConfig.Providers.Volcengine.SecretKey
@@ -279,8 +285,10 @@ func GetProviderCredentials(provider string) (accessKey, secretKey string) {
 		return LoadedConfig.Providers.Aws.AccessKey, LoadedConfig.Providers.Aws.SecretKey
 	case "huaweicloud":
 		return LoadedConfig.Providers.Huaweicloud.AccessKey, LoadedConfig.Providers.Huaweicloud.SecretKey
+	case "ucloud":
+		return LoadedConfig.Providers.UCloud.PublicKey, LoadedConfig.Providers.UCloud.PrivateKey
 	}
-	
+
 	return "", ""
 }
 
@@ -296,51 +304,51 @@ func LoadGUISettings() (*GUISettings, error) {
 	if LoadedGUISettings != nil {
 		return LoadedGUISettings, nil
 	}
-	
+
 	path := getGUISettingsPath()
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
 			LoadedGUISettings = &GUISettings{
-				DisableRightClick: true,
+				DisableRightClick:   true,
 				NotificationEnabled: false,
-				DebugEnabled: false,
+				DebugEnabled:        false,
 			}
 			return LoadedGUISettings, nil
 		}
 		return nil, err
 	}
-	
+
 	var settings GUISettings
 	if err := json.Unmarshal(data, &settings); err != nil {
 		return nil, err
 	}
-	
+
 	LoadedGUISettings = &settings
 	return LoadedGUISettings, nil
 }
 
 func SaveGUISettings(settings *GUISettings) error {
 	path := getGUISettingsPath()
-	
+
 	if RedcPath == "" {
 		home, _ := os.UserHomeDir()
 		RedcPath = filepath.Join(home, "redc")
 	}
-	
+
 	if err := os.MkdirAll(RedcPath, 0755); err != nil {
 		return err
 	}
-	
+
 	data, err := json.MarshalIndent(settings, "", "  ")
 	if err != nil {
 		return err
 	}
-	
+
 	if err := os.WriteFile(path, data, 0644); err != nil {
 		return err
 	}
-	
+
 	LoadedGUISettings = settings
 	return nil
 }

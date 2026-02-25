@@ -42,8 +42,8 @@ func (c *Case) GetSSHConfig() (*sshutil.SSHConfig, error) {
 	}
 
 	// 2. 尝试获取密码
-	// 优先顺序: password -> ecs_password -> root_password
-	pwdKeys := []string{"password", "ecs_password", "root_password"}
+	// 优先顺序: password -> ecs_password -> root_password -> ssh_password
+	pwdKeys := []string{"password", "ecs_password", "root_password", "ssh_password"}
 	var pwd string
 	for _, key := range pwdKeys {
 		pwd, _ = c.GetInstanceInfo(key)

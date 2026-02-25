@@ -84,6 +84,15 @@ func (e *DeploymentExecutor) GenerateProviderConfig(provider string, region stri
 				"region": region,
 			},
 		}, nil
+	case "ucloud":
+		return &ProviderConfig{
+			Name:    "ucloud",
+			Source:  "ucloud/ucloud",
+			Version: "~> 0.0",
+			Config: map[string]string{
+				"region": region,
+			},
+		}, nil
 	default:
 		return nil, &ValidationError{
 			Field:   "provider",
