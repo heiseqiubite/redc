@@ -69,6 +69,15 @@ func (a *App) startup(ctx context.Context) {
 		redc.U = "system" // Use "system" to match CLI default and bypass permission check
 	}
 
+	// Load GUI settings
+	if settings, err := redc.LoadGUISettings(); err == nil {
+		// Apply debug setting
+		if settings.DebugEnabled {
+			redc.Debug = true
+			gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
+		}
+	}
+
 	// Initialize config using same path detection as CLI
 	if err := redc.LoadConfig(""); err != nil {
 		a.initError = fmt.Sprintf("配置加载失败: %v", err)
@@ -546,7 +555,14 @@ func (a *App) SetDebugLogging(enabled bool) error {
 		gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
 		a.emitLog("调试日志已关闭")
 	}
-	return nil
+
+	// Save to GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.DebugEnabled = enabled
+	return redc.SaveGUISettings(settings)
 }
 
 // SetNotificationEnabled enables or disables system notifications
@@ -562,7 +578,14 @@ func (a *App) SetNotificationEnabled(enabled bool) error {
 			a.emitLog("系统通知已关闭")
 		}
 	}
-	return nil
+
+	// Save to GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.NotificationEnabled = enabled
+	return redc.SaveGUISettings(settings)
 }
 
 // GetNotificationEnabled returns whether system notifications are enabled
@@ -570,6 +593,20 @@ func (a *App) GetNotificationEnabled() bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	// Load from GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		if a.notificationMgr != nil {
+			return a.notificationMgr.IsEnabled()
+		}
+		return false
+	}
+
+	if settings.NotificationEnabled {
+		return true
+	}
+
+	// Fallback to notification manager
 	if a.notificationMgr != nil {
 		return a.notificationMgr.IsEnabled()
 	}
@@ -581,17 +618,28 @@ func (a *App) SetDisableRightClick(enabled bool) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.disableRightClick = enabled
-	return nil
+
+	// Save to GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.DisableRightClick = enabled
+	return redc.SaveGUISettings(settings)
 }
 
 // GetDisableRightClick returns whether right click is disabled
 func (a *App) GetDisableRightClick() bool {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-	if !a.disableRightClick {
-		return true
+
+	// Load from GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return true // Default to disabled
 	}
-	return a.disableRightClick
+
+	return settings.DisableRightClick
 }
 
 // maskValue returns masked value for display (shows last 4 chars if length > 8)

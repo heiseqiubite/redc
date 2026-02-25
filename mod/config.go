@@ -1,6 +1,7 @@
 package mod
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -15,10 +16,18 @@ var RedcPath = ""
 var ProjectPath = "redc-taskresult"
 var ActiveConfigPath = ""
 var LoadedConfig *Config = nil // 全局配置对象
+var LoadedGUISettings *GUISettings = nil // 全局 GUI 设置
 
 const ProjectFile = "project.json"
 const RedcPlanPath = "case.tfplan"
 const MaxTfDepth = 2
+
+// GUISettings GUI 配置结构体
+type GUISettings struct {
+	DisableRightClick bool `json:"disableRightClick"`
+	NotificationEnabled bool `json:"notificationEnabled"`
+	DebugEnabled bool `json:"debugEnabled"`
+}
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加
 // yaml 为配置文件，env为tf的环境变量参数
@@ -273,4 +282,65 @@ func GetProviderCredentials(provider string) (accessKey, secretKey string) {
 	}
 	
 	return "", ""
+}
+
+func getGUISettingsPath() string {
+	if RedcPath == "" {
+		home, _ := os.UserHomeDir()
+		RedcPath = filepath.Join(home, "redc")
+	}
+	return filepath.Join(RedcPath, "gui_settings.json")
+}
+
+func LoadGUISettings() (*GUISettings, error) {
+	if LoadedGUISettings != nil {
+		return LoadedGUISettings, nil
+	}
+	
+	path := getGUISettingsPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			LoadedGUISettings = &GUISettings{
+				DisableRightClick: true,
+				NotificationEnabled: false,
+				DebugEnabled: false,
+			}
+			return LoadedGUISettings, nil
+		}
+		return nil, err
+	}
+	
+	var settings GUISettings
+	if err := json.Unmarshal(data, &settings); err != nil {
+		return nil, err
+	}
+	
+	LoadedGUISettings = &settings
+	return LoadedGUISettings, nil
+}
+
+func SaveGUISettings(settings *GUISettings) error {
+	path := getGUISettingsPath()
+	
+	if RedcPath == "" {
+		home, _ := os.UserHomeDir()
+		RedcPath = filepath.Join(home, "redc")
+	}
+	
+	if err := os.MkdirAll(RedcPath, 0755); err != nil {
+		return err
+	}
+	
+	data, err := json.MarshalIndent(settings, "", "  ")
+	if err != nil {
+		return err
+	}
+	
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		return err
+	}
+	
+	LoadedGUISettings = settings
+	return nil
 }
