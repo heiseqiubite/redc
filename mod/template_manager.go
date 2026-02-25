@@ -74,7 +74,7 @@ func (m *TemplateManager) ScanBaseTemplates() ([]*BaseTemplate, error) {
 }
 
 // IsBaseTemplate 判断是否为基础模板
-// 通过读取 case.json 中的 is_base_template 字段判断
+// 通过读取 case.json 中的 template 字段判断
 func (m *TemplateManager) IsBaseTemplate(templatePath string) (bool, error) {
 	caseFilePath := filepath.Join(templatePath, TmplCaseFile)
 

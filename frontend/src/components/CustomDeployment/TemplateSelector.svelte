@@ -76,7 +76,7 @@
           <ol class="text-[12px] text-blue-800 space-y-2 list-decimal list-inside">
             <li>{t.baseTemplateStep1 || '在模板仓库中拉取一个模板到本地'}</li>
             <li>{t.baseTemplateStep2 || '在本地模板管理中，编辑模板的 case.json 文件'}</li>
-            <li>{t.baseTemplateStep3 || '添加 "is_base_template": true 字段'}</li>
+            <li>{t.baseTemplateStep3 || '添加 "template": "base" 字段'}</li>
             <li>{t.baseTemplateStep4 || '添加 "supported_providers": ["alicloud", "tencentcloud"] 等字段'}</li>
             <li>{t.baseTemplateStep5 || '在 variables.tf 中定义可配置的变量（provider, region, instance_type 等）'}</li>
             <li>{t.baseTemplateStep6 || '刷新此页面即可看到基础模板'}</li>
