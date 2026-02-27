@@ -76,6 +76,20 @@ func (a *App) startup(ctx context.Context) {
 			redc.Debug = true
 			gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
 		}
+
+		// Apply proxy settings from GUI settings
+		if settings.HttpProxy != "" {
+			os.Setenv("HTTP_PROXY", settings.HttpProxy)
+			os.Setenv("http_proxy", settings.HttpProxy)
+		}
+		if settings.HttpsProxy != "" {
+			os.Setenv("HTTPS_PROXY", settings.HttpsProxy)
+			os.Setenv("https_proxy", settings.HttpsProxy)
+		}
+		if settings.NoProxy != "" {
+			os.Setenv("NO_PROXY", settings.NoProxy)
+			os.Setenv("no_proxy", settings.NoProxy)
+		}
 	}
 
 	// Initialize config using same path detection as CLI
@@ -289,13 +303,32 @@ func (a *App) GetConfig() ConfigInfo {
 	if a.logMgr != nil {
 		logPath = a.logMgr.BaseDir
 	}
+
+	// Try to load proxy settings from GUI settings first, fallback to env vars
+	httpProxy := os.Getenv("HTTP_PROXY")
+	httpsProxy := os.Getenv("HTTPS_PROXY")
+	noProxy := os.Getenv("NO_PROXY")
+
+	// Load from GUI settings if available
+	if settings, err := redc.LoadGUISettings(); err == nil && settings != nil {
+		if settings.HttpProxy != "" {
+			httpProxy = settings.HttpProxy
+		}
+		if settings.HttpsProxy != "" {
+			httpsProxy = settings.HttpsProxy
+		}
+		if settings.NoProxy != "" {
+			noProxy = settings.NoProxy
+		}
+	}
+
 	return ConfigInfo{
 		RedcPath:     redc.RedcPath,
 		ProjectPath:  redc.ProjectPath,
 		LogPath:      logPath,
-		HttpProxy:    os.Getenv("HTTP_PROXY"),
-		HttpsProxy:   os.Getenv("HTTPS_PROXY"),
-		NoProxy:      os.Getenv("NO_PROXY"),
+		HttpProxy:    httpProxy,
+		HttpsProxy:   httpsProxy,
+		NoProxy:      noProxy,
 		DebugEnabled: redc.Debug,
 	}
 }
@@ -308,9 +341,9 @@ func (a *App) GetVersion() string {
 type VersionCheckResult struct {
 	CurrentVersion string `json:"currentVersion"`
 	LatestVersion  string `json:"latestVersion"`
-	HasUpdate     bool   `json:"hasUpdate"`
+	HasUpdate      bool   `json:"hasUpdate"`
 	DownloadURL    string `json:"downloadURL"`
-	Error         string `json:"error"`
+	Error          string `json:"error"`
 }
 
 // CheckForUpdates checks if there is a new version available on GitHub
@@ -320,7 +353,7 @@ func (a *App) CheckForUpdates() (VersionCheckResult, error) {
 		DownloadURL:    "https://github.com/wgpsec/redc/releases",
 	}
 
-	resp, err := http.Get("https://api.github.com/repos/wgpsec/redc/releases/latest")
+	resp, err := redc.NewProxyHTTPClient(30 * time.Second).Get("https://api.github.com/repos/wgpsec/redc/releases/latest")
 	if err != nil {
 		result.Error = "无法连接 GitHub"
 		return result, nil
@@ -376,7 +409,7 @@ func compareVersions(current, latest string) int {
 	return 0
 }
 
-// SaveProxyConfig saves proxy configuration to environment variables
+// SaveProxyConfig saves proxy configuration to environment variables and persists to GUI settings
 func (a *App) SaveProxyConfig(httpProxy, httpsProxy, noProxy string) error {
 	// Set environment variables for current process
 	if httpProxy != "" {
@@ -401,6 +434,20 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, noProxy string) error {
 	} else {
 		os.Unsetenv("NO_PROXY")
 		os.Unsetenv("no_proxy")
+	}
+
+	// Persist to GUI settings
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return fmt.Errorf("加载GUI设置失败: %w", err)
+	}
+
+	settings.HttpProxy = httpProxy
+	settings.HttpsProxy = httpsProxy
+	settings.NoProxy = noProxy
+
+	if err := redc.SaveGUISettings(settings); err != nil {
+		return fmt.Errorf("保存GUI设置失败: %w", err)
 	}
 
 	a.emitLog(fmt.Sprintf("代理配置已更新 - HTTP: %s, HTTPS: %s, NO_PROXY: %s", httpProxy, httpsProxy, noProxy))

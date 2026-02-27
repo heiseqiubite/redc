@@ -3,10 +3,13 @@ package mod
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"red-cloud/mod/gologger"
 	"reflect"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,9 +27,12 @@ const MaxTfDepth = 2
 
 // GUISettings GUI 配置结构体
 type GUISettings struct {
-	DisableRightClick   bool `json:"disableRightClick"`
-	NotificationEnabled bool `json:"notificationEnabled"`
-	DebugEnabled        bool `json:"debugEnabled"`
+	DisableRightClick   bool   `json:"disableRightClick"`
+	NotificationEnabled bool   `json:"notificationEnabled"`
+	DebugEnabled        bool   `json:"debugEnabled"`
+	HttpProxy           string `json:"httpProxy"`
+	HttpsProxy          string `json:"httpsProxy"`
+	NoProxy             string `json:"noProxy"`
 }
 
 // Config 配置文件结构体，新增厂商配置也需要再这里添加
@@ -320,6 +326,9 @@ func LoadGUISettings() (*GUISettings, error) {
 				DisableRightClick:   true,
 				NotificationEnabled: false,
 				DebugEnabled:        false,
+				HttpProxy:           "",
+				HttpsProxy:          "",
+				NoProxy:             "",
 			}
 			return LoadedGUISettings, nil
 		}
@@ -358,4 +367,63 @@ func SaveGUISettings(settings *GUISettings) error {
 
 	LoadedGUISettings = settings
 	return nil
+}
+
+// GetProxySettings returns the current proxy settings from GUI settings or environment
+func GetProxySettings() (httpProxy, httpsProxy, noProxy string) {
+	// Try to load from GUI settings first
+	if settings, err := LoadGUISettings(); err == nil && settings != nil {
+		if settings.HttpProxy != "" {
+			httpProxy = settings.HttpProxy
+		}
+		if settings.HttpsProxy != "" {
+			httpsProxy = settings.HttpsProxy
+		}
+		if settings.NoProxy != "" {
+			noProxy = settings.NoProxy
+		}
+	}
+
+	// Fallback to environment variables if not set in GUI settings
+	if httpProxy == "" {
+		httpProxy = os.Getenv("HTTP_PROXY")
+	}
+	if httpsProxy == "" {
+		httpsProxy = os.Getenv("HTTPS_PROXY")
+	}
+	if noProxy == "" {
+		noProxy = os.Getenv("NO_PROXY")
+	}
+
+	return httpProxy, httpsProxy, noProxy
+}
+
+// GetProxyURL returns a proxy URL for HTTP client based on the current proxy settings
+func GetProxyURL() string {
+	httpProxy, httpsProxy, _ := GetProxySettings()
+	if httpsProxy != "" {
+		return httpsProxy
+	}
+	if httpProxy != "" {
+		return httpProxy
+	}
+	return ""
+}
+
+// NewProxyHTTPClient returns an HTTP client that uses the configured proxy
+func NewProxyHTTPClient(timeout time.Duration) *http.Client {
+	proxyURL := GetProxyURL()
+
+	if proxyURL != "" {
+		if proxy, err := url.Parse(proxyURL); err == nil {
+			return &http.Client{
+				Timeout: timeout,
+				Transport: &http.Transport{
+					Proxy: http.ProxyURL(proxy),
+				},
+			}
+		}
+	}
+
+	return &http.Client{Timeout: timeout}
 }

@@ -689,7 +689,7 @@ func fetchJSON(ctx context.Context, url string, v interface{}) error {
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := NewProxyHTTPClient(30 * time.Second).Do(req)
 	if err != nil {
 		return err
 	}
@@ -717,7 +717,7 @@ func downloadAndInstall(ctx context.Context, verData TemplateVersion, finalDest 
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := NewProxyHTTPClient(0).Do(req)
 	if err != nil {
 		return fmt.Errorf("request failed: %w", err)
 	}

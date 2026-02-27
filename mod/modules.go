@@ -373,7 +373,7 @@ func newCFClientFromConfig() (*cfClient, cfSettings, bool) {
 	return &cfClient{
 		email:      email,
 		key:        key,
-		httpClient: &http.Client{Timeout: 15 * time.Second},
+		httpClient: NewProxyHTTPClient(15 * time.Second),
 	}, cfConf, true
 }
 

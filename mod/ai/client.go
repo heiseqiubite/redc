@@ -9,9 +9,11 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
+	"red-cloud/mod"
 	"red-cloud/mod/gologger"
 )
 
@@ -26,22 +28,44 @@ type Client struct {
 
 // NewClient creates a new AI client
 func NewClient(provider, apiKey, baseURL, model string) *Client {
+	proxyURL := mod.GetProxyURL()
+
+	var transport *http.Transport
+	if proxyURL != "" {
+		if proxy, err := url.Parse(proxyURL); err == nil {
+			transport = &http.Transport{
+				Proxy: http.ProxyURL(proxy),
+				DialContext: (&net.Dialer{
+					Timeout:   30 * time.Second,
+					KeepAlive: 30 * time.Second,
+				}).DialContext,
+				TLSHandshakeTimeout:   10 * time.Second,
+				ResponseHeaderTimeout: 30 * time.Second,
+				ExpectContinueTimeout: 1 * time.Second,
+			}
+		}
+	}
+
+	if transport == nil {
+		transport = &http.Transport{
+			DialContext: (&net.Dialer{
+				Timeout:   30 * time.Second,
+				KeepAlive: 30 * time.Second,
+			}).DialContext,
+			TLSHandshakeTimeout:   10 * time.Second,
+			ResponseHeaderTimeout: 30 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+		}
+	}
+
 	return &Client{
 		Provider: provider,
 		APIKey:   apiKey,
 		BaseURL:  strings.TrimSuffix(baseURL, "/"),
 		Model:    model,
 		client: &http.Client{
-			Timeout: 0, // No timeout for streaming requests
-			Transport: &http.Transport{
-				DialContext: (&net.Dialer{
-					Timeout:   30 * time.Second, // Connection timeout
-					KeepAlive: 30 * time.Second,
-				}).DialContext,
-				TLSHandshakeTimeout:   10 * time.Second,
-				ResponseHeaderTimeout: 30 * time.Second, // Wait for response headers
-				ExpectContinueTimeout: 1 * time.Second,
-			},
+			Timeout:   0,
+			Transport: transport,
 		},
 	}
 }

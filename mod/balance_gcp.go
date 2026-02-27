@@ -51,7 +51,7 @@ func getGCPAccessToken(credentialsPath string) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 10 * time.Second}
+	client := NewProxyHTTPClient(10 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -92,7 +92,7 @@ func QueryGCPBill(credentialsPath string, projectID string) (string, string, err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 
-	client := &http.Client{Timeout: 15 * time.Second}
+	client := NewProxyHTTPClient(15 * time.Second)
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", err
