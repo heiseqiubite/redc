@@ -304,6 +304,78 @@ func (a *App) GetVersion() string {
 	return redc.Version
 }
 
+// VersionCheckResult represents the result of checking for new versions
+type VersionCheckResult struct {
+	CurrentVersion string `json:"currentVersion"`
+	LatestVersion  string `json:"latestVersion"`
+	HasUpdate     bool   `json:"hasUpdate"`
+	DownloadURL    string `json:"downloadURL"`
+	Error         string `json:"error"`
+}
+
+// CheckForUpdates checks if there is a new version available on GitHub
+func (a *App) CheckForUpdates() (VersionCheckResult, error) {
+	result := VersionCheckResult{
+		CurrentVersion: redc.Version,
+		DownloadURL:    "https://github.com/wgpsec/redc/releases",
+	}
+
+	resp, err := http.Get("https://api.github.com/repos/wgpsec/redc/releases/latest")
+	if err != nil {
+		result.Error = "无法连接 GitHub"
+		return result, nil
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		result.Error = "无法获取版本信息"
+		return result, nil
+	}
+
+	var data map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
+		result.Error = "解析版本信息失败"
+		return result, nil
+	}
+
+	tagName, ok := data["tag_name"].(string)
+	if !ok {
+		result.Error = "无法获取最新版本号"
+		return result, nil
+	}
+
+	result.LatestVersion = tagName
+
+	currentVer := strings.TrimPrefix(redc.Version, "v")
+	latestVer := strings.TrimPrefix(tagName, "v")
+
+	result.HasUpdate = compareVersions(currentVer, latestVer) < 0
+
+	return result, nil
+}
+
+func compareVersions(current, latest string) int {
+	currentParts := strings.Split(current, ".")
+	latestParts := strings.Split(latest, ".")
+
+	for i := 0; i < len(currentParts) || i < len(latestParts); i++ {
+		var cur, lat int
+		if i < len(currentParts) {
+			fmt.Sscanf(currentParts[i], "%d", &cur)
+		}
+		if i < len(latestParts) {
+			fmt.Sscanf(latestParts[i], "%d", &lat)
+		}
+		if cur < lat {
+			return -1
+		}
+		if cur > lat {
+			return 1
+		}
+	}
+	return 0
+}
+
 // SaveProxyConfig saves proxy configuration to environment variables
 func (a *App) SaveProxyConfig(httpProxy, httpsProxy, noProxy string) error {
 	// Set environment variables for current process

@@ -13,7 +13,8 @@ let {
     onTabChange, 
     onToggleLang, 
     onLoadMCPStatus, 
-    onLoadResourceSummary
+    onLoadResourceSummary,
+    onCheckUpdate
   } = $props();
   
   // Project switching state - managed internally
@@ -280,8 +281,8 @@ let {
     <div class="flex items-center justify-between px-2 py-2">
       <button
         class="text-[10px] text-gray-400 hover:text-gray-600 hover:bg-gray-50 px-2 py-1 rounded transition-colors whitespace-nowrap"
-        onclick={() => onTabChange('about')}
-        title={lang === 'zh' ? '关于 RedC' : 'About RedC'}
+        onclick={() => { if (onCheckUpdate) onCheckUpdate(); onTabChange('about'); }}
+        title={lang === 'zh' ? '关于 RedC，点击检查更新' : 'About RedC, click to check for updates'}
       >
         {version || 'v3.0.1'} by WgpSec
       </button>

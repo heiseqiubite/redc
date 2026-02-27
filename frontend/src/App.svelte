@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick, CheckForUpdates } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -245,6 +245,28 @@
     }
   }
 
+  // Update check state
+  let updateStatus = $state({ checking: false, result: null });
+
+  async function checkForUpdates() {
+    if (updateStatus.checking) return;
+    updateStatus.checking = true;
+    updateStatus.result = null;
+    try {
+      const result = await CheckForUpdates();
+      updateStatus.result = result;
+    } catch (e) {
+      console.error('Failed to check updates:', e);
+    } finally {
+      updateStatus.checking = false;
+    }
+  }
+
+  // Expose update check to child components
+  function passUpdateStatusToAbout() {
+    return { updateStatus, checkForUpdates };
+  }
+
 
 </script>
 
@@ -259,6 +281,7 @@
     onToggleLang={toggleLang}
     onLoadMCPStatus={loadMCPStatus}
     onLoadResourceSummary={loadResourceSummary}
+    onCheckUpdate={checkForUpdates}
   />
 
   <!-- Main -->
@@ -371,7 +394,7 @@
         <CustomDeployment {t} />
 
       {:else if activeTab === 'about'}
-        <About {t} version={appVersion} />
+        <About {t} version={appVersion} updateStatus={updateStatus} onCheckUpdate={checkForUpdates} />
       {/if}
     </main>
   </div>
