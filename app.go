@@ -618,7 +618,7 @@ func (a *App) TestTerraformEndpoints() ([]EndpointCheck, error) {
 		{Name: "Tencent Cloud Mirror", URL: "https://mirrors.tencent.com/terraform/"},
 		{Name: "Volcengine Mirror", URL: "https://mirrors.volces.com/terraform/"},
 	}
-	client := &http.Client{Timeout: 6 * time.Second}
+	client := redc.NewProxyHTTPClient(6 * time.Second)
 	results := make([]EndpointCheck, 0, len(endpoints))
 	for _, ep := range endpoints {
 		start := time.Now()
@@ -2175,7 +2175,7 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 	// Fetch index.json
 	indexURL := fmt.Sprintf("%s/index.json?t=%d", registryURL, time.Now().Unix())
 
-	client := &http.Client{Timeout: 30 * time.Second}
+	client := redc.NewProxyHTTPClient(30 * time.Second)
 	resp, err := client.Get(indexURL)
 	if err != nil {
 		return nil, fmt.Errorf("连接仓库失败: %v", err)
