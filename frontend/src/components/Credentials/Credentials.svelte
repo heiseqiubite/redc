@@ -448,7 +448,7 @@ let { t } = $props();
     <div class="text-[12px] text-gray-500">
       {t.profileTemplateFrom}: <span class="font-mono">{profileForm.templateDir || '-'}</span>
     </div>
-    <div class="text-[11px] text-gray-400 mt-1">
+    <div class="text-[11px] text-gray-500 mt-1">
       {t.profileSwitchHint}
     </div>
   </div>
@@ -514,7 +514,7 @@ let { t } = $props();
             class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 transition-shadow font-mono"
             bind:value={aiConfig.model}
           />
-          <p class="text-[10px] text-gray-400 mt-1">{t.aiModelHint || '支持任意兼容的模型名称'}</p>
+          <p class="text-[10px] text-gray-500 mt-1">{t.aiModelHint || '支持任意兼容的模型名称'}</p>
         </div>
         <div class="md:col-span-2">
           <label for="aiApiKey" class="block text-[11px] font-medium text-gray-500 mb-1">
@@ -531,7 +531,7 @@ let { t } = $props();
             />
             <button 
               type="button"
-              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
               onclick={() => showApiKey = !showApiKey}
               aria-label={showApiKey ? '隐藏API密钥' : '显示API密钥'}
             >
@@ -557,7 +557,7 @@ let { t } = $props();
             class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-purple-500 focus:ring-offset-1 transition-shadow font-mono"
             bind:value={aiConfig.baseUrl}
           />
-          <p class="text-[10px] text-gray-400 mt-1">{t.aiBaseUrlHint || 'Optional: Override the default API endpoint'}</p>
+          <p class="text-[10px] text-gray-500 mt-1">{t.aiBaseUrlHint || 'Optional: Override the default API endpoint'}</p>
         </div>
       </div>
       {#if !activeProfileId}
@@ -639,7 +639,7 @@ let { t } = $props();
           <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
             <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z" />
           </svg>
-          <p class="text-[13px] text-gray-400">{t.clickLoad}</p>
+          <p class="text-[13px] text-gray-500">{t.clickLoad}</p>
         </div>
       {/each}
     </div>

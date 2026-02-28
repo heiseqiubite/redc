@@ -255,7 +255,7 @@ let { t } = $props();
           <div class="w-3.5 h-3.5 border-2 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
         {/if}
         <span class="flex-1 truncate">{registryNotice.message}</span>
-        <button class="text-gray-400 hover:text-gray-600" onclick={() => setRegistryNotice('', '')} aria-label="关闭通知">
+        <button class="text-gray-400 hover:text-gray-600 transition-colors cursor-pointer" onclick={() => setRegistryNotice('', '')} aria-label="关闭通知">
           <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
           </svg>
@@ -363,13 +363,13 @@ let { t } = $props();
                   <span class="px-2 py-0.5 bg-gray-100 text-gray-600 text-[10px] rounded-full">{tag}</span>
                 {/each}
                 {#if tmpl.tags.length > 3}
-                  <span class="px-2 py-0.5 bg-gray-100 text-gray-400 text-[10px] rounded-full">+{tmpl.tags.length - 3}</span>
+                  <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] rounded-full">+{tmpl.tags.length - 3}</span>
                 {/if}
               </div>
             {/if}
             
             <div class="flex items-center justify-between pt-3 border-t border-gray-100">
-              <div class="text-[11px] text-gray-400">
+              <div class="text-[11px] text-gray-500">
                 {#if tmpl.author}by {tmpl.author}{/if}
                 {#if tmpl.installed && hasUpdate(tmpl)}
                   <span class="ml-2 text-amber-600">
@@ -401,7 +401,7 @@ let { t } = $props();
           <svg class="w-10 h-10 mx-auto mb-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
             <path stroke-linecap="round" stroke-linejoin="round" d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z" />
           </svg>
-          <p class="text-[13px] text-gray-400">
+          <p class="text-[13px] text-gray-500">
             {#if registrySearch}
               {t.noMatch}
             {:else}
