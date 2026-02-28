@@ -4,7 +4,7 @@
   import { loadComposeTemplates } from '../../lib/composeTemplates.js';
   import { onMount } from 'svelte';
 
-  let { t } = $props();
+  let { t, onTabChange } = $props();
 
   let composeTemplates = $state([]);
   let selectedTemplate = $state(null);
@@ -130,6 +130,24 @@
 </script>
 
 <div class="max-w-3xl lg:max-w-5xl xl:max-w-full space-y-5">
+  {#if !templatesLoading && composeTemplates.length === 0}
+    <div class="bg-blue-50 border border-blue-100 rounded-xl p-5">
+      <div class="flex items-start gap-3">
+        <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+        </svg>
+        <div class="flex-1">
+          <p class="text-[13px] text-blue-700">{t.noComposeTemplatesHint}</p>
+          <button 
+            class="mt-3 h-8 px-4 bg-blue-500 text-white text-[12px] font-medium rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+            onclick={() => onTabChange && onTabChange('registry')}
+          >
+            {t.noComposeTemplatesHintButton}
+          </button>
+        </div>
+      </div>
+    </div>
+  {/if}
   {#if composeTemplates.length > 0}
     <div class="bg-white rounded-xl border border-gray-100 p-5">
       <div class="flex items-center gap-4">

@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { loadUserdataTemplates, getTemplatesByCategory, getAIScenarios, getVulhubScenarios } from '../../lib/userdataTemplates.js';
   
-  let { t } = $props();
+  let { t, onTabChange } = $props();
   let specialModuleTab = $state('vulhub');
   let selectedAIScenario = $state(null);
   let selectedVulhubScenario = $state(null);
@@ -99,7 +99,24 @@
         <div class="flex items-center justify-center h-32">
           <div class="w-6 h-6 border-2 border-gray-100 border-t-orange-500 rounded-full animate-spin"></div>
         </div>
-      {:else if templates.length > 0 && getVulhubScenarios(templates).length > 0}
+      {:else if templates.length === 0}
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            <div class="flex-1">
+              <p class="text-[13px] text-blue-700">{t.noUserdataTemplatesHint}</p>
+              <button 
+                class="mt-3 h-8 px-4 bg-blue-500 text-white text-[12px] font-medium rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+                onclick={() => onTabChange && onTabChange('registry')}
+              >
+                {t.noUserdataTemplatesHintButton}
+              </button>
+            </div>
+          </div>
+        </div>
+      {:else if getVulhubScenarios(templates).length > 0}
         <div class="mb-4">
           <input
             type="text"
@@ -180,18 +197,54 @@
     </div>
   {:else if specialModuleTab === 'c2'}
     <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 md:p-8">
-      <div class="text-center py-8">
-        <p class="text-[13px] text-gray-500">暂无可用的 C2 场景</p>
-        <p class="text-[12px] text-gray-400 mt-1">此模块功能开发中...</p>
-      </div>
-      <div class="bg-blue-50 rounded-lg p-4 sm:p-6 text-center">
-        <p class="text-[13px] text-blue-800 mb-2">C2 场景管理模块</p>
-        <p class="text-[12px] text-blue-600">此功能正在开发中，敬请期待</p>
-      </div>
+      {#if templates.length === 0}
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            <div class="flex-1">
+              <p class="text-[13px] text-blue-700">{t.noUserdataTemplatesHint}</p>
+              <button 
+                class="mt-3 h-8 px-4 bg-blue-500 text-white text-[12px] font-medium rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+                onclick={() => onTabChange && onTabChange('registry')}
+              >
+                {t.noUserdataTemplatesHintButton}
+              </button>
+            </div>
+          </div>
+        </div>
+      {:else}
+        <div class="text-center py-8">
+          <p class="text-[13px] text-gray-500">暂无可用的 C2 场景</p>
+          <p class="text-[12px] text-gray-400 mt-1">此模块功能开发中...</p>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-4 sm:p-6 text-center">
+          <p class="text-[13px] text-blue-800 mb-2">C2 场景管理模块</p>
+          <p class="text-[12px] text-blue-600">此功能正在开发中，敬请期待</p>
+        </div>
+      {/if}
     </div>
   {:else if specialModuleTab === 'ai'}
     <div class="bg-white rounded-xl border border-gray-100 p-4 sm:p-6 md:p-8">
-      {#if templates.length > 0 && getTemplatesByCategory(templates, 'ai').length > 0}
+      {#if templates.length === 0}
+        <div class="bg-blue-50 border border-blue-100 rounded-xl p-5 mb-4">
+          <div class="flex items-start gap-3">
+            <svg class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z" />
+            </svg>
+            <div class="flex-1">
+              <p class="text-[13px] text-blue-700">{t.noUserdataTemplatesHint}</p>
+              <button 
+                class="mt-3 h-8 px-4 bg-blue-500 text-white text-[12px] font-medium rounded-lg hover:bg-blue-600 transition-colors cursor-pointer"
+                onclick={() => onTabChange && onTabChange('registry')}
+              >
+                {t.noUserdataTemplatesHintButton}
+              </button>
+            </div>
+          </div>
+        </div>
+      {:else if getTemplatesByCategory(templates, 'ai').length > 0}
         <div class="mb-4">
           <input
             type="text"

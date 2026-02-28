@@ -334,7 +334,7 @@
     </header>
 
     <!-- Content -->
-    <main class="flex-1 overflow-auto p-6">
+    <main class="flex-1 overflow-y-auto p-6">
       {#if error}
         <div class="mb-5 flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
           <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -372,7 +372,7 @@
               <CloudResources bind:this={cloudResourcesComponent} {t} />
 
             {:else if activeTab === 'compose'}
-              <Compose {t} />
+              <Compose {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'settings'}
               <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:rightClickDisabled />
@@ -384,7 +384,7 @@
               <AIIntegration {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'specialModules'}
-              <SpecialModules {t} />
+              <SpecialModules {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'credentials'}
               <Credentials {t} />
@@ -410,11 +410,9 @@
   @keyframes fadeIn {
     from {
       opacity: 0;
-      transform: translateY(8px);
     }
     to {
       opacity: 1;
-      transform: translateY(0);
     }
   }
 

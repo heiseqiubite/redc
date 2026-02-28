@@ -64,6 +64,10 @@ export const i18n = {
     selectTemplateErr: '请选择一个模板',
     noTemplatesHint: '暂无模板，请先从"模板仓库"页面下载模板',
     noTemplatesHintButton: '前往模板仓库',
+    noUserdataTemplatesHint: '暂无专项模块模板，请先从"模板仓库"页面下载 userdata 模板',
+    noUserdataTemplatesHintButton: '前往模板仓库',
+    noComposeTemplatesHint: '暂无编排模板，请先从"模板仓库"页面下载 compose 模板',
+    noComposeTemplatesHintButton: '前往模板仓库',
     // Local templates i18n
     version: '版本', author: '作者', module: '模块', description: '描述', viewParams: '查看参数',
     cloneTemplate: '复制模板',
@@ -252,6 +256,10 @@ export const i18n = {
     selectTemplateErr: 'Please select a template',
     noTemplatesHint: 'No templates available. Please download templates from the "Template Registry" page first',
     noTemplatesHintButton: 'Go to Template Registry',
+    noUserdataTemplatesHint: 'No special module templates available. Please download userdata templates from the "Template Registry" page first',
+    noUserdataTemplatesHintButton: 'Go to Template Registry',
+    noComposeTemplatesHint: 'No compose templates available. Please download compose templates from the "Template Registry" page first',
+    noComposeTemplatesHintButton: 'Go to Template Registry',
     // Local templates i18n
     version: 'Version', author: 'Author', module: 'Module', description: 'Description', viewParams: 'View Params',
     cloneTemplate: 'Clone',

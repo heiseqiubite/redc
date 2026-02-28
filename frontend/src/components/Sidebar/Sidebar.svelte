@@ -247,7 +247,7 @@ let {
 
   <!-- New Project Modal -->
   {#if showNewProjectModal}
-    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible">
       <div class="bg-white rounded-lg p-4 w-64 border border-gray-200">
         <h3 class="text-[13px] font-medium text-gray-900 mb-3">{lang === 'zh' ? '新建项目' : 'New Project'}</h3>
         <input

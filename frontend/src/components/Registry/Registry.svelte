@@ -417,7 +417,7 @@ let { t } = $props();
 <!-- Batch Pull Confirmation Modal -->
 {#if batchPullConfirm.show}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelBatchPull}>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchPull}>
     <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
@@ -452,7 +452,7 @@ let { t } = $props();
 <!-- Batch Update Confirmation Modal -->
 {#if batchUpdateConfirm.show}
   <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onclick={cancelBatchUpdate}>
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelBatchUpdate}>
     <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
