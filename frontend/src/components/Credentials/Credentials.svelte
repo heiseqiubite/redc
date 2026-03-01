@@ -501,7 +501,7 @@ let { t } = $props();
             onchange={handleProviderChange}
           >
             {#each Object.entries(aiProviderPresets) as [key, preset]}
-              <option value={key}>{preset.name}</option>
+              <option value={key}>{t[key + 'Compatible'] || preset.name}</option>
             {/each}
           </select>
         </div>
@@ -576,7 +576,7 @@ let { t } = $props();
       {#each providersConfig.providers || [] as provider}
         <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
           <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-            <h3 class="text-[14px] font-semibold text-gray-900">{provider.name}</h3>
+            <h3 class="text-[14px] font-semibold text-gray-900">{t[provider.name] || provider.name}</h3>
             {#if editingProvider === provider.name}
               <div class="flex gap-2">
                 <button 
@@ -678,7 +678,7 @@ let { t } = $props();
           </div>
         </div>
         <p class="text-[13px] text-gray-600">
-          {t.confirmSaveCredentials || '确认保存'} <span class="font-medium text-gray-900">"{saveConfirm.providerName}"</span> {t.credentials || '的凭据'}?
+          {t.confirmSaveCredentials || '确认保存'} <span class="font-medium text-gray-900">"{t[saveConfirm.providerName] || saveConfirm.providerName}"</span> {t.credentials || '的凭据'}?
         </p>
       </div>
       <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">

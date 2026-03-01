@@ -129,7 +129,7 @@
           {t.noSavedTemplates || '暂无保存的配置模板'}
         </p>
         <p class="text-[12px] text-gray-400 mt-1">
-          {t.saveTemplateHint || '完成配置后可以保存为模板以便重复使用'}
+          {t.saveConfigTemplateTip || '完成配置后可以保存为模板以便重复使用'}
         </p>
       </div>
     {:else}

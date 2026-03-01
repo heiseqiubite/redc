@@ -57,24 +57,24 @@
   let aiAnalysisCompleted = $state<Record<string, boolean>>({});
 
   // 状态颜色配置（与创建部署页面一致）
-  const stateConfig: Record<string, { label: string; color: string; bg: string; dot: string }> = {
-    'pending': { label: '待部署', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
-    'starting': { label: '启动中', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500 animate-pulse' },
-    'running': { label: '运行中', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
-    'stopping': { label: '停止中', color: 'text-orange-600', bg: 'bg-orange-50', dot: 'bg-orange-500 animate-pulse' },
-    'stopped': { label: '已停止', color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' },
-    'removing': { label: '删除中', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500 animate-pulse' },
-    'error': { label: '错误', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' }
-  };
+  const stateConfig = $derived<Record<string, { label: string; color: string; bg: string; dot: string }>>({
+    'pending': { label: t.pending || '待部署', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
+    'starting': { label: t.starting || '启动中', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500 animate-pulse' },
+    'running': { label: t.running || '运行中', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
+    'stopping': { label: t.stopping || '停止中', color: 'text-orange-600', bg: 'bg-orange-50', dot: 'bg-orange-500 animate-pulse' },
+    'stopped': { label: t.stopped || '已停止', color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' },
+    'removing': { label: t.removing || '删除中', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500 animate-pulse' },
+    'error': { label: t.error || '错误', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' }
+  });
 
   // 云厂商映射
-  const providerLabels: Record<string, string> = {
-    'alicloud': '阿里云',
-    'tencentcloud': '腾讯云',
-    'aws': 'AWS',
-    'volcengine': '火山引擎',
-    'huaweicloud': '华为云'
-  };
+  const providerLabels = $derived<Record<string, string>>({
+    'alicloud': t.Aliyun || '阿里云',
+    'tencentcloud': t.TencentCloud || '腾讯云',
+    'aws': t.AWS || 'AWS',
+    'volcengine': t.Volcengine || '火山引擎',
+    'huaweicloud': t.HuaweiCloud || '华为云'
+  });
 
   // 截断 ID 显示（参考预定义场景页面）
   function getShortId(id: string): string {
@@ -495,8 +495,8 @@
         {batchMode ? (t.exitBatch || '退出批量') : (t.batchOperation || '批量操作')}
       </button>
       {#if batchMode}
-        <button class="btn-select-all" onclick={selectAll}>全选</button>
-        <button class="btn-deselect-all" onclick={deselectAll}>取消全选</button>
+        <button class="btn-select-all" onclick={selectAll}>{t.selectAll || '全选'}</button>
+        <button class="btn-deselect-all" onclick={deselectAll}>{t.deselectAll || '取消全选'}</button>
         <button
           class="px-4 py-2 text-[13px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 transition-colors disabled:opacity-50"
           onclick={handleBatchStart}
@@ -560,13 +560,13 @@
             {#if batchMode}
               <th class="checkbox-col"></th>
             {/if}
-            <th>名称</th>
-            <th>模板</th>
-            <th>云厂商</th>
-            <th>地域</th>
-            <th>状态</th>
-            <th>创建时间</th>
-            <th class="text-right">操作</th>
+            <th>{t.name || '名称'}</th>
+            <th>{t.template || '模板'}</th>
+            <th>{t.provider || '云厂商'}</th>
+            <th>{t.region || '地域'}</th>
+            <th>{t.status || '状态'}</th>
+            <th>{t.createdAt || '创建时间'}</th>
+            <th class="text-right">{t.action || '操作'}</th>
           </tr>
         </thead>
         <tbody>
@@ -606,9 +606,10 @@
                   <span class="w-1.5 h-1.5 rounded-full {stateConfig[deployment.state]?.dot || 'bg-gray-400'}"></span>
                   {stateConfig[deployment.state]?.label || deployment.state}
                 </span>
-                {#if deployment.config?.is_spot_instance}
+                <!-- svelte-ignore a11y_click_events_have_key_events -->
+                {#if (deployment.config as any)?.is_spot_instance}
                   <span class="ml-1.5 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded">
-                    抢占式
+                    {t.spotInstance || '抢占式'}
                   </span>
                 {/if}
               </td>
@@ -626,7 +627,7 @@
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors"
                       onclick={() => handleStart(deployment.id)}
-                    >重试</button>
+                    >{t.retry || '重试'}</button>
                   {:else if deployment.state !== 'running'}
                     <!-- 定时启动按钮 -->
                     <button 
@@ -641,7 +642,7 @@
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors"
                       onclick={() => handleStart(deployment.id)}
-                    >启动</button>
+                    >{t.start || '启动'}</button>
                   {:else}
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors"
@@ -665,13 +666,13 @@
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors"
                       onclick={() => handleStop(deployment.id, deployment.name)}
-                    >停止</button>
+                    >{t.stop || '停止'}</button>
                   {/if}
                   {#if deployment.state !== 'starting' && deployment.state !== 'stopping' && deployment.state !== 'removing'}
                     <button 
                       class="px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors"
                       onclick={() => handleDelete(deployment.id, deployment.name)}
-                    >删除</button>
+                    >{t.delete || '删除'}</button>
                   {/if}
                 </div>
               </td>
@@ -688,8 +689,8 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                           </svg>
                           <div class="flex-1">
-                            <h4 class="text-[13px] font-semibold text-red-900">部署失败</h4>
-                            <p class="text-[12px] text-red-700 mt-1">请检查配置后重试。错误详情：</p>
+                            <h4 class="text-[13px] font-semibold text-red-900">{t.deploymentFailed || '部署失败'}</h4>
+                            <p class="text-[12px] text-red-700 mt-1">{t.checkConfigRetry || '请检查配置后重试。错误详情：'}</p>
                             <pre class="mt-2 p-3 bg-white rounded border border-red-200 text-[11px] text-red-800 overflow-x-auto whitespace-pre-wrap">{deployment.outputs?.error_message || '未知错误'}</pre>
                             
                             {#if aiAnalyzing[deployment.id] || aiAnalysisCompleted[deployment.id]}
@@ -715,7 +716,7 @@
                                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                                 </svg>
-                                AI 分析错误原因
+                                {t.aiAnalyzeError || 'AI 分析错误原因'}
                               </button>
                             {/if}
                           </div>
@@ -724,7 +725,7 @@
                     {:else if deployment.state === 'running'}
                       {#if deploymentOutputs[deployment.id] && Object.keys(deploymentOutputs[deployment.id]).length > 0}
                         <div class="flex items-center justify-between mb-3">
-                          <span class="text-[12px] font-medium text-gray-700">输出信息</span>
+                          <span class="text-[12px] font-medium text-gray-700">{t.outputInfo || '输出信息'}</span>
                           <button
                             class="px-2 py-1 text-[11px] font-medium bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-1"
                             onclick={() => copyAllOutputs(deploymentOutputs[deployment.id])}
@@ -733,12 +734,12 @@
                               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                               </svg>
-                              已复制
+                              {t.copied || '已复制'}
                             {:else}
                               <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                               </svg>
-                              复制全部
+                              {t.copyAll || '复制全部'}
                             {/if}
                           </button>
                         </div>
@@ -750,13 +751,12 @@
                                 <button 
                                   class="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-100 rounded flex items-center gap-1"
                                   onclick={(e) => { e.stopPropagation(); copyToClipboard(String(value), key); }}
-                                  title="复制"
                                 >
                                   {#if copiedKey === key}
                                     <svg class="w-4 h-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                                     </svg>
-                                    <span class="text-[10px] text-emerald-500">已复制</span>
+                                    <span class="text-[10px] text-emerald-500">{t.copied || '已复制'}</span>
                                   {:else}
                                     <svg class="w-4 h-4 text-gray-400 hover:text-gray-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
@@ -769,12 +769,11 @@
                           {/each}
                         </div>
                       {:else}
-                        <div class="text-[13px] text-gray-500">暂无输出信息</div>
+                        <div class="text-[13px] text-gray-500">{t.noOutput || '部署未运行，无输出信息'}</div>
                       {/if}
                     {:else}
-                      <div class="text-[13px] text-gray-500">部署未运行，无输出信息</div>
+                      <div class="text-[13px] text-gray-500">{t.noOutput || '部署未运行，无输出信息'}</div>
                     {/if}
-                  </div>
                 </td>
               </tr>
             {/if}

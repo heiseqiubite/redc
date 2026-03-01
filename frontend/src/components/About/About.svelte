@@ -53,7 +53,7 @@
             {updateStatus.result.latestVersion} 可更新
           </button>
         {:else}
-          <span class="text-xs text-green-600">已是最新版本</span>
+          <span class="text-xs text-green-600">{t.alreadyLatest || '已是最新版本'}</span>
         {/if}
       {:else}
         <button 

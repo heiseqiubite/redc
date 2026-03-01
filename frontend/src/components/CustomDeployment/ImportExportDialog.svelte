@@ -269,7 +269,7 @@
                 <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
               <p class="text-[12px] text-blue-700">
-                {t.importDescription || '从 JSON 文件导入配置模板。如果模板名称已存在，将会覆盖原有配置。'}
+                {t.importFromJson || '从 JSON 文件导入配置模板。如果模板名称已存在，将会覆盖原有配置。'}
               </p>
             </div>
           {/if}
