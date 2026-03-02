@@ -35,10 +35,23 @@
   
   // 控制欢迎弹框是否可见（用于避免闪烁）
   let welcomeDialogReady = $state(false);
+  let hasCheckedWelcomeDialog = $state(false);
   
   // 当 rightClickDisabled 变化时更新同步变量
   $effect(() => {
     rightClickDisabledSync = rightClickDisabled;
+  });
+
+  // 监听页面切换到仪表盘时检查欢迎弹框（只检查一次）
+  $effect(() => {
+    if (activeTab === 'dashboard' && !hasCheckedWelcomeDialog) {
+      hasCheckedWelcomeDialog = true;
+      GetShowWelcomeDialog().then(shouldShow => {
+        if (shouldShow) {
+          welcomeDialogReady = true;
+        }
+      }).catch(() => {});
+    }
   });
   
   let debugEnabled = $state(false);
@@ -195,11 +208,6 @@
         GetLanguage(),
         GetVersion()
       ]);
-      // Check if should show welcome dialog
-      const shouldShowWelcome = await GetShowWelcomeDialog();
-      if (shouldShowWelcome) {
-        welcomeDialogReady = true;
-      }
       rightClickDisabledSync = rightClickDisabled;
       debugEnabled = !!config.debugEnabled;
     } catch (e) {
