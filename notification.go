@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os/exec"
+	"red-cloud/i18n"
 	"runtime"
 	"sync"
 	"time"
@@ -39,7 +40,7 @@ func (nm *NotificationManager) Send(title, message string) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Printf("通知发送失败: %v\n", r)
+				fmt.Println(i18n.Tf("notify_send_failed", r))
 			}
 		}()
 
@@ -53,7 +54,7 @@ func (nm *NotificationManager) Send(title, message string) {
 		case "linux":
 			nm.sendLinuxNotification(title, message)
 		default:
-			fmt.Printf("不支持的平台: %s\n", runtime.GOOS)
+			fmt.Println(i18n.Tf("notify_unsupported_os", runtime.GOOS))
 		}
 	}()
 }
@@ -62,7 +63,7 @@ func (nm *NotificationManager) sendMacOSNotification(title, message string) {
 	script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`, message, title)
 	cmd := exec.Command("osascript", "-e", script)
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("macOS 通知发送失败: %v\n", err)
+		fmt.Println(i18n.Tf("notify_macos_failed", err))
 	}
 }
 
@@ -70,35 +71,35 @@ func (nm *NotificationManager) sendWindowsNotification(title, message string) {
 	powershell := fmt.Sprintf(`[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null; $template = @"<toast><visual><binding template=""ToastGeneric""><text>%s</text><text>%s</text></binding></visual></toast>"; $xml = New-Object Windows.Data.Xml.Dom.XmlDocument; $xml.LoadXml($template); $toast = New-Object Windows.UI.Notifications.ToastNotification $xml; $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("redc-gui"); $notifier.Show($toast)`, title, message)
 	cmd := exec.Command("powershell", "-NoProfile", "-Command", powershell)
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Windows 通知发送失败: %v\n", err)
+		fmt.Println(i18n.Tf("notify_windows_failed", err))
 	}
 }
 
 func (nm *NotificationManager) sendLinuxNotification(title, message string) {
 	if _, err := exec.LookPath("notify-send"); err != nil {
-		fmt.Printf("notify-send 未安装，无法发送 Linux 通知\n")
+		fmt.Println(i18n.T("notify_linux_not_installed"))
 		return
 	}
 	cmd := exec.Command("notify-send", "-a", "redc-gui", title, message)
 	if err := cmd.Run(); err != nil {
-		fmt.Printf("Linux 通知发送失败: %v\n", err)
+		fmt.Println(i18n.Tf("notify_linux_failed", err))
 	}
 }
 
 func (nm *NotificationManager) SendSceneStarted(sceneName string) {
-	title := "场景已启动"
-	message := fmt.Sprintf("场景「%s」已成功启动", sceneName)
+	title := i18n.T("notify_scene_started")
+	message := i18n.Tf("notify_scene_started_msg", sceneName)
 	nm.Send(title, message)
 }
 
 func (nm *NotificationManager) SendSceneStopped(sceneName string) {
-	title := "场景已停止"
-	message := fmt.Sprintf("场景「%s」已成功停止", sceneName)
+	title := i18n.T("notify_scene_stopped")
+	message := i18n.Tf("notify_scene_stopped_msg", sceneName)
 	nm.Send(title, message)
 }
 
 func (nm *NotificationManager) SendSceneFailed(sceneName, action string) {
-	title := "场景操作失败"
-	message := fmt.Sprintf("场景「%s」%s失败", sceneName, action)
+	title := i18n.T("notify_scene_failed")
+	message := i18n.Tf("notify_scene_failed_msg", sceneName, action)
 	nm.Send(title, message)
 }

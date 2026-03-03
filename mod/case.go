@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"os"
 	"path/filepath"
+	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"red-cloud/utils"
 	"strings"
@@ -70,7 +71,7 @@ func CaseScene(t string, m map[string]string) ([]string, error) {
 		par = RVar(fmt.Sprintf("node=%d", Node))
 	case "dnslog", "xraydnslog", "interactsh":
 		if Domain == "360.com" {
-			return par, fmt.Errorf("创建 dnslog 时,域名不可为默认值")
+			return par, fmt.Errorf("%s", i18n.T("case_create_dnslog_domain_invalid"))
 		}
 		tfDomain := Domain
 		if !strings.HasPrefix(strings.ToLower(tfDomain), "a.") {
@@ -125,7 +126,7 @@ func ensureProviderVars(templateName string, vars map[string]string) map[string]
 		// 如果模板需要 instance_password 且用户未提供，则自动生成
 		if vars["instance_password"] == "" {
 			vars["instance_password"] = generateInstancePassword()
-			gologger.Info().Msgf("已自动生成阿里云实例密码")
+			gologger.Info().Msg(i18n.T("case_auto_password_aliyun"))
 		}
 	}
 	
@@ -140,10 +141,10 @@ func ensureProviderVars(templateName string, vars map[string]string) map[string]
 		// 如果模板需要 instance_password 且用户未提供，则自动生成
 		if vars["instance_password"] == "" {
 			vars["instance_password"] = generateInstancePassword()
-			gologger.Info().Msgf("已自动生成腾讯云实例密码")
+			gologger.Info().Msg(i18n.T("case_auto_password_tencent"))
 		}
 	}
-	
+
 	// 处理华为云
 	if provider == "huawei" || provider == "huaweicloud" {
 		if (vars["huaweicloud_access_key"] == "" || isPlaceholderSecret(vars["huaweicloud_access_key"])) && conf.Providers.Huaweicloud.AccessKey != "" {
@@ -155,17 +156,17 @@ func ensureProviderVars(templateName string, vars map[string]string) map[string]
 		// 如果模板需要 instance_password 且用户未提供，则自动生成
 		if vars["instance_password"] == "" {
 			vars["instance_password"] = generateInstancePassword()
-			gologger.Info().Msgf("已自动生成华为云实例密码")
+			gologger.Info().Msg(i18n.T("case_auto_password_huawei"))
 		}
 	}
-	
+
 	// 处理火山引擎
 	// 火山引擎使用环境变量 VOLCENGINE_ACCESS_KEY 和 VOLCENGINE_SECRET_KEY，不需要通过 -var 传递
 	if provider == "volcengine" {
 		// 如果模板需要 instance_password 且用户未提供，则自动生成
 		if vars["instance_password"] == "" {
 			vars["instance_password"] = generateInstancePassword()
-			gologger.Info().Msgf("已自动生成火山引擎实例密码")
+			gologger.Info().Msg(i18n.T("case_auto_password_volc"))
 		}
 	}
 
@@ -175,7 +176,7 @@ func ensureProviderVars(templateName string, vars map[string]string) map[string]
 		// 如果模板需要 instance_password 且用户未提供，则自动生成
 		if vars["instance_password"] == "" {
 			vars["instance_password"] = generateInstancePassword()
-			gologger.Info().Msgf("已自动生成 UCloud 实例密码")
+			gologger.Info().Msg(i18n.T("case_auto_password_ucloud"))
 		}
 	}
 
@@ -191,7 +192,7 @@ func ensureProviderVars(templateName string, vars map[string]string) map[string]
 		// 如果模板需要 instance_password 且用户未提供，则自动生成
 		if vars["instance_password"] == "" {
 			vars["instance_password"] = generateInstancePassword()
-			gologger.Info().Msgf("已自动生成天翼云实例密码")
+			gologger.Info().Msg(i18n.T("case_auto_password_ctyun"))
 		}
 	}
 
@@ -264,32 +265,32 @@ func ensureProviderParams(templateName string, params []string) []string {
 
 func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars map[string]string) (*Case, error) {
 	// 创建新的 case 目录,这里不需要检测是否存在,因为名称是采用nanoID
-	gologger.Info().Msgf("正在创建场景 「%s」", CaseName)
+	gologger.Info().Msgf("%s", i18n.Tf("case_creating", CaseName))
 	uid := GenerateCaseID()
 	vars = ensureProviderVars(CaseName, vars)
 
 	// 从模版文件夹复制模版
 	tpPath, err := GetTemplatePath(CaseName)
 	if err != nil {
-		return nil, fmt.Errorf("获取模版错误！%s", err.Error())
+		return nil, fmt.Errorf("%s", i18n.Tf("case_get_template_error", err.Error()))
 	}
 	casePath := filepath.Join(p.ProjectPath, uid)
 
 	// 复制 tf文件
-	gologger.Debug().Msgf("复制模版中 %s", uid)
+	gologger.Debug().Msgf("%s", i18n.Tf("case_copying_template", uid))
 	if err := utils.Dir(tpPath, casePath); err != nil {
-		return nil, fmt.Errorf("复制模版出错！\n%v", err)
+		return nil, fmt.Errorf("%s", i18n.Tf("case_copy_template_error", err))
 	}
 
 	// 在次 init,防止万一
 	if err := TfInit2(casePath); err != nil {
-		gologger.Error().Msgf("二次初始化失败！%s", err.Error())
+		gologger.Error().Msgf("%s", i18n.Tf("case_second_init_failed", err.Error()))
 		return nil, err
 	}
 	// 初始化结构参数
 	par, err := CaseScene(CaseName, vars)
 	if err != nil {
-		gologger.Error().Msgf("场景参数校验失败！%s", err.Error())
+		gologger.Error().Msgf("%s", i18n.Tf("case_validate_params_failed", err.Error()))
 		return nil, err
 	}
 
@@ -329,15 +330,15 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 
 	// 构建场景
 	if err := c.TfPlan(); err != nil {
-		gologger.Error().Msgf("场景创建校验失败！%s", err.Error())
+		gologger.Error().Msgf("%s", i18n.Tf("case_validate_create_failed", err.Error()))
 		c.Remove()
 		return nil, err
 	}
-	gologger.Info().Msgf("场景创建成功！%s", uid)
+	gologger.Info().Msgf("%s", i18n.Tf("case_create_success", uid))
 	// 确认场景创建无误后,才会写入到配置文件中
 	err = p.AddCase(c)
 	if err != nil {
-		gologger.Error().Msgf("项目配置保存失败！")
+		gologger.Error().Msg(i18n.T("case_save_config_failed"))
 		return nil, err
 	}
 	RedcLog("创建成功 " + p.ProjectPath + "/" + uid + " " + CaseName)
@@ -346,19 +347,19 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 
 func (c *Case) TfApply() error {
 	var err error
-	gologger.Info().Msgf("正在启动场景：%s(%s)", c.Name, c.GetId())
+	gologger.Info().Msgf("%s", i18n.Tf("case_starting", c.Name, c.GetId()))
 	if c.State == StateRunning {
-		return fmt.Errorf("场景正在运行中！")
+		return fmt.Errorf("%s", i18n.T("case_scene_running"))
 	}
 	
 	// 设置为正在启动状态
 	c.StatusChange(StateStarting)
 	
 	// 重新生成 plan 以确保与当前 state 一致
-	gologger.Info().Msgf("正在刷新场景计划...")
+	gologger.Info().Msg(i18n.T("case_plan_refreshing"))
 	if err = TfPlan(c.Path, c.Parameter...); err != nil {
 		c.StatusChange(StateError)
-		return fmt.Errorf("场景计划刷新失败: %w", err)
+		return fmt.Errorf("%s", i18n.Tf("case_plan_refresh_failed", err))
 	}
 	
 	if err = TfApply(c.Path, c.Parameter...); err != nil {
@@ -387,7 +388,7 @@ func (c *Case) GetInstanceInfo(id string) (string, error) {
 	if c.output == nil {
 		_, err := c.TfOutput()
 		if err != nil {
-			return "", fmt.Errorf("output 数据未初始化")
+			return "", fmt.Errorf("%s", i18n.T("case_output_not_initialized"))
 		}
 
 	}
@@ -395,7 +396,7 @@ func (c *Case) GetInstanceInfo(id string) (string, error) {
 	// 2. 检查 key 是否存在
 	val, ok := c.output[id]
 	if !ok {
-		return "", fmt.Errorf("未找到 ID 为 %s 的信息", id)
+		return "", fmt.Errorf("%s", i18n.Tf("case_output_not_found", id))
 	}
 	var str string
 	// 反序列化会将 JSON 字符串解析为 Go 的 string，自动去除引号和处理转义
@@ -431,13 +432,13 @@ func (c *Case) runModuleHook() error {
 		}
 		handler, ok := moduleRegistry[name]
 		if !ok {
-			gologger.Warning().Msgf("未找到模块处理函数: %s", name)
+			gologger.Warning().Msgf("%s", i18n.Tf("case_module_not_found", name))
 			continue
 		}
 
-		gologger.Info().Msgf("执行模块: %s", name)
+		gologger.Info().Msgf("%s", i18n.Tf("case_module_executing", name))
 		if err := handler(c); err != nil {
-			gologger.Error().Msgf("模块执行失败(%s): %v", name, err)
+			gologger.Error().Msgf("%s", i18n.Tf("case_module_failed", name, err))
 			return err
 		}
 	}
@@ -448,7 +449,7 @@ func (c *Case) TfOutput() (map[string]tfexec.OutputMeta, error) {
 	// 输出 output 信息
 	o, err := TfOutput(c.Path)
 	if err != nil {
-		gologger.Error().Msgf("获取 Output 信息失败: %v", err)
+		gologger.Error().Msgf("%s", i18n.Tf("case_get_output_failed", err))
 		return nil, err
 	}
 	c.output = o
@@ -467,7 +468,7 @@ func (c *Case) bindHandlers() {
 }
 
 func (c *Case) TfPlan() error {
-	gologger.Info().Msgf("正在构建场景「%s(%s)」...", c.Name, c.GetId())
+	gologger.Info().Msgf("%s", i18n.Tf("case_building", c.Name, c.GetId()))
 	c.Parameter = ensureProviderParams(c.Type, c.Parameter)
 	if err := TfPlan(c.Path, c.Parameter...); err != nil {
 		return err
@@ -482,20 +483,20 @@ func (c *Case) StatusChange(s string) {
 	c.StateTime = time.Now().Format(time.RFC3339)
 	if c.saveHandler != nil {
 		if err := c.saveHandler(); err != nil {
-			gologger.Error().Msgf("状态保存到配置文件失败: %s \n", err)
+			gologger.Error().Msgf("%s", i18n.Tf("case_save_state_failed", err))
 		}
 	}
 }
 
 func (c *Case) TfDestroy() error {
-	gologger.Info().Msgf("正在销毁场景「%s(%s)」...", c.Name, c.GetId())
+	gologger.Info().Msgf("%s", i18n.Tf("case_destroying", c.Name, c.GetId()))
 	
 	// 设置为正在停止状态
 	c.StatusChange(StateStopping)
 	
 	err := TfDestroy(c.Path, c.Parameter)
 	if err != nil {
-		gologger.Error().Msgf("场景销毁失败！%s", err.Error())
+		gologger.Error().Msgf("%s", i18n.Tf("case_destroy_failed", err.Error()))
 		c.StatusChange(StateError)
 		return err
 	}
@@ -504,7 +505,7 @@ func (c *Case) TfDestroy() error {
 }
 func (c *Case) Remove() error {
 	if c.State == StateRunning {
-		return fmt.Errorf("场景正在运行中，请先停止场景后删除！")
+		return fmt.Errorf("%s", i18n.T("case_delete_running"))
 	}
 	
 	// 设置为正在删除状态
@@ -513,20 +514,20 @@ func (c *Case) Remove() error {
 	err := os.RemoveAll(c.Path)
 	if err != nil {
 		c.StatusChange(StateError)
-		return fmt.Errorf("删除场景文件失败！%s", err.Error())
+		return fmt.Errorf("%s", i18n.Tf("case_delete_file_failed", err.Error()))
 	}
 	if err = c.removeHandle(); err != nil {
 		c.StatusChange(StateError)
-		return fmt.Errorf("删除数据库记录失败: %v", err)
+		return fmt.Errorf("%s", i18n.Tf("case_delete_db_failed", err))
 	}
-	gologger.Info().Msgf("场景删除成功")
+	gologger.Info().Msg(i18n.T("case_delete_success"))
 	return nil
 }
 
 // Stop 停止场景
 func (c *Case) Stop() error {
 	if c.State != StateRunning {
-		gologger.Warning().Msgf("该场景提示未运行中,不过还是为您销毁")
+		gologger.Warning().Msg(i18n.T("case_destroy_warning"))
 	}
 	err := c.TfDestroy()
 	if err != nil {
@@ -547,7 +548,7 @@ func (c *Case) Kill() error {
 	}
 	// 销毁场景
 	if err := c.Stop(); err != nil {
-		gologger.Error().Msgf("场景销毁失败！%s", err.Error())
+		gologger.Error().Msgf("%s", i18n.Tf("case_destroy_failed", err.Error()))
 		return err
 	}
 	return nil
@@ -557,7 +558,7 @@ func (c *Case) Kill() error {
 func (c *Case) Change(cc ChangeCommand) error {
 	if cc.IsRemove {
 		// 销毁场景，不删除项目
-		gologger.Info().Msgf("正在销毁场景 「%s」 %s\n", c.Name, c.Id)
+		gologger.Info().Msgf("%s", i18n.Tf("case_change_destroying", c.Name, c.Id))
 		if err := c.TfDestroy(); err != nil {
 			return err
 		}
@@ -579,7 +580,7 @@ func (c *Case) Change(cc ChangeCommand) error {
 }
 
 func (c *Case) Status() error {
-	gologger.Info().Msgf("Case「%s」当前 %s 状态", c.Name, c.State)
+	gologger.Info().Msgf("%s", i18n.Tf("case_status_format", c.Name, c.State))
 	state, err := TfStatus(c.Path)
 	if err != nil {
 		return err

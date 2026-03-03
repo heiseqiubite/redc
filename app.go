@@ -17,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/ai"
 	"red-cloud/mod/compose"
@@ -98,20 +99,19 @@ func (a *App) startup(ctx context.Context) {
 
 	// Initialize config using same path detection as CLI
 	if err := redc.LoadConfig(""); err != nil {
-		a.initError = fmt.Sprintf("配置加载失败: %v", err)
+		a.initError = i18n.Tf("app_config_load_failed2", err)
 		runtime.LogErrorf(ctx, a.initError)
 		return
 	}
 	if profile, err := redc.GetActiveProfile(); err == nil {
 		if _, err := redc.SetActiveProfile(profile.ID); err != nil {
-			runtime.LogInfof(ctx, "Profile 初始化失败: %v", err)
+			runtime.LogInfof(ctx, i18n.Tf("app_profile_init_failed", err))
 		}
 	} else {
-		runtime.LogInfof(ctx, "Profile 初始化失败: %v", err)
+		runtime.LogInfof(ctx, i18n.Tf("app_profile_init_failed", err))
 	}
 
-	runtime.LogInfof(ctx, "配置加载成功 - RedcPath: %s, ProjectPath: %s, TemplateDir: %s",
-		redc.RedcPath, redc.ProjectPath, redc.TemplateDir)
+	runtime.LogInfof(ctx, i18n.Tf("app_config_load_success", redc.RedcPath, redc.ProjectPath, redc.TemplateDir))
 
 	// Load default project
 	if p, err := redc.ProjectParse(redc.Project, redc.U); err == nil {
@@ -123,9 +123,9 @@ func (a *App) startup(ctx context.Context) {
 		} else {
 			gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
 		}
-		runtime.LogInfof(ctx, "项目加载成功: %s", a.project.ProjectName)
+		runtime.LogInfof(ctx, i18n.Tf("app_project_load_success", a.project.ProjectName))
 	} else {
-		a.initError = fmt.Sprintf("项目加载失败: %v", err)
+		a.initError = i18n.Tf("app_project_load_failed2", err)
 		runtime.LogErrorf(ctx, a.initError)
 	}
 
@@ -164,7 +164,7 @@ func (a *App) startup(ctx context.Context) {
 	// Start background cache cleanup (runs every hour)
 	a.pricingService.StartCacheCleanup(1 * time.Hour)
 
-	runtime.LogInfof(ctx, "成本估算服务初始化成功 - 缓存路径: %s", pricingCacheDBPath)
+	runtime.LogInfof(ctx, i18n.Tf("app_cost_init_success", pricingCacheDBPath))
 
 	// Initialize task scheduler
 	schedulerDBPath := filepath.Join(redc.RedcPath, "scheduler.db")
@@ -172,9 +172,9 @@ func (a *App) startup(ctx context.Context) {
 
 	// 初始化数据库
 	if err := a.taskScheduler.InitDB(); err != nil {
-		runtime.LogErrorf(ctx, "任务调度器数据库初始化失败: %v", err)
+		runtime.LogErrorf(ctx, i18n.Tf("app_scheduler_db_init_failed", err))
 	} else {
-		runtime.LogInfof(ctx, "任务调度器数据库初始化成功: %s", schedulerDBPath)
+		runtime.LogInfof(ctx, i18n.Tf("app_scheduler_db_init_success", schedulerDBPath))
 	}
 
 	a.taskScheduler.SetExecuteCallback(func(caseID string, action string) error {
@@ -191,18 +191,18 @@ func (a *App) startup(ctx context.Context) {
 			}
 			return err
 		}
-		return fmt.Errorf("未知操作: %s", action)
+		return fmt.Errorf(i18n.Tf("app_unknown_action", action))
 	})
 	a.taskScheduler.Start()
 
-	runtime.LogInfof(ctx, "任务调度器启动成功")
+	runtime.LogInfof(ctx, i18n.T("app_scheduler_start_success"))
 
 	// Initialize custom deployment service
 	a.customDeploymentService = redc.NewCustomDeploymentService()
 	a.templateManager = redc.NewTemplateManager()
 	a.configStore = redc.NewConfigStore()
 
-	runtime.LogInfof(ctx, "自定义部署服务初始化成功")
+	runtime.LogInfof(ctx, i18n.T("app_deploy_service_init_success"))
 }
 
 // emitLog sends a log message to the frontend and writes to file
@@ -365,25 +365,25 @@ func (a *App) CheckForUpdates() (VersionCheckResult, error) {
 
 	resp, err := redc.NewProxyHTTPClient(30 * time.Second).Get("https://api.github.com/repos/wgpsec/redc/releases/latest")
 	if err != nil {
-		result.Error = "无法连接 GitHub"
+		result.Error = i18n.T("github_connect_failed")
 		return result, nil
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		result.Error = "无法获取版本信息"
+		result.Error = i18n.T("github_version_failed")
 		return result, nil
 	}
 
 	var data map[string]interface{}
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		result.Error = "解析版本信息失败"
+		result.Error = i18n.T("github_parse_failed")
 		return result, nil
 	}
 
 	tagName, ok := data["tag_name"].(string)
 	if !ok {
-		result.Error = "无法获取最新版本号"
+		result.Error = i18n.T("github_latest_failed")
 		return result, nil
 	}
 
@@ -457,7 +457,7 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, socks5Proxy, noProxy string
 	// Persist to GUI settings
 	settings, err := redc.LoadGUISettings()
 	if err != nil {
-		return fmt.Errorf("加载GUI设置失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_gui_load_failed", err))
 	}
 
 	settings.HttpProxy = httpProxy
@@ -466,10 +466,10 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, socks5Proxy, noProxy string
 	settings.NoProxy = noProxy
 
 	if err := redc.SaveGUISettings(settings); err != nil {
-		return fmt.Errorf("保存GUI设置失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_gui_save_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("代理配置已更新 - HTTP: %s, HTTPS: %s, SOCKS5: %s, NO_PROXY: %s", httpProxy, httpsProxy, socks5Proxy, noProxy))
+	a.emitLog(i18n.Tf("app_proxy_updated", httpProxy, httpsProxy, socks5Proxy, noProxy))
 	return nil
 }
 
@@ -619,9 +619,9 @@ func (a *App) SaveTerraformMirrorConfig(enabled bool, providers []string, config
 		return err
 	}
 	if enabled {
-		a.emitLog(fmt.Sprintf("Terraform 镜像配置已写入: %s", path))
+		a.emitLog(i18n.Tf("app_tf_mirror_written", path))
 	} else {
-		a.emitLog(fmt.Sprintf("Terraform 镜像配置已关闭: %s", path))
+		a.emitLog(i18n.Tf("app_tf_mirror_closed", path))
 	}
 	return nil
 }
@@ -692,10 +692,10 @@ func (a *App) SetDebugLogging(enabled bool) error {
 	redc.Debug = enabled
 	if enabled {
 		gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
-		a.emitLog("调试日志已开启")
+		a.emitLog(i18n.T("app_debug_on"))
 	} else {
 		gologger.DefaultLogger.SetMaxLevel(levels.LevelInfo)
-		a.emitLog("调试日志已关闭")
+		a.emitLog(i18n.T("app_debug_off"))
 	}
 
 	// Save to GUI settings
@@ -715,9 +715,9 @@ func (a *App) SetNotificationEnabled(enabled bool) error {
 	if a.notificationMgr != nil {
 		a.notificationMgr.SetEnabled(enabled)
 		if enabled {
-			a.emitLog("系统通知已开启")
+			a.emitLog(i18n.T("app_notify_on"))
 		} else {
-			a.emitLog("系统通知已关闭")
+			a.emitLog(i18n.T("app_notify_off"))
 		}
 	}
 
@@ -789,6 +789,9 @@ func (a *App) SetLanguage(lang string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
+	// Sync with backend i18n module
+	i18n.SetLang(lang)
+
 	// Save to GUI settings
 	settings, err := redc.LoadGUISettings()
 	if err != nil {
@@ -806,13 +809,16 @@ func (a *App) GetLanguage() string {
 	// Load from GUI settings
 	settings, err := redc.LoadGUISettings()
 	if err != nil {
-		// No saved settings, detect system language
-		return detectSystemLanguage()
+		lang := detectSystemLanguage()
+		i18n.SetLang(lang)
+		return lang
 	}
 	if settings.Language == "" {
-		// No language saved, detect system language
-		return detectSystemLanguage()
+		lang := detectSystemLanguage()
+		i18n.SetLang(lang)
+		return lang
 	}
+	i18n.SetLang(settings.Language)
 	return settings.Language
 }
 
@@ -1222,14 +1228,14 @@ func (a *App) SaveProvidersConfig(providerName string, fields map[string]string,
 			conf.Cloudflare.APIKey = v
 		}
 	default:
-		return fmt.Errorf("未知的云厂商: %s", providerName)
+		return fmt.Errorf(i18n.Tf("app_unknown_provider", providerName))
 	}
 
 	if err := redc.SaveConfig(conf, customPath); err != nil {
 		return err
 	}
 
-	a.emitLog(fmt.Sprintf("凭据配置已更新: %s", providerName))
+	a.emitLog(i18n.Tf("app_cred_updated", providerName))
 	return nil
 }
 
@@ -1319,7 +1325,7 @@ func (a *App) SwitchProject(projectName string) error {
 	// Parse and load the new project
 	p, err := redc.ProjectParse(projectName, redc.U)
 	if err != nil {
-		return fmt.Errorf("切换项目失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_switch_project_failed", err))
 	}
 
 	// Update project reference
@@ -1332,7 +1338,7 @@ func (a *App) SwitchProject(projectName string) error {
 	redc.Project = projectName
 
 	// Emit log and refresh
-	a.emitLog(fmt.Sprintf("已切换到项目: %s", projectName))
+	a.emitLog(i18n.Tf("app_project_switched", projectName))
 	a.emitRefresh()
 
 	return nil
@@ -1342,9 +1348,9 @@ func (a *App) SwitchProject(projectName string) error {
 func (a *App) CreateProject(name string) error {
 	_, err := redc.NewProjectConfig(name, redc.U)
 	if err != nil {
-		return fmt.Errorf("创建项目失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_create_project_failed", err))
 	}
-	a.emitLog(fmt.Sprintf("已创建新项目: %s", name))
+	a.emitLog(i18n.Tf("app_project_created", name))
 	return nil
 }
 
@@ -1357,7 +1363,7 @@ func (a *App) ListCases() ([]CaseInfo, error) {
 		if a.initError != "" {
 			return nil, fmt.Errorf(a.initError)
 		}
-		return nil, fmt.Errorf("项目未加载")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	cases, err := redc.LoadProjectCases(a.project.ProjectName)
@@ -1390,7 +1396,7 @@ func (a *App) GetResourceSummary() ([]ResourceSummary, error) {
 		if a.initError != "" {
 			return nil, fmt.Errorf(a.initError)
 		}
-		return nil, fmt.Errorf("项目未加载")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	cases, err := redc.LoadProjectCases(project.ProjectName)
@@ -1492,7 +1498,7 @@ func (a *App) ComposeUp(filePath string, profiles []string) error {
 		if a.initError != "" {
 			return fmt.Errorf(a.initError)
 		}
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	if strings.TrimSpace(filePath) == "" {
@@ -1505,14 +1511,14 @@ func (a *App) ComposeUp(filePath string, profiles []string) error {
 		Project:  project,
 	}
 
-	a.emitLog(fmt.Sprintf("开始执行 compose up: %s", filePath))
+	a.emitLog(i18n.Tf("app_compose_up_start", filePath))
 	go func() {
 		defer a.emitRefresh()
 		if err := compose.RunComposeUp(opts); err != nil {
-			a.emitLog(fmt.Sprintf("compose up 失败: %v", err))
+			a.emitLog(i18n.Tf("app_compose_up_failed", err))
 			return
 		}
-		a.emitLog("compose up 完成")
+		a.emitLog(i18n.T("app_compose_up_done"))
 	}()
 	return nil
 }
@@ -1527,7 +1533,7 @@ func (a *App) ComposeDown(filePath string, profiles []string) error {
 		if a.initError != "" {
 			return fmt.Errorf(a.initError)
 		}
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	if strings.TrimSpace(filePath) == "" {
@@ -1540,14 +1546,14 @@ func (a *App) ComposeDown(filePath string, profiles []string) error {
 		Project:  project,
 	}
 
-	a.emitLog(fmt.Sprintf("开始执行 compose down: %s", filePath))
+	a.emitLog(i18n.Tf("app_compose_down_start", filePath))
 	go func() {
 		defer a.emitRefresh()
 		if err := compose.RunComposeDown(opts); err != nil {
-			a.emitLog(fmt.Sprintf("compose down 失败: %v", err))
+			a.emitLog(i18n.Tf("app_compose_down_failed", err))
 			return
 		}
-		a.emitLog("compose down 完成")
+		a.emitLog(i18n.T("app_compose_down_done"))
 	}()
 	return nil
 }
@@ -1636,7 +1642,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 		switch p {
 		case "aliyun":
 			if conf.Providers.Alicloud.AccessKey == "" || conf.Providers.Alicloud.SecretKey == "" {
-				result.Error = "未配置阿里云凭据"
+				result.Error = i18n.T("app_cred_aliyun_missing")
 			} else {
 				amount, currency, err := redc.QueryAliyunBalance(conf.Providers.Alicloud.AccessKey, conf.Providers.Alicloud.SecretKey, conf.Providers.Alicloud.Region)
 				if err != nil {
@@ -1648,7 +1654,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "tencentcloud":
 			if conf.Providers.Tencentcloud.SecretId == "" || conf.Providers.Tencentcloud.SecretKey == "" {
-				result.Error = "未配置腾讯云凭据"
+				result.Error = i18n.T("app_cred_tencent_missing")
 			} else {
 				amount, currency, err := redc.QueryTencentBalance(conf.Providers.Tencentcloud.SecretId, conf.Providers.Tencentcloud.SecretKey, conf.Providers.Tencentcloud.Region)
 				if err != nil {
@@ -1660,7 +1666,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "volcengine":
 			if conf.Providers.Volcengine.AccessKey == "" || conf.Providers.Volcengine.SecretKey == "" {
-				result.Error = "未配置火山引擎凭据"
+				result.Error = i18n.T("app_cred_volcengine_missing")
 			} else {
 				amount, currency, err := redc.QueryVolcengineBalance(conf.Providers.Volcengine.AccessKey, conf.Providers.Volcengine.SecretKey, conf.Providers.Volcengine.Region)
 				if err != nil {
@@ -1672,7 +1678,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "huaweicloud":
 			if conf.Providers.Huaweicloud.AccessKey == "" || conf.Providers.Huaweicloud.SecretKey == "" {
-				result.Error = "未配置华为云凭据"
+				result.Error = i18n.T("app_cred_huawei_missing")
 			} else {
 				amount, currency, err := redc.QueryHuaweiBalance(conf.Providers.Huaweicloud.AccessKey, conf.Providers.Huaweicloud.SecretKey, conf.Providers.Huaweicloud.Region)
 				if err != nil {
@@ -1684,7 +1690,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "ucloud":
 			if conf.Providers.UCloud.PublicKey == "" || conf.Providers.UCloud.PrivateKey == "" {
-				result.Error = "未配置 UCloud 凭据"
+				result.Error = i18n.T("app_cred_ucloud_missing")
 			} else {
 				amount, currency, err := redc.QueryUCloudBalance(conf.Providers.UCloud.PublicKey, conf.Providers.UCloud.PrivateKey, conf.Providers.UCloud.Region)
 				if err != nil {
@@ -1696,7 +1702,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "vultr":
 			if conf.Providers.Vultr.ApiKey == "" {
-				result.Error = "未配置 Vultr 凭据"
+				result.Error = i18n.T("app_cred_vultr_missing")
 			} else {
 				amount, currency, err := redc.QueryVultrBalance(conf.Providers.Vultr.ApiKey)
 				if err != nil {
@@ -1708,7 +1714,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			}
 		case "aws":
 			if conf.Providers.Aws.AccessKey == "" || conf.Providers.Aws.SecretKey == "" {
-				result.Error = "未配置 AWS 凭据"
+				result.Error = i18n.T("app_cred_aws_missing")
 			} else {
 				amount, currency, err := redc.QueryAWSBill(conf.Providers.Aws.AccessKey, conf.Providers.Aws.SecretKey, conf.Providers.Aws.Region)
 				if err != nil {
@@ -1719,7 +1725,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				}
 			}
 		default:
-			result.Error = "不支持的云厂商"
+			result.Error = i18n.T("app_provider_unsupported")
 		}
 		results = append(results, result)
 	}
@@ -1765,7 +1771,7 @@ func (a *App) GetBills(providers []string) ([]BillInfo, error) {
 		switch p {
 		case "aws":
 			if conf.Providers.Aws.AccessKey == "" || conf.Providers.Aws.SecretKey == "" {
-				result.Error = "未配置 AWS 凭据"
+				result.Error = i18n.T("app_cred_aws_missing")
 			} else {
 				amount, currency, err := redc.QueryAWSBill(conf.Providers.Aws.AccessKey, conf.Providers.Aws.SecretKey, conf.Providers.Aws.Region)
 				if err != nil {
@@ -1777,7 +1783,7 @@ func (a *App) GetBills(providers []string) ([]BillInfo, error) {
 			}
 		case "gcp":
 			if conf.Providers.Google.Credentials == "" {
-				result.Error = "未配置 GCP 凭据"
+				result.Error = i18n.T("app_cred_gcp_missing")
 			} else {
 				amount, currency, err := redc.QueryGCPBillFromConfig(conf.Providers.Google.Credentials, conf.Providers.Google.Project, conf.Providers.Google.Region)
 				if err != nil {
@@ -1789,7 +1795,7 @@ func (a *App) GetBills(providers []string) ([]BillInfo, error) {
 			}
 		case "vultr":
 			if conf.Providers.Vultr.ApiKey == "" {
-				result.Error = "未配置 Vultr 凭据"
+				result.Error = i18n.T("app_cred_vultr_missing")
 			} else {
 				amount, currency, err := redc.QueryVultrBill(conf.Providers.Vultr.ApiKey)
 				if err != nil {
@@ -1800,7 +1806,7 @@ func (a *App) GetBills(providers []string) ([]BillInfo, error) {
 				}
 			}
 		default:
-			result.Error = "不支持的云厂商"
+			result.Error = i18n.T("app_provider_unsupported")
 		}
 		results = append(results, result)
 	}
@@ -1867,7 +1873,7 @@ func (a *App) GetTemplateVariables(templateName string) ([]TemplateVariable, err
 	if _, err := os.Stat(variablesFile); err == nil {
 		vars, err := parseVariablesTf(variablesFile)
 		if err != nil {
-			return nil, fmt.Errorf("解析 variables.tf 失败: %v", err)
+			return nil, fmt.Errorf(i18n.Tf("app_parse_variables_failed", err))
 		}
 		for _, v := range vars {
 			variables[v.Name] = v
@@ -1878,7 +1884,7 @@ func (a *App) GetTemplateVariables(templateName string) ([]TemplateVariable, err
 	if _, err := os.Stat(tfvarsFile); err == nil {
 		defaults, err := parseTfvars(tfvarsFile)
 		if err != nil {
-			return nil, fmt.Errorf("解析 terraform.tfvars 失败: %v", err)
+			return nil, fmt.Errorf(i18n.Tf("app_parse_tfvars_failed", err))
 		}
 		for name, value := range defaults {
 			if v, ok := variables[name]; ok {
@@ -2004,47 +2010,47 @@ func (a *App) StartCase(caseID string) error {
 	defer a.mu.Unlock()
 
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	c, err := a.project.GetCase(caseID)
 	if err != nil {
-		return fmt.Errorf("获取场景失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_get_case_failed", err))
 	}
 
 	if c == nil {
-		return fmt.Errorf("场景对象为 nil")
+		return fmt.Errorf("%s", i18n.T("app_case_nil"))
 	}
 
 	// Validate case before starting
 	if c.Path == "" {
-		return fmt.Errorf("场景路径为空")
+		return fmt.Errorf("%s", i18n.T("app_case_path_empty"))
 	}
 
 	caseName := c.Name
 	casePath := c.Path
 	caseState := c.State
 
-	a.emitLog(fmt.Sprintf("准备启动场景: %s, 路径: %s, 当前状态: %s", caseName, casePath, caseState))
+	a.emitLog(i18n.Tf("app_scene_prepare_start", caseName, casePath, caseState))
 
 	// Run in goroutine to avoid blocking GUI
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				a.emitLog(fmt.Sprintf("启动场景时发生错误: %v", r))
+				a.emitLog(i18n.Tf("app_scene_start_error", r))
 			}
 			a.emitRefresh()
 		}()
 
-		a.emitLog(fmt.Sprintf("正在启动场景: %s", caseName))
+		a.emitLog(i18n.Tf("app_scene_starting", caseName))
 		if err := c.TfApply(); err != nil {
-			a.emitLog(fmt.Sprintf("启动失败: %v", err))
+			a.emitLog(i18n.Tf("app_scene_start_failed", err))
 			if a.notificationMgr != nil {
 				a.notificationMgr.SendSceneFailed(caseName, "启动")
 			}
 			return
 		}
-		a.emitLog(fmt.Sprintf("场景启动成功: %s", caseName))
+		a.emitLog(i18n.Tf("app_scene_start_success", caseName))
 
 		if a.notificationMgr != nil {
 			a.notificationMgr.SendSceneStarted(caseName)
@@ -2066,7 +2072,7 @@ func (a *App) StopCase(caseID string) error {
 	defer a.mu.Unlock()
 
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	c, err := a.project.GetCase(caseID)
@@ -2077,20 +2083,20 @@ func (a *App) StopCase(caseID string) error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				a.emitLog(fmt.Sprintf("停止场景时发生错误: %v", r))
+				a.emitLog(i18n.Tf("app_scene_stop_error", r))
 			}
 			a.emitRefresh()
 		}()
 
-		a.emitLog(fmt.Sprintf("正在停止场景: %s", c.Name))
+		a.emitLog(i18n.Tf("app_stopping_scene", c.Name))
 		if err := c.Stop(); err != nil {
-			a.emitLog(fmt.Sprintf("停止失败: %v", err))
+			a.emitLog(i18n.Tf("app_scene_stop_failed", err))
 			if a.notificationMgr != nil {
 				a.notificationMgr.SendSceneFailed(c.Name, "停止")
 			}
 			return
 		}
-		a.emitLog(fmt.Sprintf("场景停止成功: %s", c.Name))
+		a.emitLog(i18n.Tf("app_scene_stop_success", c.Name))
 
 		if a.notificationMgr != nil {
 			a.notificationMgr.SendSceneStopped(c.Name)
@@ -2106,7 +2112,7 @@ func (a *App) RemoveCase(caseID string) error {
 	defer a.mu.Unlock()
 
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	c, err := a.project.GetCase(caseID)
@@ -2117,17 +2123,17 @@ func (a *App) RemoveCase(caseID string) error {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				a.emitLog(fmt.Sprintf("删除场景时发生错误: %v", r))
+				a.emitLog(i18n.Tf("app_scene_delete_error", r))
 			}
 			a.emitRefresh() // 操作完成后刷新仪表盘
 		}()
 
-		a.emitLog(fmt.Sprintf("正在删除场景: %s", c.Name))
+		a.emitLog(i18n.Tf("app_deleting_scene", c.Name))
 		if err := c.Remove(); err != nil {
-			a.emitLog(fmt.Sprintf("删除失败: %v", err))
+			a.emitLog(i18n.Tf("app_scene_delete_failed", err))
 			return
 		}
-		a.emitLog(fmt.Sprintf("场景删除成功: %s", c.Name))
+		a.emitLog(i18n.Tf("app_scene_delete_success", c.Name))
 	}()
 
 	return nil
@@ -2138,28 +2144,28 @@ func (a *App) CreateCase(templateName string, name string, vars map[string]strin
 	a.mu.Lock()
 	if a.project == nil {
 		a.mu.Unlock()
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 	project := a.project
 	a.mu.Unlock()
 
-	a.emitLog(fmt.Sprintf("正在创建场景: %s (模板: %s)", name, templateName))
+	a.emitLog(i18n.Tf("app_creating_scene", name, templateName))
 
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				a.emitLog(fmt.Sprintf("创建场景时发生错误: %v", r))
+				a.emitLog(i18n.Tf("app_scene_init_error", r))
 			}
 			a.emitRefresh()
 		}()
 
-		a.emitLog(fmt.Sprintf("场景初始化中: %s (模板: %s)", name, templateName))
+		a.emitLog(i18n.Tf("app_scene_initing", name, templateName))
 		c, err := project.CaseCreate(templateName, redc.U, name, vars)
 		if err != nil {
-			a.emitLog(fmt.Sprintf("场景创建失败: %v", err))
+			a.emitLog(i18n.Tf("app_scene_create_failed", err))
 			return
 		}
-		a.emitLog(fmt.Sprintf("场景创建成功: %s (%s)", c.Name, c.GetId()))
+		a.emitLog(i18n.Tf("app_scene_create_success", c.Name, c.GetId()))
 	}()
 
 	return nil
@@ -2170,40 +2176,40 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 	a.mu.Lock()
 	if a.project == nil {
 		a.mu.Unlock()
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 	project := a.project
 	a.mu.Unlock()
 
-	a.emitLog(fmt.Sprintf("正在创建并运行场景: %s (模板: %s)", name, templateName))
+	a.emitLog(i18n.Tf("app_creating_running_scene", name, templateName))
 
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				a.emitLog(fmt.Sprintf("创建场景时发生错误: %v", r))
+				a.emitLog(i18n.Tf("app_scene_init_error", r))
 			}
 			a.emitRefresh()
 		}()
 
-		a.emitLog(fmt.Sprintf("场景初始化中: %s (模板: %s)", name, templateName))
+		a.emitLog(i18n.Tf("app_scene_initing", name, templateName))
 		// Step 1: Create the case (same as planLogic in CLI)
 		c, err := project.CaseCreate(templateName, redc.U, name, vars)
 		if err != nil {
-			a.emitLog(fmt.Sprintf("场景创建失败: %v", err))
+			a.emitLog(i18n.Tf("app_scene_create_failed", err))
 			return
 		}
-		a.emitLog(fmt.Sprintf("场景创建成功: %s (%s)", c.Name, c.GetId()))
+		a.emitLog(i18n.Tf("app_scene_create_success", c.Name, c.GetId()))
 
 		// Step 2: Start the case immediately (same as runCmd in CLI)
-		a.emitLog(fmt.Sprintf("正在启动场景: %s", c.Name))
+		a.emitLog(i18n.Tf("app_scene_starting", c.Name))
 
 		// Run terraform apply
 		if err := c.TfApply(); err != nil {
-			a.emitLog(fmt.Sprintf("启动失败: %v", err))
+			a.emitLog(i18n.Tf("app_scene_start_failed", err))
 			return
 		}
 
-		a.emitLog(fmt.Sprintf("场景启动成功: %s", c.Name))
+		a.emitLog(i18n.Tf("app_scene_start_success", c.Name))
 
 		// Get and display outputs
 		if outputs, err := c.TfOutput(); err == nil {
@@ -2231,7 +2237,7 @@ func (a *App) GetCaseOutputs(caseID string) (map[string]string, error) {
 	defer a.mu.Unlock()
 
 	if a.project == nil {
-		return nil, fmt.Errorf("项目未加载")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	c, err := a.project.GetCase(caseID)
@@ -2353,7 +2359,7 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 		registryURL = "https://redc.wgpsec.org"
 	}
 
-	a.emitLog(fmt.Sprintf("正在连接仓库: %s", registryURL))
+	a.emitLog(i18n.Tf("app_connecting_registry", registryURL))
 
 	// Fetch index.json
 	indexURL := fmt.Sprintf("%s/index.json?t=%d", registryURL, time.Now().Unix())
@@ -2361,17 +2367,17 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 	client := redc.NewProxyHTTPClient(30 * time.Second)
 	resp, err := client.Get(indexURL)
 	if err != nil {
-		return nil, fmt.Errorf("连接仓库失败: %v", err)
+		return nil, fmt.Errorf(i18n.Tf("app_registry_connect_failed", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("仓库返回错误: %s", resp.Status)
+		return nil, fmt.Errorf(i18n.Tf("app_registry_status_error", resp.Status))
 	}
 
 	var idx remoteIndexResponse
 	if err := json.NewDecoder(resp.Body).Decode(&idx); err != nil {
-		return nil, fmt.Errorf("解析仓库索引失败: %v", err)
+		return nil, fmt.Errorf(i18n.Tf("app_registry_parse_failed", err))
 	}
 
 	// Build result list
@@ -2415,32 +2421,32 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 		})
 	}
 
-	a.emitLog(fmt.Sprintf("已获取 %d 个模板", len(result)))
+	a.emitLog(i18n.Tf("app_fetched_templates", len(result)))
 	return result, nil
 }
 
 // RemoveTemplate removes a local template (aligns with CLI `image rm`)
 func (a *App) RemoveTemplate(templateName string) error {
-	a.emitLog(fmt.Sprintf("正在删除模板: %s", templateName))
+	a.emitLog(i18n.Tf("app_deleting_template", templateName))
 
 	if err := redc.RemoveTemplate(templateName); err != nil {
-		a.emitLog(fmt.Sprintf("删除失败: %v", err))
+		a.emitLog(i18n.Tf("app_delete_failed", err))
 		return err
 	}
 
-	a.emitLog(fmt.Sprintf("模板删除成功: %s", templateName))
+	a.emitLog(i18n.Tf("app_template_deleted", templateName))
 	a.emitRefresh()
 	return nil
 }
 
 // PullTemplate pulls a template from the registry
 func (a *App) PullTemplate(templateName string, force bool) error {
-	a.emitLog(fmt.Sprintf("正在拉取模板: %s", templateName))
+	a.emitLog(i18n.Tf("app_pulling_template", templateName))
 
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				a.emitLog(fmt.Sprintf("拉取模板时发生错误: %v", r))
+				a.emitLog(i18n.Tf("app_pull_error", r))
 			}
 			a.emitRefresh()
 		}()
@@ -2452,11 +2458,11 @@ func (a *App) PullTemplate(templateName string, force bool) error {
 		}
 
 		if err := redc.Pull(context.Background(), templateName, opts); err != nil {
-			a.emitLog(fmt.Sprintf("拉取失败: %v", err))
+			a.emitLog(i18n.Tf("app_pull_failed", err))
 			return
 		}
 
-		a.emitLog(fmt.Sprintf("模板拉取成功: %s", templateName))
+		a.emitLog(i18n.Tf("app_template_pulled", templateName))
 	}()
 
 	return nil
@@ -2477,7 +2483,7 @@ type TemplateRecommendation struct {
 // RecommendTemplates searches and recommends templates based on user query
 func (a *App) RecommendTemplates(query string) ([]TemplateRecommendation, error) {
 	if strings.TrimSpace(query) == "" {
-		return nil, fmt.Errorf("搜索关键词不能为空")
+		return nil, fmt.Errorf("%s", i18n.T("app_search_keyword_empty"))
 	}
 
 	opts := redc.PullOptions{
@@ -2487,7 +2493,7 @@ func (a *App) RecommendTemplates(query string) ([]TemplateRecommendation, error)
 
 	results, err := redc.Search(context.Background(), query, opts)
 	if err != nil {
-		return nil, fmt.Errorf("搜索失败: %v", err)
+		return nil, fmt.Errorf(i18n.Tf("app_search_failed", err))
 	}
 
 	localTemplates, _ := redc.ListLocalTemplates()
@@ -2544,13 +2550,13 @@ func (a *App) RecommendTemplates(query string) ([]TemplateRecommendation, error)
 // AIRecommendTemplates uses AI to recommend templates based on user query with streaming
 func (a *App) AIRecommendTemplates(query string) error {
 	if strings.TrimSpace(query) == "" {
-		return fmt.Errorf("搜索关键词不能为空")
+		return fmt.Errorf("%s", i18n.T("app_search_keyword_empty"))
 	}
 
 	// Get active profile and AI config
 	profile, err := redc.GetActiveProfile()
 	if err != nil || profile.AIConfig == nil {
-		return fmt.Errorf("请先配置 AI 服务")
+		return fmt.Errorf("%s", i18n.T("app_ai_not_configured"))
 	}
 
 	// Get UI language
@@ -2562,7 +2568,7 @@ func (a *App) AIRecommendTemplates(query string) error {
 
 	aiConfig := profile.AIConfig
 	if aiConfig.APIKey == "" || aiConfig.BaseURL == "" || aiConfig.Model == "" {
-		return fmt.Errorf("AI 配置不完整，请检查 API Key、Base URL 和 Model")
+		return fmt.Errorf("%s", i18n.T("app_ai_config_incomplete"))
 	}
 
 	// Get available templates
@@ -2601,7 +2607,7 @@ func (a *App) AIRecommendTemplates(query string) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("AI 推荐失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ai_recommend_failed", err))
 	}
 
 	// Emit completion event
@@ -2614,12 +2620,12 @@ func (a *App) AICostOptimization() error {
 	// Get active profile and AI config
 	profile, err := redc.GetActiveProfile()
 	if err != nil || profile.AIConfig == nil {
-		return fmt.Errorf("请先配置 AI 服务")
+		return fmt.Errorf("%s", i18n.T("app_ai_not_configured"))
 	}
 
 	aiConfig := profile.AIConfig
 	if aiConfig.APIKey == "" || aiConfig.BaseURL == "" || aiConfig.Model == "" {
-		return fmt.Errorf("AI 配置不完整，请检查 API Key、Base URL 和 Model")
+		return fmt.Errorf("%s", i18n.T("app_ai_config_incomplete"))
 	}
 
 	// Get running cases and their cost information
@@ -2631,16 +2637,16 @@ func (a *App) AICostOptimization() error {
 	a.mu.Unlock()
 
 	if project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	if pricingService == nil || costCalculator == nil {
-		return fmt.Errorf("成本估算服务未初始化")
+		return fmt.Errorf("%s", i18n.T("app_cost_estimate_not_init"))
 	}
 
 	cases, err := redc.LoadProjectCases(project.ProjectName)
 	if err != nil {
-		return fmt.Errorf("加载 case 列表失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_case_load_failed", err))
 	}
 
 	// Log analysis start
@@ -2812,7 +2818,7 @@ func (a *App) AICostOptimization() error {
 	}
 
 	if runningCount == 0 {
-		return fmt.Errorf("当前没有运行中的场景")
+		return fmt.Errorf("%s", i18n.T("app_no_running_case"))
 	}
 
 	// Get UI language
@@ -2878,7 +2884,7 @@ func (a *App) AICostOptimization() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf("AI 成本分析失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ai_cost_analysis_failed", err))
 	}
 
 	// Emit completion event
@@ -2894,12 +2900,12 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 	profile, err := redc.GetActiveProfile()
 	if err != nil || profile.AIConfig == nil {
 		gologger.Error().Msgf("AI 配置获取失败: %v", err)
-		return fmt.Errorf("请先配置 AI 服务")
+		return fmt.Errorf("%s", i18n.T("app_ai_not_configured"))
 	}
 
 	aiConfig := profile.AIConfig
 	if aiConfig.APIKey == "" || aiConfig.BaseURL == "" || aiConfig.Model == "" {
-		return fmt.Errorf("AI 配置不完整，请检查 API Key、Base URL 和 Model")
+		return fmt.Errorf("%s", i18n.T("app_ai_config_incomplete"))
 	}
 
 	// Get UI language
@@ -2951,7 +2957,7 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 
 	if err != nil {
 		gologger.Error().Msgf("AI 分析失败: %v", err)
-		return fmt.Errorf("AI 分析失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
 	}
 
 	gologger.Info().Msgf("AI 分析完成")
@@ -2971,12 +2977,12 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 	profile, err := redc.GetActiveProfile()
 	if err != nil || profile.AIConfig == nil {
 		gologger.Error().Msgf("AI 配置获取失败: %v", err)
-		return fmt.Errorf("请先配置 AI 服务")
+		return fmt.Errorf("%s", i18n.T("app_ai_not_configured"))
 	}
 
 	aiConfig := profile.AIConfig
 	if aiConfig.APIKey == "" || aiConfig.BaseURL == "" || aiConfig.Model == "" {
-		return fmt.Errorf("AI 配置不完整，请检查 API Key、Base URL 和 Model")
+		return fmt.Errorf("%s", i18n.T("app_ai_config_incomplete"))
 	}
 
 	// Get UI language
@@ -3029,7 +3035,7 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 			"caseId":  caseName,
 			"success": false,
 		})
-		return fmt.Errorf("AI 分析失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
 	}
 
 	// Emit completion event
@@ -3043,10 +3049,10 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 // CopyTemplate creates an editable local copy of a template
 func (a *App) CopyTemplate(sourceName string, targetName string) error {
 	if err := redc.CopyTemplate(sourceName, targetName); err != nil {
-		a.emitLog(fmt.Sprintf("模板复制失败: %v", err))
+		a.emitLog(i18n.Tf("app_template_copy_failed", err))
 		return err
 	}
-	a.emitLog(fmt.Sprintf("模板复制成功: %s -> %s", sourceName, targetName))
+	a.emitLog(i18n.Tf("app_template_copy_success", sourceName, targetName))
 	a.emitRefresh()
 	return nil
 }
@@ -3129,7 +3135,7 @@ func (a *App) SaveTemplateFiles(templateName string, files map[string]string) er
 			}
 		}
 	}
-	a.emitLog(fmt.Sprintf("模板保存成功: %s", templateName))
+	a.emitLog(i18n.Tf("app_template_save_success", templateName))
 	return nil
 }
 
@@ -3318,7 +3324,7 @@ func (a *App) StartMCPServer(mode string, address string) error {
 	defer a.mu.Unlock()
 
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	// Create manager if not exists
@@ -3335,14 +3341,14 @@ func (a *App) StartMCPServer(mode string, address string) error {
 	case "stdio":
 		transportMode = mcp.TransportSTDIO
 	default:
-		return fmt.Errorf("未知的传输模式: %s", mode)
+		return fmt.Errorf(i18n.Tf("app_mcp_unknown_mode", mode))
 	}
 
 	if err := a.mcpManager.Start(transportMode, address); err != nil {
-		return fmt.Errorf("启动 MCP 服务器失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_mcp_start_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("MCP 服务器已启动 - 模式: %s, 地址: %s", mode, address))
+	a.emitLog(i18n.Tf("app_mcp_started", mode, address))
 	return nil
 }
 
@@ -3352,14 +3358,14 @@ func (a *App) StopMCPServer() error {
 	defer a.mu.Unlock()
 
 	if a.mcpManager == nil {
-		return fmt.Errorf("MCP 服务器未初始化")
+		return fmt.Errorf("%s", i18n.T("app_mcp_not_init"))
 	}
 
 	if err := a.mcpManager.Stop(); err != nil {
-		return fmt.Errorf("停止 MCP 服务器失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_mcp_stop_failed", err))
 	}
 
-	a.emitLog("MCP 服务器已停止")
+	a.emitLog(i18n.T("app_mcp_stopped"))
 	return nil
 }
 
@@ -3373,7 +3379,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 
 	// Validate that cost estimation components are initialized
 	if pricingService == nil || costCalculator == nil {
-		err := fmt.Errorf("成本估算服务未初始化")
+		err := fmt.Errorf("%s", i18n.T("app_cost_estimate_not_init"))
 		if logMgr != nil {
 			if logger, logErr := logMgr.NewServiceLogger("cost-estimation"); logErr == nil {
 				logger.Write([]byte(fmt.Sprintf("[ERROR] Cost estimation service not initialized for template: %s\n", templateName)))
@@ -3404,7 +3410,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 				logger.Close()
 			}
 		}
-		return nil, fmt.Errorf("模板未找到: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_template_not_found", err))
 	}
 
 	// Log successful template path resolution
@@ -3427,7 +3433,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 				logger.Close()
 			}
 		}
-		return nil, fmt.Errorf("模板解析失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_template_parse_failed", err))
 	}
 
 	// Log successful parsing with resource count
@@ -3456,7 +3462,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 				logger.Close()
 			}
 		}
-		return nil, fmt.Errorf("成本计算失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_cost_calculate_failed", err))
 	}
 
 	// Log successful cost estimation with summary
@@ -3511,7 +3517,7 @@ func (a *App) GetTotalRuntime() (string, error) {
 	a.mu.Unlock()
 
 	if project == nil {
-		return "0h", fmt.Errorf("项目未加载")
+		return "0h", fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	cases, err := redc.LoadProjectCases(project.ProjectName)
@@ -3597,11 +3603,11 @@ func (a *App) GetPredictedMonthlyCost() (string, error) {
 	a.mu.Unlock()
 
 	if project == nil {
-		return "¥0.00", fmt.Errorf("项目未加载")
+		return "¥0.00", fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	if pricingService == nil || costCalculator == nil {
-		return "¥0.00", fmt.Errorf("成本估算服务未初始化")
+		return "¥0.00", fmt.Errorf("%s", i18n.T("app_cost_estimate_not_init"))
 	}
 
 	cases, err := redc.LoadProjectCases(project.ProjectName)
@@ -3940,7 +3946,7 @@ func (a *App) ExecCommand(caseID string, command string) ExecCommandResult {
 	result := ExecCommandResult{}
 
 	if project == nil {
-		result.Error = "项目未加载"
+		result.Error = i18n.T("app_project_not_loaded")
 		result.Success = false
 		return result
 	}
@@ -3951,7 +3957,7 @@ func (a *App) ExecCommand(caseID string, command string) ExecCommandResult {
 		// 是 Case，使用原有逻辑
 		sshConfig, err := c.GetSSHConfig()
 		if err != nil {
-			result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+			result.Error = i18n.Tf("app_ssh_config_failed", err)
 			result.Success = false
 			return result
 		}
@@ -3967,13 +3973,13 @@ func (a *App) ExecCommand(caseID string, command string) ExecCommandResult {
 			return a.execSSHCommand(sshConfig, command)
 		}
 		// 既不是 Case 也不是部署
-		result.Error = fmt.Sprintf("找不到场景或部署: %s", caseID)
+		result.Error = i18n.Tf("app_case_or_deploy_not_found", caseID)
 		result.Success = false
 		return result
 	}
 
 	// 自定义部署服务未初始化，只能是 Case
-	result.Error = fmt.Sprintf("找不到场景: %v", caseErr)
+	result.Error = i18n.Tf("app_case_not_found", caseErr)
 	result.Success = false
 	return result
 }
@@ -3984,7 +3990,7 @@ func (a *App) execSSHCommand(sshConfig *sshutil.SSHConfig, command string) ExecC
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_connect_failed", err)
 		result.Success = false
 		return result
 	}
@@ -3993,7 +3999,7 @@ func (a *App) execSSHCommand(sshConfig *sshutil.SSHConfig, command string) ExecC
 	var stdoutBuf, stderrBuf strings.Builder
 	session, err := client.NewSession()
 	if err != nil {
-		result.Error = fmt.Sprintf("创建 SSH 会话失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_session_failed", err)
 		result.Success = false
 		return result
 	}
@@ -4032,7 +4038,7 @@ func (a *App) ExecUserdata(caseID string, script string) ExecCommandResult {
 	result := ExecCommandResult{}
 
 	if project == nil {
-		result.Error = "项目未加载"
+		result.Error = i18n.T("app_project_not_loaded")
 		result.Success = false
 		return result
 	}
@@ -4046,7 +4052,7 @@ func (a *App) ExecUserdata(caseID string, script string) ExecCommandResult {
 		var err error
 		sshConfig, err = c.GetSSHConfig()
 		if err != nil {
-			result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+			result.Error = i18n.Tf("app_ssh_config_failed", err)
 			result.Success = false
 			return result
 		}
@@ -4056,12 +4062,12 @@ func (a *App) ExecUserdata(caseID string, script string) ExecCommandResult {
 			var err error
 			sshConfig, err = a.getDeploymentSSHConfig(caseID)
 			if err != nil {
-				result.Error = fmt.Sprintf("找不到场景或部署: %s", caseID)
+				result.Error = i18n.Tf("app_case_or_deploy_not_found", caseID)
 				result.Success = false
 				return result
 			}
 		} else {
-			result.Error = fmt.Sprintf("找不到场景: %v", caseErr)
+			result.Error = i18n.Tf("app_case_not_found", caseErr)
 			result.Success = false
 			return result
 		}
@@ -4069,7 +4075,7 @@ func (a *App) ExecUserdata(caseID string, script string) ExecCommandResult {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_connect_failed", err)
 		result.Success = false
 		return result
 	}
@@ -4078,7 +4084,7 @@ func (a *App) ExecUserdata(caseID string, script string) ExecCommandResult {
 	// 创建临时脚本文件
 	session, err := client.NewSession()
 	if err != nil {
-		result.Error = fmt.Sprintf("创建 SSH 会话失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_session_failed", err)
 		result.Success = false
 		return result
 	}
@@ -4133,7 +4139,7 @@ func (a *App) UploadUserdataScript(caseID string, scriptContent string, fileName
 	result := FileTransferResult{}
 
 	if project == nil {
-		result.Error = "项目未加载"
+		result.Error = i18n.T("app_project_not_loaded")
 		return result
 	}
 
@@ -4145,7 +4151,7 @@ func (a *App) UploadUserdataScript(caseID string, scriptContent string, fileName
 		var err error
 		sshConfig, err = c.GetSSHConfig()
 		if err != nil {
-			result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+			result.Error = i18n.Tf("app_ssh_config_failed", err)
 			return result
 		}
 	} else {
@@ -4154,25 +4160,25 @@ func (a *App) UploadUserdataScript(caseID string, scriptContent string, fileName
 			var err error
 			sshConfig, err = a.getDeploymentSSHConfig(caseID)
 			if err != nil {
-				result.Error = fmt.Sprintf("找不到场景或部署: %s", caseID)
+				result.Error = i18n.Tf("app_case_or_deploy_not_found", caseID)
 				return result
 			}
 		} else {
-			result.Error = fmt.Sprintf("找不到场景: %v", caseErr)
+			result.Error = i18n.Tf("app_case_not_found", caseErr)
 			return result
 		}
 	}
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_connect_failed", err)
 		return result
 	}
 	defer client.Close()
 
 	session, err := client.NewSession()
 	if err != nil {
-		result.Error = fmt.Sprintf("创建 SSH 会话失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_session_failed", err)
 		return result
 	}
 	defer session.Close()
@@ -4190,7 +4196,7 @@ func (a *App) UploadUserdataScript(caseID string, scriptContent string, fileName
 	err = session.Run(command)
 
 	if err != nil {
-		result.Error = fmt.Sprintf("上传失败: %v - %s", err, stderrBuf.String())
+		result.Error = i18n.Tf("app_ssh_upload_failed", err, stderrBuf.String())
 		return result
 	}
 
@@ -4208,7 +4214,7 @@ func (a *App) UploadFile(caseID string, localPath string, remotePath string) Fil
 	result := FileTransferResult{}
 
 	if project == nil {
-		result.Error = "项目未加载"
+		result.Error = i18n.T("app_project_not_loaded")
 		return result
 	}
 
@@ -4218,7 +4224,7 @@ func (a *App) UploadFile(caseID string, localPath string, remotePath string) Fil
 		// 是 Case，使用原有逻辑
 		sshConfig, err := c.GetSSHConfig()
 		if err != nil {
-			result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+			result.Error = i18n.Tf("app_ssh_config_failed", err)
 			return result
 		}
 
@@ -4233,12 +4239,12 @@ func (a *App) UploadFile(caseID string, localPath string, remotePath string) Fil
 			return a.uploadFileSSH(sshConfig, localPath, remotePath)
 		}
 		// 既不是 Case 也不是部署
-		result.Error = fmt.Sprintf("找不到场景或部署: %s", caseID)
+		result.Error = i18n.Tf("app_case_or_deploy_not_found", caseID)
 		return result
 	}
 
 	// 自定义部署服务未初始化，只能是 Case
-	result.Error = fmt.Sprintf("找不到场景: %v", caseErr)
+	result.Error = i18n.Tf("app_case_not_found", caseErr)
 	return result
 }
 
@@ -4248,13 +4254,13 @@ func (a *App) uploadFileSSH(sshConfig *sshutil.SSHConfig, localPath string, remo
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_connect_failed", err)
 		return result
 	}
 	defer client.Close()
 
 	if err := client.Upload(localPath, remotePath); err != nil {
-		result.Error = fmt.Sprintf("上传失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_upload_failed", err)
 		return result
 	}
 
@@ -4272,7 +4278,7 @@ func (a *App) DownloadFile(caseID string, remotePath string, localPath string) F
 	result := FileTransferResult{}
 
 	if project == nil {
-		result.Error = "项目未加载"
+		result.Error = i18n.T("app_project_not_loaded")
 		return result
 	}
 
@@ -4282,7 +4288,7 @@ func (a *App) DownloadFile(caseID string, remotePath string, localPath string) F
 		// 是 Case，使用原有逻辑
 		sshConfig, err := c.GetSSHConfig()
 		if err != nil {
-			result.Error = fmt.Sprintf("获取 SSH 配置失败: %v", err)
+			result.Error = i18n.Tf("app_ssh_config_failed", err)
 			return result
 		}
 
@@ -4297,12 +4303,12 @@ func (a *App) DownloadFile(caseID string, remotePath string, localPath string) F
 			return a.downloadFileSSH(sshConfig, remotePath, localPath)
 		}
 		// 既不是 Case 也不是部署
-		result.Error = fmt.Sprintf("找不到场景或部署: %s", caseID)
+		result.Error = i18n.Tf("app_case_or_deploy_not_found", caseID)
 		return result
 	}
 
 	// 自定义部署服务未初始化，只能是 Case
-	result.Error = fmt.Sprintf("找不到场景: %v", caseErr)
+	result.Error = i18n.Tf("app_case_not_found", caseErr)
 	return result
 }
 
@@ -4312,13 +4318,13 @@ func (a *App) downloadFileSSH(sshConfig *sshutil.SSHConfig, remotePath string, l
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		result.Error = fmt.Sprintf("SSH 连接失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_connect_failed", err)
 		return result
 	}
 	defer client.Close()
 
 	if err := client.Download(remotePath, localPath); err != nil {
-		result.Error = fmt.Sprintf("下载失败: %v", err)
+		result.Error = i18n.Tf("app_ssh_download_failed", err)
 		return result
 	}
 
@@ -4365,7 +4371,7 @@ var (
 // StartSSHTerminal 启动 SSH 终端会话
 func (a *App) StartSSHTerminal(caseID string, rows, cols int) (string, error) {
 	if a.project == nil {
-		return "", fmt.Errorf("项目未加载")
+		return "", fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	sshConfig, err := a.getSSHConfig(caseID)
@@ -4375,14 +4381,14 @@ func (a *App) StartSSHTerminal(caseID string, rows, cols int) (string, error) {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return "", fmt.Errorf("SSH 连接失败: %v", err)
+		return "", fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 
 	// 创建终端会话
 	session, err := client.NewTerminalSession(rows, cols)
 	if err != nil {
 		client.Close()
-		return "", fmt.Errorf("创建终端会话失败: %v", err)
+		return "", fmt.Errorf(i18n.Tf("app_terminal_session_failed", err))
 	}
 
 	// 生成会话 ID
@@ -4430,7 +4436,7 @@ func (a *App) WriteToTerminal(sessionID string, data string) error {
 	terminalSessionsMu.Unlock()
 
 	if !exists {
-		return fmt.Errorf("终端会话不存在")
+		return fmt.Errorf("%s", i18n.T("app_terminal_not_found"))
 	}
 
 	return session.Write([]byte(data))
@@ -4443,7 +4449,7 @@ func (a *App) ResizeTerminal(sessionID string, rows, cols int) error {
 	terminalSessionsMu.Unlock()
 
 	if !exists {
-		return fmt.Errorf("终端会话不存在")
+		return fmt.Errorf("%s", i18n.T("app_terminal_not_found"))
 	}
 
 	return session.Resize(rows, cols)
@@ -4474,7 +4480,7 @@ func (a *App) ListRemoteFiles(caseID string, remotePath string) ([]sshutil.FileI
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return nil, fmt.Errorf("SSH 连接失败: %v", err)
+		return nil, fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -4490,7 +4496,7 @@ func (a *App) CreateRemoteDirectory(caseID string, remotePath string) error {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf("SSH 连接失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -4500,7 +4506,7 @@ func (a *App) CreateRemoteDirectory(caseID string, remotePath string) error {
 // DeleteRemoteFile 删除远程文件或目录
 func (a *App) DeleteRemoteFile(caseID string, remotePath string) error {
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	sshConfig, err := a.getSSHConfig(caseID)
@@ -4510,7 +4516,7 @@ func (a *App) DeleteRemoteFile(caseID string, remotePath string) error {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf("SSH 连接失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -4520,7 +4526,7 @@ func (a *App) DeleteRemoteFile(caseID string, remotePath string) error {
 // RenameRemoteFile 重命名远程文件或目录
 func (a *App) RenameRemoteFile(caseID string, oldPath, newPath string) error {
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	sshConfig, err := a.getSSHConfig(caseID)
@@ -4530,7 +4536,7 @@ func (a *App) RenameRemoteFile(caseID string, oldPath, newPath string) error {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf("SSH 连接失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -4540,7 +4546,7 @@ func (a *App) RenameRemoteFile(caseID string, oldPath, newPath string) error {
 // GetRemoteFileContent 获取远程文件内容（用于预览）
 func (a *App) GetRemoteFileContent(caseID string, remotePath string) (string, error) {
 	if a.project == nil {
-		return "", fmt.Errorf("项目未加载")
+		return "", fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	sshConfig, err := a.getSSHConfig(caseID)
@@ -4550,7 +4556,7 @@ func (a *App) GetRemoteFileContent(caseID string, remotePath string) (string, er
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return "", fmt.Errorf("SSH 连接失败: %v", err)
+		return "", fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -4566,7 +4572,7 @@ func (a *App) GetRemoteFileContent(caseID string, remotePath string) (string, er
 // WriteRemoteFileContent 写入远程文件内容
 func (a *App) WriteRemoteFileContent(caseID string, remotePath string, content string) error {
 	if a.project == nil {
-		return fmt.Errorf("项目未加载")
+		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	sshConfig, err := a.getSSHConfig(caseID)
@@ -4576,7 +4582,7 @@ func (a *App) WriteRemoteFileContent(caseID string, remotePath string, content s
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf("SSH 连接失败: %v", err)
+		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -4594,7 +4600,7 @@ func (a *App) ScheduleTask(caseID string, caseName string, action string, schedu
 	a.mu.Unlock()
 
 	if scheduler == nil {
-		return nil, fmt.Errorf("任务调度器未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_scheduler_not_init"))
 	}
 
 	task, err := scheduler.AddTask(caseID, caseName, action, scheduledAt)
@@ -4603,7 +4609,7 @@ func (a *App) ScheduleTask(caseID string, caseName string, action string, schedu
 	}
 
 	// 发送通知
-	a.emitLog(fmt.Sprintf("已创建定时任务: %s 将在 %s %s", caseName, scheduledAt.Format("2006-01-02 15:04:05"), action))
+	a.emitLog(i18n.Tf("app_cron_created", caseName, scheduledAt.Format("2006-01-02 15:04:05"), action))
 
 	return task, nil
 }
@@ -4615,7 +4621,7 @@ func (a *App) CancelScheduledTask(taskID string) error {
 	a.mu.Unlock()
 
 	if scheduler == nil {
-		return fmt.Errorf("任务调度器未初始化")
+		return fmt.Errorf("%s", i18n.T("app_scheduler_not_init"))
 	}
 
 	err := scheduler.CancelTask(taskID)
@@ -4623,7 +4629,7 @@ func (a *App) CancelScheduledTask(taskID string) error {
 		return err
 	}
 
-	a.emitLog(fmt.Sprintf("已取消定时任务: %s", taskID))
+	a.emitLog(i18n.Tf("app_cron_cancelled", taskID))
 	return nil
 }
 
@@ -4634,7 +4640,7 @@ func (a *App) GetScheduledTask(taskID string) (*redc.ScheduledTask, error) {
 	a.mu.Unlock()
 
 	if scheduler == nil {
-		return nil, fmt.Errorf("任务调度器未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_scheduler_not_init"))
 	}
 
 	return scheduler.GetTask(taskID)
@@ -4672,20 +4678,20 @@ func (a *App) ListCaseScheduledTasks(caseID string) []*redc.ScheduledTask {
 
 // GetBaseTemplates 获取基础模板列表
 func (a *App) GetBaseTemplates() ([]*redc.BaseTemplate, error) {
-	runtime.LogInfof(a.ctx, "开始扫描基础模板...")
+	runtime.LogInfof(a.ctx, i18n.T("app_template_scan_start"))
 
 	a.mu.Lock()
 	templateMgr := a.templateManager
 	a.mu.Unlock()
 
 	if templateMgr == nil {
-		runtime.LogErrorf(a.ctx, "模板管理器未初始化")
+		runtime.LogErrorf(a.ctx, i18n.T("app_template_mgr_not_init"))
 		return []*redc.BaseTemplate{}, nil // 返回空列表而不是错误
 	}
 
 	templates, err := templateMgr.ScanBaseTemplates()
 	if err != nil {
-		runtime.LogErrorf(a.ctx, "扫描基础模板失败: %v", err)
+		runtime.LogErrorf(a.ctx, i18n.Tf("app_template_scan_failed", err))
 		return []*redc.BaseTemplate{}, nil // 返回空列表而不是错误
 	}
 
@@ -4693,7 +4699,7 @@ func (a *App) GetBaseTemplates() ([]*redc.BaseTemplate, error) {
 		templates = []*redc.BaseTemplate{}
 	}
 
-	runtime.LogInfof(a.ctx, "扫描完成，找到 %d 个基础模板", len(templates))
+	runtime.LogInfof(a.ctx, i18n.Tf("app_template_scan_done", len(templates)))
 	return templates, nil
 }
 
@@ -4704,13 +4710,13 @@ func (a *App) GetTemplateMetadata(name string) (*redc.BaseTemplate, error) {
 	a.mu.Unlock()
 
 	if templateMgr == nil {
-		return nil, fmt.Errorf("模板管理器未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_template_mgr_not_init"))
 	}
 
 	// 获取所有基础模板
 	templates, err := templateMgr.ScanBaseTemplates()
 	if err != nil {
-		return nil, fmt.Errorf("扫描基础模板失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_template_scan_failed", err))
 	}
 
 	// 查找指定名称的模板
@@ -4720,7 +4726,7 @@ func (a *App) GetTemplateMetadata(name string) (*redc.BaseTemplate, error) {
 		}
 	}
 
-	return nil, fmt.Errorf("模板不存在: %s", name)
+	return nil, fmt.Errorf(i18n.Tf("app_template_not_exist", name))
 }
 
 // GetProviderRegions 获取云厂商地域
@@ -4730,12 +4736,12 @@ func (a *App) GetProviderRegions(provider string) ([]redc.Region, error) {
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	regions, err := service.GetProviderRegions(provider)
 	if err != nil {
-		return nil, fmt.Errorf("获取云厂商地域失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_region_load_failed", err))
 	}
 
 	return regions, nil
@@ -4748,12 +4754,12 @@ func (a *App) GetInstanceTypes(provider, region string) ([]redc.InstanceType, er
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	types, err := service.GetInstanceTypes(provider, region)
 	if err != nil {
-		return nil, fmt.Errorf("获取实例规格失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_instance_type_failed", err))
 	}
 
 	return types, nil
@@ -4766,17 +4772,17 @@ func (a *App) ValidateDeploymentConfig(config *redc.DeploymentConfig) (*redc.Val
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if config == nil {
-		return nil, fmt.Errorf("配置不能为空")
+		return nil, fmt.Errorf("%s", i18n.T("app_config_empty"))
 	}
 
 	validator := redc.NewConfigValidator()
 	result, err := validator.ValidateDeploymentConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("验证配置失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_validate_failed", err))
 	}
 
 	return result, nil
@@ -4791,16 +4797,16 @@ func (a *App) EstimateDeploymentCost(config *redc.DeploymentConfig) (*redc.CostE
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if config == nil {
-		return nil, fmt.Errorf("配置不能为空")
+		return nil, fmt.Errorf("%s", i18n.T("app_config_empty"))
 	}
 
 	estimate, err := service.EstimateCost(config, pricingService, costCalculator)
 	if err != nil {
-		return nil, fmt.Errorf("估算成本失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_estimate_failed", err))
 	}
 
 	return estimate, nil
@@ -4814,23 +4820,23 @@ func (a *App) CreateCustomDeployment(config *redc.DeploymentConfig) (*redc.Custo
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
-		return nil, fmt.Errorf("项目未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	if config == nil {
-		return nil, fmt.Errorf("配置不能为空")
+		return nil, fmt.Errorf("%s", i18n.T("app_config_empty"))
 	}
 
 	deployment, err := service.CreateCustomDeployment(config, project.ProjectPath, project.ProjectName)
 	if err != nil {
-		return nil, fmt.Errorf("创建自定义部署失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_deploy_create_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("创建自定义部署成功: %s", deployment.Name))
+	a.emitLog(i18n.Tf("app_deploy_custom_success", deployment.Name))
 	a.emitRefresh()
 
 	return deployment, nil
@@ -4844,16 +4850,16 @@ func (a *App) ListCustomDeployments() ([]*redc.CustomDeployment, error) {
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
-		return nil, fmt.Errorf("项目未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	deployments, err := service.ListCustomDeployments(project.ProjectName)
 	if err != nil {
-		return nil, fmt.Errorf("列出自定义部署失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_deploy_list_failed", err))
 	}
 
 	return deployments, nil
@@ -4867,19 +4873,19 @@ func (a *App) StartCustomDeployment(id string) error {
 	a.mu.Unlock()
 
 	if service == nil {
-		return fmt.Errorf("自定义部署服务未初始化")
+		return fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
-		return fmt.Errorf("项目未初始化")
+		return fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	err := service.StartCustomDeployment(project.ProjectName, id, project.ProjectPath)
 	if err != nil {
-		return fmt.Errorf("启动自定义部署失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_deploy_start_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("启动自定义部署成功: %s", id))
+	a.emitLog(i18n.Tf("app_deploy_start_success", id))
 	a.emitRefresh()
 
 	return nil
@@ -4893,19 +4899,19 @@ func (a *App) StopCustomDeployment(id string) error {
 	a.mu.Unlock()
 
 	if service == nil {
-		return fmt.Errorf("自定义部署服务未初始化")
+		return fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
-		return fmt.Errorf("项目未初始化")
+		return fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	err := service.StopCustomDeployment(project.ProjectName, id, project.ProjectPath)
 	if err != nil {
-		return fmt.Errorf("停止自定义部署失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_deploy_stop_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("停止自定义部署成功: %s", id))
+	a.emitLog(i18n.Tf("app_deploy_stop_success", id))
 	a.emitRefresh()
 
 	return nil
@@ -4919,19 +4925,19 @@ func (a *App) DeleteCustomDeployment(id string) error {
 	a.mu.Unlock()
 
 	if service == nil {
-		return fmt.Errorf("自定义部署服务未初始化")
+		return fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
-		return fmt.Errorf("项目未初始化")
+		return fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	err := service.DeleteCustomDeployment(project.ProjectName, id, project.ProjectPath)
 	if err != nil {
-		return fmt.Errorf("删除自定义部署失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_deploy_delete_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("删除自定义部署成功: %s", id))
+	a.emitLog(i18n.Tf("app_deploy_delete_success", id))
 	a.emitRefresh()
 
 	return nil
@@ -4945,7 +4951,7 @@ func (a *App) getSSHConfig(caseID string) (*sshutil.SSHConfig, error) {
 	a.mu.Unlock()
 
 	if project == nil {
-		return nil, fmt.Errorf("项目未加载")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	fmt.Printf("[DEBUG getSSHConfig] 尝试获取 SSH 配置，ID: %s\n", caseID)
@@ -4974,7 +4980,7 @@ func (a *App) getSSHConfig(caseID string) (*sshutil.SSHConfig, error) {
 
 	// 自定义部署服务未初始化
 	fmt.Printf("[DEBUG getSSHConfig] 自定义部署服务未初始化\n")
-	return nil, fmt.Errorf("找不到场景: %v", caseErr)
+	return nil, fmt.Errorf(i18n.Tf("app_case_not_found", caseErr))
 }
 
 // getDeploymentSSHConfig 从自定义部署的 outputs 获取 SSH 配置
@@ -4988,12 +4994,12 @@ func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, e
 
 	if service == nil {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] 自定义部署服务未初始化\n")
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] 项目未初始化\n")
-		return nil, fmt.Errorf("项目未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	fmt.Printf("[DEBUG getDeploymentSSHConfig] 项目名称: %s\n", project.ProjectName)
@@ -5002,7 +5008,7 @@ func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, e
 	deployments, err := service.ListCustomDeployments(project.ProjectName)
 	if err != nil {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] 加载部署列表失败: %v\n", err)
-		return nil, fmt.Errorf("加载部署列表失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_deploy_load_failed", err))
 	}
 
 	fmt.Printf("[DEBUG getDeploymentSSHConfig] 查找部署 ID: %s, 总共有 %d 个部署\n", deploymentID, len(deployments))
@@ -5021,7 +5027,7 @@ func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, e
 
 	if deployment == nil {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] ✗ 未找到部署: %s\n", deploymentID)
-		return nil, fmt.Errorf("未找到部署: %s", deploymentID)
+		return nil, fmt.Errorf(i18n.Tf("app_deploy_not_found", deploymentID))
 	}
 
 	fmt.Printf("[DEBUG getDeploymentSSHConfig] 找到部署: %s\n", deployment.Name)
@@ -5039,7 +5045,7 @@ func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, e
 		fmt.Printf("\n")
 	} else {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] 部署没有 outputs 信息\n")
-		return nil, fmt.Errorf("部署没有 outputs 信息")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_no_outputs"))
 	}
 
 	// 从 outputs 获取 SSH 信息
@@ -5087,16 +5093,16 @@ func (a *App) GetDeploymentHistory(id string) ([]*redc.DeploymentChangeHistory, 
 	a.mu.Unlock()
 
 	if service == nil {
-		return nil, fmt.Errorf("自定义部署服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_deploy_service_not_init"))
 	}
 
 	if project == nil {
-		return nil, fmt.Errorf("项目未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_init"))
 	}
 
 	history, err := service.GetDeploymentHistory(project.ProjectName, id)
 	if err != nil {
-		return nil, fmt.Errorf("获取部署历史失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_deploy_history_failed", err))
 	}
 
 	return history, nil
@@ -5125,8 +5131,7 @@ func (a *App) BatchStartCustomDeployments(ids []string) []redc.BatchOperationRes
 
 	results := service.BatchStartDeployments(project.ProjectName, ids, project.ProjectPath)
 
-	a.emitLog(fmt.Sprintf("批量启动部署完成: 成功 %d, 失败 %d",
-		countSuccessful(results), countFailed(results)))
+	a.emitLog(i18n.Tf("app_batch_start", countSuccessful(results), countFailed(results)))
 	a.emitRefresh()
 
 	return results
@@ -5155,8 +5160,7 @@ func (a *App) BatchStopCustomDeployments(ids []string) []redc.BatchOperationResu
 
 	results := service.BatchStopDeployments(project.ProjectName, ids, project.ProjectPath)
 
-	a.emitLog(fmt.Sprintf("批量停止部署完成: 成功 %d, 失败 %d",
-		countSuccessful(results), countFailed(results)))
+	a.emitLog(i18n.Tf("app_batch_stop", countSuccessful(results), countFailed(results)))
 	a.emitRefresh()
 
 	return results
@@ -5185,8 +5189,7 @@ func (a *App) BatchDeleteCustomDeployments(ids []string) []redc.BatchOperationRe
 
 	results := service.BatchDeleteDeployments(project.ProjectName, ids, project.ProjectPath)
 
-	a.emitLog(fmt.Sprintf("批量删除部署完成: 成功 %d, 失败 %d",
-		countSuccessful(results), countFailed(results)))
+	a.emitLog(i18n.Tf("app_batch_delete", countSuccessful(results), countFailed(results)))
 	a.emitRefresh()
 
 	return results
@@ -5221,23 +5224,23 @@ func (a *App) SaveConfigTemplate(name string, config *redc.DeploymentConfig) err
 	a.mu.Unlock()
 
 	if configStore == nil {
-		return fmt.Errorf("配置存储未初始化")
+		return fmt.Errorf("%s", i18n.T("app_config_store_not_init"))
 	}
 
 	if name == "" {
-		return fmt.Errorf("配置模板名称不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_name_empty"))
 	}
 
 	if config == nil {
-		return fmt.Errorf("配置不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_empty"))
 	}
 
 	err := configStore.SaveConfigTemplate(name, config)
 	if err != nil {
-		return fmt.Errorf("保存配置模板失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_config_save_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("保存配置模板成功: %s", name))
+	a.emitLog(i18n.Tf("app_config_save_success", name))
 
 	return nil
 }
@@ -5249,16 +5252,16 @@ func (a *App) LoadConfigTemplate(name string) (*redc.DeploymentConfig, error) {
 	a.mu.Unlock()
 
 	if configStore == nil {
-		return nil, fmt.Errorf("配置存储未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_config_store_not_init"))
 	}
 
 	if name == "" {
-		return nil, fmt.Errorf("配置模板名称不能为空")
+		return nil, fmt.Errorf("%s", i18n.T("app_config_name_empty"))
 	}
 
 	config, err := configStore.LoadConfigTemplate(name)
 	if err != nil {
-		return nil, fmt.Errorf("加载配置模板失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_config_load_failed", err))
 	}
 
 	return config, nil
@@ -5271,12 +5274,12 @@ func (a *App) ListConfigTemplates() ([]string, error) {
 	a.mu.Unlock()
 
 	if configStore == nil {
-		return nil, fmt.Errorf("配置存储未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("app_config_store_not_init"))
 	}
 
 	templates, err := configStore.ListConfigTemplates()
 	if err != nil {
-		return nil, fmt.Errorf("列出配置模板失败: %w", err)
+		return nil, fmt.Errorf(i18n.Tf("app_config_list_failed", err))
 	}
 
 	return templates, nil
@@ -5289,19 +5292,19 @@ func (a *App) DeleteConfigTemplate(name string) error {
 	a.mu.Unlock()
 
 	if configStore == nil {
-		return fmt.Errorf("配置存储未初始化")
+		return fmt.Errorf("%s", i18n.T("app_config_store_not_init"))
 	}
 
 	if name == "" {
-		return fmt.Errorf("配置模板名称不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_name_empty"))
 	}
 
 	err := configStore.DeleteConfigTemplate(name)
 	if err != nil {
-		return fmt.Errorf("删除配置模板失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_config_delete_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("删除配置模板成功: %s", name))
+	a.emitLog(i18n.Tf("app_config_delete_success", name))
 
 	return nil
 }
@@ -5313,23 +5316,23 @@ func (a *App) ExportConfigTemplate(name string, exportPath string) error {
 	a.mu.Unlock()
 
 	if configStore == nil {
-		return fmt.Errorf("配置存储未初始化")
+		return fmt.Errorf("%s", i18n.T("app_config_store_not_init"))
 	}
 
 	if name == "" {
-		return fmt.Errorf("配置模板名称不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_name_empty"))
 	}
 
 	if exportPath == "" {
-		return fmt.Errorf("导出路径不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_export_path_empty"))
 	}
 
 	err := configStore.ExportConfigTemplate(name, exportPath)
 	if err != nil {
-		return fmt.Errorf("导出配置模板失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_config_export_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("导出配置模板成功: %s -> %s", name, exportPath))
+	a.emitLog(i18n.Tf("app_config_export_success", name, exportPath))
 
 	return nil
 }
@@ -5341,23 +5344,23 @@ func (a *App) ImportConfigTemplate(name string, importPath string) error {
 	a.mu.Unlock()
 
 	if configStore == nil {
-		return fmt.Errorf("配置存储未初始化")
+		return fmt.Errorf("%s", i18n.T("app_config_store_not_init"))
 	}
 
 	if name == "" {
-		return fmt.Errorf("配置模板名称不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_name_empty"))
 	}
 
 	if importPath == "" {
-		return fmt.Errorf("导入路径不能为空")
+		return fmt.Errorf("%s", i18n.T("app_config_import_path_empty"))
 	}
 
 	err := configStore.ImportConfigTemplate(name, importPath)
 	if err != nil {
-		return fmt.Errorf("导入配置模板失败: %w", err)
+		return fmt.Errorf(i18n.Tf("app_config_import_failed", err))
 	}
 
-	a.emitLog(fmt.Sprintf("导入配置模板成功: %s <- %s", name, importPath))
+	a.emitLog(i18n.Tf("app_config_import_success", name, importPath))
 
 	return nil
 }

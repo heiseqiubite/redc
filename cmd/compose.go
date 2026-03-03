@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"red-cloud/i18n"
 	"red-cloud/mod/compose"
 	"red-cloud/mod/gologger"
 
@@ -14,12 +15,12 @@ var (
 
 var composeCmd = &cobra.Command{
 	Use:   "compose",
-	Short: "redc 编排",
+	Short: i18n.T("compose_short"),
 }
 
 var upCmd = &cobra.Command{
 	Use:   "up",
-	Short: "启动编排环境",
+	Short: i18n.T("compose_up_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		opts := compose.ComposeOptions{
 			File:     composeFile,
@@ -28,17 +29,16 @@ var upCmd = &cobra.Command{
 		}
 
 		if err := compose.RunComposeUp(opts); err != nil {
-			gologger.Fatal().Msgf("编排失败: %v", err)
+			gologger.Fatal().Msgf(i18n.Tf("compose_up_failed", err))
 		}
 
-		//redcProject.SaveProject()
-		gologger.Info().Msg("✨ 所有服务部署完成！")
+		gologger.Info().Msg(i18n.T("compose_up_done"))
 	},
 }
 
 var downCmd = &cobra.Command{
 	Use:   "down",
-	Short: "销毁编排环境",
+	Short: i18n.T("compose_down_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		opts := compose.ComposeOptions{
 			File:     composeFile,
@@ -47,18 +47,17 @@ var downCmd = &cobra.Command{
 		}
 
 		if err := compose.RunComposeDown(opts); err != nil {
-			gologger.Fatal().Msgf("销毁失败: %v", err)
+			gologger.Fatal().Msgf(i18n.Tf("compose_down_failed", err))
 		}
 
-		//redcProject.SaveProject()
-		gologger.Info().Msg("✨ 所有服务销毁完成！")
+		gologger.Info().Msg(i18n.T("compose_down_done"))
 	},
 }
 
 var configCmd = &cobra.Command{
 	Use:   "config",
-	Short: "预览编排配置和变量解析结果 (Dry Run)",
-	Long:  "解析 redc-compose.yaml，展示所有的服务裂变结果、依赖关系以及传递给 Terraform 的变量值。",
+	Short: i18n.T("compose_config_short"),
+	Long:  i18n.T("compose_config_long"),
 	Run: func(cmd *cobra.Command, args []string) {
 		// 2. 构造选项
 		// profiles 是之前的全局变量 pProfiles (需要在 root.go 或 compose.go 中定义)
@@ -70,17 +69,17 @@ var configCmd = &cobra.Command{
 
 		// 3. 执行预览
 		if err := compose.InspectConfig(opts); err != nil {
-			gologger.Fatal().Msgf("配置解析失败: %v", err)
+			gologger.Fatal().Msgf(i18n.Tf("compose_config_failed", err))
 		}
 	},
 }
 
 func init() {
-	upCmd.Flags().StringVarP(&composeFile, "file", "f", "redc-compose.yaml", "配置文件路径")
-	upCmd.Flags().StringSliceVarP(&profiles, "profile", "p", []string{}, "激活的 Profiles")
+	upCmd.Flags().StringVarP(&composeFile, "file", "f", "redc-compose.yaml", i18n.T("flag_compose_file"))
+	upCmd.Flags().StringSliceVarP(&profiles, "profile", "p", []string{}, i18n.T("flag_compose_profile"))
 
-	downCmd.Flags().StringVarP(&composeFile, "file", "f", "redc-compose.yaml", "配置文件路径")
-	downCmd.Flags().StringSliceVarP(&profiles, "profile", "p", []string{}, "激活的 Profiles")
+	downCmd.Flags().StringVarP(&composeFile, "file", "f", "redc-compose.yaml", i18n.T("flag_compose_file"))
+	downCmd.Flags().StringSliceVarP(&profiles, "profile", "p", []string{}, i18n.T("flag_compose_profile"))
 
 	composeCmd.AddCommand(upCmd)
 	composeCmd.AddCommand(downCmd)

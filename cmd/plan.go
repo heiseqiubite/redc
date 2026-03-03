@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
 	"strings"
@@ -18,14 +19,14 @@ var (
 
 var runCmd = &cobra.Command{
 	Use:     "run [template_name]",
-	Short:   "创建并立即启动一个场景",
+	Short:   i18n.T("run_short"),
 	Example: "redc run ecs",
 	Args:    cobra.MinimumNArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		templateName := args[0]
 		if c, err := planLogic(templateName); err == nil {
 			if err := c.TfApply(); err != nil {
-				gologger.Error().Msgf("场景启动失败！%s", err.Error())
+				gologger.Error().Msgf(i18n.Tf("scene_start_failed", err.Error()))
 			}
 			if len(args) > 1 {
 				commandToRun = strings.Join(args[1:], " ")
@@ -37,13 +38,13 @@ var runCmd = &cobra.Command{
 
 var planCmd = &cobra.Command{
 	Use:     "plan [template_name]",
-	Short:   "预览（plan）一个新的基础设施场景，检查将要创建的资源",
+	Short:   i18n.T("plan_short"),
 	Example: "redc plan ecs -u team1 -n operation_alpha",
-	Args:    cobra.ExactArgs(1), // 强制要求输入一个模板名，例如 pte
+	Args:    cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		templateName := args[0]
 		if c, err := planLogic(templateName); err == nil {
-			gologger.Info().Msgf("✅「%s」%s 场景 plan 完成！，接下来您可以start启动该场景", c.Name, c.Id)
+			gologger.Info().Msgf(i18n.Tf("scene_plan_done", c.Name, c.Id))
 		}
 	},
 }
@@ -57,10 +58,10 @@ func planLogic(templateName string) (*redc.Case, error) {
 	// 创建 Case
 	c, err := redcProject.CaseCreate(templateName, userName, projectName, envVars)
 	if err != nil {
-		gologger.Error().Msgf("❌「%s」场景创建失败\n %s\n", templateName, err.Error())
+		gologger.Error().Msgf(i18n.Tf("scene_create_failed", templateName, err.Error()))
 		return nil, err
 	}
-	gologger.Info().Msgf("✅「%s」场景创建完成！", templateName)
+	gologger.Info().Msgf(i18n.Tf("scene_create_done", templateName))
 	return c, nil
 }
 
@@ -69,9 +70,9 @@ func init() {
 	rootCmd.AddCommand(runCmd)
 	CRCommonFlagSet := pflag.NewFlagSet("common", pflag.ExitOnError)
 
-	CRCommonFlagSet.StringVarP(&userName, "user", "u", "system", "指定用户/操作员")
-	CRCommonFlagSet.StringVarP(&projectName, "name", "n", "", "指定项目/任务名称")
-	CRCommonFlagSet.StringToStringVarP(&envVars, "env", "e", nil, "设置环境变量 (格式: key=value)")
+	CRCommonFlagSet.StringVarP(&userName, "user", "u", "system", i18n.T("flag_plan_user"))
+	CRCommonFlagSet.StringVarP(&projectName, "name", "n", "", i18n.T("flag_plan_name"))
+	CRCommonFlagSet.StringToStringVarP(&envVars, "env", "e", nil, i18n.T("flag_plan_env"))
 	planCmd.Flags().AddFlagSet(CRCommonFlagSet)
 	runCmd.Flags().AddFlagSet(CRCommonFlagSet)
 }

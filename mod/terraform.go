@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"runtime"
 	"strings"
@@ -240,16 +241,16 @@ func (te *TerraformExecutor) ShowPlan(ctx context.Context) error {
 	// 1. 调用 Show 读取 Plan 文件
 	plan, err := te.tf.ShowPlanFile(ctx, RedcPlanPath)
 	if err != nil {
-		return fmt.Errorf("读取 Plan 失败: %w", err)
+		return fmt.Errorf("%s", i18n.Tf("terraform_read_plan_failed", err))
 	}
 
 	// 2. 检查是否有资源变更
 	if plan.ResourceChanges == nil {
-		fmt.Println("没有检测到资源变更。")
+		fmt.Println(i18n.T("terraform_no_changes"))
 		return nil
 	}
 
-	fmt.Println("=== 变更预览 ===")
+	fmt.Println(i18n.T("terraform_change_preview"))
 
 	// 3. 遍历变更列表
 	for _, rc := range plan.ResourceChanges {
@@ -262,18 +263,18 @@ func (te *TerraformExecutor) ShowPlan(ctx context.Context) error {
 		if len(actions) == 1 {
 			switch actions[0] {
 			case "create":
-				fmt.Printf("[+] 创建: %s\n", rc.Address)
+				fmt.Printf("%s %s\n", i18n.T("terraform_creating"), rc.Address)
 			case "delete":
-				fmt.Printf("[-] 销毁: %s\n", rc.Address)
+				fmt.Printf("%s %s\n", i18n.T("terraform_destroying"), rc.Address)
 			case "update":
-				fmt.Printf("[~] 更新: %s\n", rc.Address)
+				fmt.Printf("%s %s\n", i18n.T("terraform_updating"), rc.Address)
 			case "no-op":
 				// 没有任何变更，通常不需要打印
 			}
 		} else if len(actions) == 2 {
 			// 通常是 ["delete", "create"]，意味着重建
 			if actions[0] == "delete" && actions[1] == "create" {
-				fmt.Printf("[+/-] 重建 (销毁后创建): %s\n", rc.Address)
+				fmt.Printf("%s %s\n", i18n.T("terraform_recreate"), rc.Address)
 			}
 		}
 	}
@@ -336,11 +337,11 @@ func GetTerraformExecPath(ctx context.Context, priorityDir string) (string, erro
 	}
 
 	// 3. 如果以上都没有，执行自动下载
-	gologger.Info().Msgf("未检测到 Terraform，正在下载最新版本到: %s...\n", absDir)
+	gologger.Info().Msgf("%s", i18n.Tf("terraform_downloading", absDir))
 
 	// 确保目录存在
 	if err := os.MkdirAll(absDir, 0755); err != nil {
-		return "", fmt.Errorf("创建安装目录失败: %w", err)
+		return "", fmt.Errorf("%s", i18n.Tf("terraform_mkdir_failed", err))
 	}
 
 	//installer := &releases.ExactVersion{
@@ -356,7 +357,7 @@ func GetTerraformExecPath(ctx context.Context, priorityDir string) (string, erro
 
 	installedPath, err := installer.Install(ctx)
 	if err != nil {
-		return "", fmt.Errorf("下载 Terraform 失败: %w", err)
+		return "", fmt.Errorf("%s", i18n.Tf("terraform_download_failed", err))
 	}
 
 	return installedPath, nil

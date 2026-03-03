@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
 
@@ -9,7 +10,7 @@ import (
 
 var tmplCmd = &cobra.Command{
 	Use:   "image",
-	Short: "管理模版信息",
+	Short: i18n.T("tmpl_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		cmd.Help()
 	},
@@ -20,14 +21,14 @@ var showAll bool // 定义一个变量来接收 flag
 
 var tmplLsCmd = &cobra.Command{
 	Use:   "ls",
-	Short: "列出所有模版文件",
+	Short: i18n.T("tmpl_ls_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		redc.ShowLocalTemplates()
 	},
 }
 var tmplRMCmd = &cobra.Command{
 	Use:   "rm [case]",
-	Short: "删除模版文件",
+	Short: i18n.T("tmpl_rm_short"),
 	Args:  cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
 		id := args[0]

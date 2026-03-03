@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
 
@@ -15,7 +16,7 @@ func runAction(actionType string, caseID string) {
 	// 2. 查找 Case
 	c, err := redcProject.GetCase(caseID)
 	if err != nil {
-		gologger.Error().Msgf("操作失败: 找不到 ID 为「%s」的场景\n错误: %s", caseID, err)
+		gologger.Error().Msgf(i18n.Tf("action_case_not_found", caseID, err))
 		return
 	}
 
@@ -39,16 +40,16 @@ func runAction(actionType string, caseID string) {
 	}
 
 	if actionErr != nil {
-		gologger.Error().Msgf("执行「%s」失败，%v\n", actionType, actionErr)
+		gologger.Error().Msgf(i18n.Tf("action_failed", actionType, actionErr))
 	} else {
-		gologger.Info().Msgf("✅ %s 操作执行成功: 「%s」%s\n", actionType, c.Name, c.GetId())
+		gologger.Info().Msgf(i18n.Tf("action_success", actionType, c.Name, c.GetId()))
 	}
 }
 
 // 定义各个命令
 var stopCmd = &cobra.Command{
 	Use:   "stop [id]",
-	Short: "停止指定场景",
+	Short: i18n.T("stop_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("stop", args[0])
 	},
@@ -56,7 +57,7 @@ var stopCmd = &cobra.Command{
 
 var statusCmd = &cobra.Command{
 	Use:   "status [id]",
-	Short: "查看场景状态",
+	Short: i18n.T("status_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("status", args[0])
 	},
@@ -64,7 +65,7 @@ var statusCmd = &cobra.Command{
 
 var changeCmd = &cobra.Command{
 	Use:   "change [id]",
-	Short: "更改场景",
+	Short: i18n.T("change_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("change", args[0])
 	},
@@ -72,7 +73,7 @@ var changeCmd = &cobra.Command{
 
 var startCmd = &cobra.Command{
 	Use:   "start [id]",
-	Short: "启动场景",
+	Short: i18n.T("start_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("start", args[0])
 	},
@@ -80,14 +81,14 @@ var startCmd = &cobra.Command{
 
 var killCmd = &cobra.Command{
 	Use:   "kill [id]",
-	Short: "销毁指定场景",
+	Short: i18n.T("kill_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("kill", args[0])
 	},
 }
 var rmCmd = &cobra.Command{
 	Use:   "rm [id]",
-	Short: "删除场景 case",
+	Short: i18n.T("rm_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		runAction("rm", args[0])
 	},
@@ -95,7 +96,7 @@ var rmCmd = &cobra.Command{
 
 var listCmd = &cobra.Command{
 	Use:   "ps",
-	Short: "列出当前所有场景",
+	Short: i18n.T("ps_short"),
 	Run: func(cmd *cobra.Command, args []string) {
 		redcProject.CaseList()
 	},
@@ -110,7 +111,7 @@ func init() {
 	rootCmd.AddCommand(changeCmd)
 	rootCmd.AddCommand(startCmd)
 	rootCmd.AddCommand(rmCmd)
-	changeCmd.Flags().BoolVar(&changeConfig.IsRemove, "rm", false, "更改时销毁资源")
+	changeCmd.Flags().BoolVar(&changeConfig.IsRemove, "rm", false, i18n.T("flag_change_rm"))
 	//listCmd.Flags().BoolVarP(&redc.ShowAll, "all", "a", false, "查看所有 case")
 
 }

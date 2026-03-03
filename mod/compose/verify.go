@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"red-cloud/i18n"
 	"red-cloud/mod"
 	"strings"
 
@@ -18,7 +19,7 @@ import (
 func VerifyTemplates(ctx *ComposeContext) error {
 	var totalErrors []string
 
-	gologger.Info().Msg("🔍 正在预检模版配置...")
+	gologger.Info().Msg(i18n.T("compose_verify_start"))
 
 	checkedTemplates := make(map[string]map[string]bool)
 
@@ -85,7 +86,7 @@ func VerifyTemplates(ctx *ComposeContext) error {
 		return fmt.Errorf("模版校验失败，请在对应的 variables.tf 中添加缺失的变量:\n\n%s", strings.Join(totalErrors, "\n\n"))
 	}
 
-	gologger.Info().Msg("✅ 模版预检通过")
+	gologger.Info().Msg(i18n.T("compose_verify_done"))
 	return nil
 }
 

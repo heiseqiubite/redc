@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"reflect"
 	"time"
@@ -109,7 +110,7 @@ type Config struct {
 func LoadConfig(path string) error {
 	home, err := os.UserHomeDir() // 忽略错误，home为空也没关系
 	if err != nil {
-		return fmt.Errorf("无法获取用户目录\n%s", err.Error())
+		return fmt.Errorf("%s", i18n.Tf("config_no_user_home", err.Error()))
 	}
 
 	// 设置默认缓存路径
@@ -147,17 +148,17 @@ func LoadConfig(path string) error {
 	}
 
 	if data == nil {
-		gologger.Info().Msgf("未找到配置文件，正在创建空配置文件: %s\n", defaultConfigPath)
+		gologger.Info().Msgf("%s", i18n.Tf("config_creating_empty", defaultConfigPath))
 		if err := os.MkdirAll(filepath.Dir(defaultConfigPath), 0755); err != nil {
-			return fmt.Errorf("创建配置目录失败: %v", err)
+			return fmt.Errorf("%s", i18n.Tf("config_create_dir_failed", err))
 		}
 		defaultConf := Config{}
 		defaultData, err := yaml.Marshal(defaultConf)
 		if err != nil {
-			return fmt.Errorf("生成默认配置模版失败: %v", err)
+			return fmt.Errorf("%s", i18n.Tf("config_gen_template_failed", err))
 		}
 		if err := os.WriteFile(defaultConfigPath, defaultData, 0644); err != nil {
-			return fmt.Errorf("创建配置文件失败: %v", err)
+			return fmt.Errorf("%s", i18n.Tf("config_create_file_failed", err))
 		}
 		ActiveConfigPath = defaultConfigPath
 		return nil
@@ -223,7 +224,7 @@ func GetConfigPath(customPath string) (string, error) {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", fmt.Errorf("无法获取用户目录: %s", err.Error())
+		return "", fmt.Errorf("%s", i18n.Tf("config_get_user_home_failed", err.Error()))
 	}
 	if RedcPath == "" {
 		RedcPath = filepath.Join(home, "redc")
@@ -243,12 +244,12 @@ func ReadConfig(customPath string) (*Config, string, error) {
 		if os.IsNotExist(err) {
 			return &Config{}, configPath, nil
 		}
-		return nil, configPath, fmt.Errorf("读取配置文件失败: %v", err)
+		return nil, configPath, fmt.Errorf("%s", i18n.Tf("config_load_file_failed", err))
 	}
 
 	var conf Config
 	if err := yaml.Unmarshal(data, &conf); err != nil {
-		return nil, configPath, fmt.Errorf("解析配置文件失败: %v", err)
+		return nil, configPath, fmt.Errorf("%s", i18n.Tf("config_parse_failed", err))
 	}
 	return &conf, configPath, nil
 }
@@ -261,16 +262,16 @@ func SaveConfig(conf *Config, customPath string) error {
 	}
 
 	if err := os.MkdirAll(filepath.Dir(configPath), 0755); err != nil {
-		return fmt.Errorf("创建配置目录失败: %v", err)
+		return fmt.Errorf("%s", i18n.Tf("config_create_dir_failed", err))
 	}
 
 	data, err := yaml.Marshal(conf)
 	if err != nil {
-		return fmt.Errorf("序列化配置失败: %v", err)
+		return fmt.Errorf("%s", i18n.Tf("config_serialize_failed", err))
 	}
 
 	if err := os.WriteFile(configPath, data, 0600); err != nil {
-		return fmt.Errorf("写入配置文件失败: %v", err)
+		return fmt.Errorf("%s", i18n.Tf("config_write_failed", err))
 	}
 
 	// Rebind environment variables after saving

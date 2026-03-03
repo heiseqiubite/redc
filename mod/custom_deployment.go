@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"red-cloud/i18n"
 	"red-cloud/mod/cost"
 	"red-cloud/mod/gologger"
 	"red-cloud/pb"
@@ -33,30 +34,30 @@ type CustomDeploymentService struct {
 // 集成现有的 cost.CostCalculator 根据部署配置估算成本
 func (s *CustomDeploymentService) EstimateCost(config *DeploymentConfig, pricingService *cost.PricingService, costCalculator *cost.CostCalculator) (*CostEstimate, error) {
 	if config == nil {
-		return nil, fmt.Errorf("部署配置不能为空")
+		return nil, fmt.Errorf("%s", i18n.T("deploy_config_empty"))
 	}
 
 	if pricingService == nil {
-		return nil, fmt.Errorf("定价服务未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("deploy_pricing_not_init"))
 	}
 
 	if costCalculator == nil {
-		return nil, fmt.Errorf("成本计算器未初始化")
+		return nil, fmt.Errorf("%s", i18n.T("deploy_cost_calc_not_init"))
 	}
 
 	// 1. 验证配置
 	validationResult, err := s.validator.ValidateDeploymentConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf("验证配置失败: %w", err)
+		return nil, fmt.Errorf("%s", i18n.Tf("deploy_validate_failed", err))
 	}
 	if !validationResult.Valid {
-		return nil, fmt.Errorf("配置验证失败: %v", validationResult.Errors)
+		return nil, fmt.Errorf("%s", i18n.Tf("deploy_validation_errors", validationResult.Errors))
 	}
 
 	// 2. 获取模板路径
 	templatePath, err := GetTemplatePath(config.TemplateName)
 	if err != nil {
-		return nil, fmt.Errorf("获取模板路径失败: %w", err)
+		return nil, fmt.Errorf("%s", i18n.Tf("deploy_get_template_path_failed", err))
 	}
 
 	// 3. 准备变量映射（合并所有配置参数）
@@ -296,13 +297,13 @@ func (s *CustomDeploymentService) CreateCustomDeployment(config *DeploymentConfi
 		// 自动生成符合云厂商要求的密码
 		generatedPassword := generateInstancePassword()
 		config.Variables["instance_password"] = generatedPassword
-		gologger.Info().Msgf("已自动生成实例密码")
+		gologger.Info().Msg(i18n.T("deploy_auto_password"))
 	}
 
 	// 为阿里云补充系统盘类型默认值（如果缺失）
 	if config.Provider == "alicloud" && config.Variables["system_disk_category"] == "" {
 		config.Variables["system_disk_category"] = "cloud_efficiency"
-		gologger.Info().Msgf("已自动设置阿里云系统盘类型为 cloud_efficiency")
+		gologger.Info().Msg(i18n.T("deploy_auto_disk_aliyun"))
 	}
 
 	// 3. 生成部署 ID
@@ -444,7 +445,7 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 	planFile := filepath.Join(deploymentPath, RedcPlanPath)
 	if _, err := os.Stat(planFile); err == nil {
 		if err := os.Remove(planFile); err != nil {
-			gologger.Warning().Msgf("删除旧的 plan 文件失败: %v", err)
+			gologger.Warning().Msgf("%s", i18n.Tf("deploy_delete_plan_failed", err))
 		}
 	}
 
@@ -458,33 +459,33 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 			// 自动生成符合云厂商要求的密码
 			generatedPassword := generateInstancePassword()
 			deployment.Config.Variables["instance_password"] = generatedPassword
-			gologger.Info().Msgf("已自动生成实例密码")
+			gologger.Info().Msg(i18n.T("deploy_auto_password"))
 			// 更新数据库中的配置
 			deployment.UpdatedAt = time.Now()
 			if err := deployment.DBSave(); err != nil {
-				gologger.Warning().Msgf("保存密码到数据库失败: %v", err)
+				gologger.Warning().Msgf("%s", i18n.Tf("deploy_save_password_failed", err))
 			}
 		}
 
 		// 为阿里云补充系统盘类型默认值（如果缺失）
 		if deployment.Config.Provider == "alicloud" && deployment.Config.Variables["system_disk_category"] == "" {
 			deployment.Config.Variables["system_disk_category"] = "cloud_efficiency"
-			gologger.Info().Msgf("已自动设置阿里云系统盘类型为 cloud_efficiency")
+			gologger.Info().Msg(i18n.T("deploy_auto_disk_aliyun"))
 			deployment.UpdatedAt = time.Now()
 			if err := deployment.DBSave(); err != nil {
-				gologger.Warning().Msgf("保存系统盘类型到数据库失败: %v", err)
+				gologger.Warning().Msgf("%s", i18n.Tf("deploy_save_disk_failed", err))
 			}
 		}
 
 		tfvarsContent, err := s.executor.GenerateVariablesFile(deployment.Config)
 		if err != nil {
-			gologger.Warning().Msgf("重新生成变量文件失败: %v", err)
+			gologger.Warning().Msgf("%s", i18n.Tf("deploy_regen_vars_failed", err))
 		} else {
 			tfvarsPath := filepath.Join(deploymentPath, "terraform.tfvars")
 			if err := os.WriteFile(tfvarsPath, []byte(tfvarsContent), 0644); err != nil {
-				gologger.Warning().Msgf("写入变量文件失败: %v", err)
+				gologger.Warning().Msgf("%s", i18n.Tf("deploy_write_vars_failed", err))
 			} else {
-				gologger.Info().Msgf("已更新 terraform.tfvars 文件")
+				gologger.Info().Msg(i18n.T("deploy_vars_updated"))
 			}
 		}
 	}
@@ -498,24 +499,24 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 		}
 
 		// 自动清理已创建的资源（避免 EIP 等资源持续扣费）
-		gologger.Warning().Msgf("部署失败，自动清理已创建的资源...")
+		gologger.Warning().Msg(i18n.T("deploy_cleanup_warning"))
 		if destroyErr := TfDestroy(deploymentPath, nil); destroyErr != nil {
-			gologger.Error().Msgf("自动清理资源失败: %v，用户可能需要手动清理", destroyErr)
+			gologger.Error().Msgf("%s", i18n.Tf("deploy_cleanup_failed", destroyErr))
 		} else {
-			gologger.Info().Msgf("已自动清理部署失败时创建的资源")
+			gologger.Info().Msg(i18n.T("deploy_cleanup_done"))
 		}
 
 		// 更新状态为错误
 		deployment.State = StateError
 		deployment.UpdatedAt = time.Now()
 		deployment.DBSave() // 忽略保存错误
-		return fmt.Errorf("Terraform apply 失败: %w", err)
+		return fmt.Errorf("%s", i18n.Tf("deploy_tf_apply_failed", err))
 	}
 
 	// 读取 Terraform outputs
 	outputs, err := TfOutput(deploymentPath)
 	if err != nil {
-		gologger.Warning().Msgf("读取 Terraform outputs 失败: %v", err)
+		gologger.Warning().Msgf("%s", i18n.Tf("deploy_read_outputs_failed", err))
 		// 不中断流程，继续更新状态
 	} else {
 		// 将 outputs 转换为 map[string]interface{}
@@ -527,13 +528,13 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 			// 需要 unmarshal Value (它是 json.RawMessage)
 			var value interface{}
 			if err := json.Unmarshal(output.Value, &value); err != nil {
-				gologger.Warning().Msgf("解析 output %s 失败: %v", key, err)
+				gologger.Warning().Msgf("%s", i18n.Tf("deploy_parse_output_failed", key, err))
 				continue
 			}
 			outputMap[key] = value
 		}
 		deployment.Outputs = outputMap
-		gologger.Info().Msgf("已读取 %d 个 Terraform outputs", len(outputMap))
+		gologger.Info().Msgf("%s", i18n.Tf("deploy_read_outputs_done", len(outputMap)))
 		fmt.Printf("[DEBUG StartCustomDeployment] 最终 outputMap: %+v\n", outputMap)
 	}
 
@@ -541,7 +542,7 @@ func (s *CustomDeploymentService) StartCustomDeployment(projectID, deploymentID,
 	deployment.State = StateRunning
 	deployment.UpdatedAt = time.Now()
 	if err := deployment.DBSave(); err != nil {
-		return fmt.Errorf("更新部署状态失败: %w", err)
+		return fmt.Errorf("%s", i18n.Tf("deploy_update_status_failed", err))
 	}
 
 	return nil

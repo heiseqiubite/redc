@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"red-cloud/pb"
 	"strings"
@@ -22,11 +23,11 @@ type ChangeCommand struct {
 func GetProjectCase(projectId string, caseID string, userName string) (*Case, error) {
 	pro, err := ProjectParse(projectId, userName) // 注意：这里可能需要处理 global U 或者从配置读取
 	if err != nil {
-		gologger.Fatal().Msgf("项目解析失败: %s", err)
+		gologger.Fatal().Msgf("%s", i18n.Tf("project_parse_failed", err))
 	}
 	c, err := pro.GetCase(caseID)
 	if err != nil {
-		return nil, fmt.Errorf("操作失败: 找不到 ID 为「%s」的场景\n错误: %s", caseID, err)
+		return nil, fmt.Errorf("%s", i18n.Tf("project_case_not_found", caseID, err))
 
 	}
 	return c, nil
@@ -37,7 +38,7 @@ func NewProjectConfig(name string, user string) (*RedcProject, error) {
 	path := filepath.Join(ProjectPath, name)
 	// 创建项目目录
 	if err := os.MkdirAll(path, 0755); err != nil {
-		return nil, fmt.Errorf("创建项目目录失败: %w", err)
+		return nil, fmt.Errorf("%s", i18n.Tf("project_create_dir_failed", err))
 	}
 	// 创建项目状态文件
 	currentTime := time.Now().Format("2006-01-02 15:04:05")
@@ -50,9 +51,9 @@ func NewProjectConfig(name string, user string) (*RedcProject, error) {
 
 	// 保存到 DB
 	if err := project.SaveMeta(); err != nil {
-		return nil, fmt.Errorf("保存数据库失败: %v", err)
+		return nil, fmt.Errorf("%s", i18n.Tf("project_save_db_failed", err))
 	}
-	gologger.Info().Msgf("项目状态数据库创建成功！")
+	gologger.Info().Msg(i18n.T("project_db_created"))
 	return project, nil
 
 }
@@ -62,14 +63,14 @@ func ProjectParse(name string, user string) (*RedcProject, error) {
 	if p, err := LoadProjectMeta(name); err == nil {
 		// 项目鉴权
 		if p.User != user && user != "system" {
-			return nil, fmt.Errorf("当前用户「%s」无权限访问项目「%s」", user, name)
+			return nil, fmt.Errorf("%s", i18n.Tf("project_no_permission", user, name))
 		}
 		return p, nil
 	}
 	// 项目不存在，走创建逻辑 (保持不变)
 	path := filepath.Join(ProjectPath, name)
 	if _, statErr := os.Stat(path); os.IsNotExist(statErr) {
-		gologger.Info().Msgf("项目不存在，正在创建新项目: %s", name)
+		gologger.Info().Msgf("%s", i18n.Tf("project_creating", name))
 		return NewProjectConfig(name, user)
 	}
 	return NewProjectConfig(name, user)
@@ -96,7 +97,7 @@ func FindCaseBySearch(projectID, keyword string) (*Case, error) {
 	err := dbExec(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(fmt.Sprintf("Cases_%s", projectID)))
 		if b == nil {
-			return fmt.Errorf("无数据")
+			return fmt.Errorf("%s", i18n.T("project_no_data"))
 		}
 
 		// 1. 尝试直接按 ID 获取 (最快，O(1))
@@ -104,7 +105,7 @@ func FindCaseBySearch(projectID, keyword string) (*Case, error) {
 			var p pb.Case
 			err := proto.Unmarshal(data, &p)
 			if err != nil {
-				return fmt.Errorf("解析数据失败: %w", err)
+				return fmt.Errorf("%s", i18n.Tf("project_parse_data_failed", err))
 			}
 			c := caseFromProto(&p)
 			c.ProjectID = projectID
@@ -159,10 +160,10 @@ func FindCaseBySearch(projectID, keyword string) (*Case, error) {
 
 	// 结果判定
 	if len(candidates) == 0 {
-		return nil, fmt.Errorf("未找到匹配 '%s' 的 Case", keyword)
+		return nil, fmt.Errorf("%s", i18n.Tf("project_case_not_found_keyword", keyword))
 	}
 	if len(candidates) > 1 {
-		return nil, fmt.Errorf("存在歧义，关键词 '%s' 匹配到 %d 个 Case", keyword, len(candidates))
+		return nil, fmt.Errorf("%s", i18n.Tf("project_ambiguous_keyword", keyword, len(candidates)))
 	}
 
 	return candidates[0], nil
@@ -192,7 +193,7 @@ func (p *RedcProject) AddCase(c *Case) error {
 func (p *RedcProject) CaseList() {
 	cases, err := LoadProjectCases(p.ProjectName)
 	if err != nil {
-		gologger.Error().Msgf("加载列表失败: %v", err)
+		gologger.Error().Msgf("%s", i18n.Tf("project_load_list_failed", err))
 		return
 	}
 

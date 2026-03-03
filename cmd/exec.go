@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"fmt"
+	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"red-cloud/utils/sshutil"
 	"strings"
@@ -17,7 +18,7 @@ var (
 func GetInstanceInfoFromTF(id string) (*sshutil.SSHConfig, error) {
 	c, err := redcProject.GetCase(id)
 	if err != nil {
-		return nil, fmt.Errorf("操作失败: 找不到 ID 为「%s」的场景\n错误: %s", id, err)
+		return nil, fmt.Errorf(i18n.Tf("case_not_found", id, err))
 	}
 	s, err := c.GetSSHConfig()
 	return s, nil
@@ -26,7 +27,7 @@ func GetInstanceInfoFromTF(id string) (*sshutil.SSHConfig, error) {
 
 var execCmd = &cobra.Command{
 	Use:   "exec [id] [command]",
-	Short: "在目标机器执行命令",
+	Short: i18n.T("exec_short"),
 	Example: `  redc exec [id] whoami
   redc exec -t [id] bash`,
 	//Args: cobra.MinimumNArgs(2), // 需要 ID 和 命令
@@ -41,28 +42,27 @@ var execCmd = &cobra.Command{
 
 		client, err := getSSHClient(id)
 		if err != nil {
-			gologger.Error().Msgf("连接失败: %v", err)
+			gologger.Error().Msgf(i18n.Tf("exec_connect_failed", err))
 			return
 		}
 		defer client.Close()
 
-		// 根据是否交互式调用不同函数 (Requirement #1, #4)
 		if execInteractive {
-			gologger.Info().Msgf("正在启动交互式命令")
+			gologger.Info().Msgf(i18n.T("exec_interactive_starting"))
 			err = client.RunInteractiveShell(commandStr)
 		} else {
 			err = client.RunCommand(commandStr)
 		}
 
 		if err != nil {
-			gologger.Error().Msgf("执行出错: %v", err)
+			gologger.Error().Msgf(i18n.Tf("exec_error", err))
 		}
 	},
 }
 
 var cpCmd = &cobra.Command{
 	Use:   "cp [src] [dest]",
-	Short: "在本地和远程机器间复制文件",
+	Short: i18n.T("cp_short"),
 	Example: `  redc cp ./tool [id]:/tmp/tool
   redc cp [id]:/var/log/syslog ./local_log`,
 	//Args: cobra.ExactArgs(2),
@@ -79,11 +79,11 @@ var cpCmd = &cobra.Command{
 
 		// 逻辑校验：不能两边都是远程，也不能两边都是本地 (简化版)
 		if srcRemote && destRemote {
-			gologger.Error().Msg("不支持远程到远程的直接复制")
+			gologger.Error().Msg(i18n.T("cp_remote_to_remote_not_supported"))
 			return
 		}
 		if !srcRemote && !destRemote {
-			gologger.Error().Msg("请使用系统 cp 命令进行本地复制")
+			gologger.Error().Msg(i18n.T("cp_use_local_cp"))
 			return
 		}
 
@@ -93,33 +93,33 @@ var cpCmd = &cobra.Command{
 
 			client, err := getSSHClient(destID)
 			if err != nil {
-				gologger.Error().Msgf("连接失败: %v", err)
+				gologger.Error().Msgf(i18n.Tf("cp_connect_failed", err))
 				return
 			}
 			defer client.Close()
 
 			if err := client.Upload(srcArg, destPath); err != nil {
-				gologger.Error().Msgf("上传失败: %v", err)
+				gologger.Error().Msgf(i18n.Tf("cp_upload_failed", err))
 			} else {
-				gologger.Info().Msg("上传成功")
+				gologger.Info().Msg(i18n.T("cp_upload_success"))
 			}
 		}
 
-		// 场景 2: 下载 (Remote -> Local)
+		// Scene 2: Download (Remote -> Local)
 		if srcRemote && !destRemote {
 			gologger.Info().Msgf("Downloading %s:%s to %s", srcID, srcPath, destArg)
 
 			client, err := getSSHClient(srcID)
 			if err != nil {
-				gologger.Error().Msgf("连接失败: %v", err)
+				gologger.Error().Msgf(i18n.Tf("cp_connect_failed", err))
 				return
 			}
 			defer client.Close()
 
 			if err := client.Download(srcPath, destArg); err != nil {
-				gologger.Error().Msgf("下载失败: %v", err)
+				gologger.Error().Msgf(i18n.Tf("cp_download_failed", err))
 			} else {
-				gologger.Info().Msg("下载成功")
+				gologger.Info().Msg(i18n.T("cp_download_success"))
 			}
 		}
 	},

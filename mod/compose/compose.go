@@ -9,6 +9,7 @@ import (
 	"regexp"
 	"strings"
 
+	"red-cloud/i18n"
 	"red-cloud/mod/gologger"
 	"red-cloud/utils/sshutil"
 
@@ -40,7 +41,7 @@ func RunComposeUp(opts ComposeOptions) error {
 			}
 
 			if canDeploy(svc, ctx.RuntimeSvcs) {
-				gologger.Info().Msgf("🚀 开始部署服务: %s (Type: %s)", svc.Name, svc.Spec.Image)
+				gologger.Info().Msgf("%s", i18n.Tf("compose_deploy_service", svc.Name, svc.Spec.Image))
 
 				if err := processServiceUp(svc, ctx); err != nil {
 					return fmt.Errorf("部署服务 [%s] 失败: %v", svc.Name, err)
@@ -59,7 +60,7 @@ func RunComposeUp(opts ComposeOptions) error {
 
 	// 3. 执行 Setup
 	if len(ctx.ConfigRaw.Setup) > 0 {
-		gologger.Info().Msg("⚙️ 开始执行 Setup 后置任务...")
+		gologger.Info().Msg(i18n.T("compose_setup_start"))
 		if err := runSetupTasks(ctx.ConfigRaw.Setup, ctx.RuntimeSvcs, ctx.LogMgr); err != nil {
 			return err
 		}
@@ -102,19 +103,19 @@ func RunComposeDown(opts ComposeOptions) error {
 
 			if !svc.IsDeployed {
 				continue
-			}
-
-			if canDestroy(svc, ctx.RuntimeSvcs) {
-				gologger.Info().Msgf("🔥 正在销毁服务: %s", svc.Name)
-				if err := svc.CaseRef.TfDestroy(); err != nil {
-					gologger.Error().Msgf("销毁服务 [%s] 失败: %v", svc.Name, err)
-				}
-
-				svc.IsDeployed = false
-				destroyedInThisLoop++
-				pendingCount--
-			}
 		}
+
+		if canDestroy(svc, ctx.RuntimeSvcs) {
+			gologger.Info().Msgf("%s", i18n.Tf("compose_destroy_service", svc.Name))
+			if err := svc.CaseRef.TfDestroy(); err != nil {
+				gologger.Error().Msgf("%s", i18n.Tf("compose_destroy_failed", svc.Name, err))
+			}
+
+			svc.IsDeployed = false
+			destroyedInThisLoop++
+			pendingCount--
+		}
+	}
 
 		if destroyedInThisLoop == 0 && pendingCount > 0 {
 			return fmt.Errorf("销毁死锁: 存在循环依赖")
