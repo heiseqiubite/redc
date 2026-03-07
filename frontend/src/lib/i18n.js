@@ -9,7 +9,7 @@ export const i18n = {
     // Dashboard specific
     totalScenes: '总场景数', runningScenes: '运行中', stoppedScenes: '已停止', errorScenes: '异常',
     recentScenes: '最近场景', recentActivity: '最近活动', viewAll: '查看全部',
-    resourceSummary: '资源概览', accountBalance: '账户余额', currentMonthBill: '当月账单', queryBill: '查询', clickToQueryBill: '点击上方按钮查询当月账单', billCostWarning: 'AWS Cost Explorer USE1-APIRequest 调用每次约 $0.01', systemHealth: '系统健康',
+    resourceSummary: '资源概览', accountBalance: '账户余额', queryBalance: '查询', clickToQueryBalance: '点击上方按钮查询账户余额', currentMonthBill: '当月账单', queryBill: '查询', clickToQueryBill: '点击上方按钮查询当月账单', billCostWarning: 'AWS Cost Explorer USE1-APIRequest 调用每次约 $0.01', systemHealth: '系统健康',
     memory: '内存', disk: '磁盘', noRecentScenes: '暂无场景', noResources: '暂无资源',
     noBalanceData: '暂无余额数据', loadFailed: '加载失败',
     noCredentialsAliyun: '未配置阿里云凭据', noCredentialsTencent: '未配置腾讯云凭据',
@@ -262,7 +262,7 @@ export const i18n = {
     // Dashboard specific
     totalScenes: 'Total Scenes', runningScenes: 'Running', stoppedScenes: 'Stopped', errorScenes: 'Error',
     recentScenes: 'Recent Scenes', recentActivity: 'Recent Activity', viewAll: 'View All',
-    resourceSummary: 'Resource Summary', accountBalance: 'Account Balance', currentMonthBill: 'Current Month Bill', queryBill: 'Query', clickToQueryBill: 'Click button above to query bill', billCostWarning: 'AWS Cost Explorer USE1-APIRequest ~$0.01 per request', systemHealth: 'System Health',
+    resourceSummary: 'Resource Summary', accountBalance: 'Account Balance', queryBalance: 'Query', clickToQueryBalance: 'Click button above to query balance', currentMonthBill: 'Current Month Bill', queryBill: 'Query', clickToQueryBill: 'Click button above to query bill', billCostWarning: 'AWS Cost Explorer USE1-APIRequest ~$0.01 per request', systemHealth: 'System Health',
     memory: 'Memory', disk: 'Disk', noRecentScenes: 'No scenes', noResources: 'No resources',
     noBalanceData: 'No balance data', loadFailed: 'Load failed',
     noCredentialsAliyun: 'Aliyun credentials not configured', noCredentialsTencent: 'Tencent Cloud credentials not configured',

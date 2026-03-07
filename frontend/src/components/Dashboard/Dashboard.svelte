@@ -34,6 +34,7 @@
   
   let resourceSummary = $state([]);
   let balances = $state([]);
+  let balancesLoading = $state(false);
   let bills = $state([]);
   let billsLoading = $state(false);
   let recentCases = $state([]);
@@ -102,17 +103,23 @@
       } catch (e) {
         console.error('Failed to load resource summary:', e);
       }
-      
-      // Load balances
-      try {
-        balances = await GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud', 'ucloud', 'vultr']);
-      } catch (e) {
-        console.error('Failed to load balances:', e);
-      }
     } catch (e) {
       console.error('Failed to load dashboard data:', e);
     } finally {
       loading = false;
+    }
+  }
+  
+  async function queryBalances() {
+    balancesLoading = true;
+    balances = [];
+    try {
+      balances = await GetBalances(['aliyun', 'tencentcloud', 'volcengine', 'huaweicloud', 'ucloud', 'vultr']);
+    } catch (e) {
+      console.error('Failed to load balances:', e);
+      balances = [];
+    } finally {
+      balancesLoading = false;
     }
   }
   
@@ -359,17 +366,24 @@
     
     <!-- Account Balances -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
-      <div class="px-5 py-4 border-b border-gray-100">
+      <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{t.accountBalance || '账户余额'}</h3>
+        <button 
+          onclick={queryBalances}
+          disabled={balancesLoading}
+          class="h-7 px-2.5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[10px] font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          {balancesLoading ? (t.loading || '加载中...') : (t.queryBalance || '查询')}
+        </button>
       </div>
       <div class="p-5">
-        {#if loading}
+        {#if balancesLoading}
           <div class="text-center py-8 text-[13px] text-gray-400">
             {t.loading || '加载中...'}
           </div>
         {:else if balances.length === 0}
-          <div class="text-center py-8 text-[13px] text-gray-400">
-            {t.noBalanceData || '暂无余额数据'}
+          <div class="text-center py-4 text-[13px] text-gray-400">
+            <div>{t.clickToQueryBalance || '点击上方按钮查询账户余额'}</div>
           </div>
         {:else}
           <div class="space-y-3">
