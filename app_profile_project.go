@@ -2,12 +2,16 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"sort"
+	"strings"
+	"time"
+
 	"github.com/hashicorp/terraform-json"
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"red-cloud/i18n"
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
-	"sort"
-	"time"
 )
 
 func (a *App) GetProvidersConfig(customPath string) (ProvidersConfigInfo, error) {
@@ -509,7 +513,26 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			Currency:  "-",
 			UpdatedAt: time.Now().Format("2006-01-02 15:04:05"),
 		}
-		switch p {
+
+		func() {
+			defer func() {
+				if r := recover(); r != nil {
+					errMsg := fmt.Sprintf("%v", r)
+					logMsg := fmt.Sprintf("[GetBalances] recovered from panic for provider %s: %v", p, r)
+					log.Printf(logMsg)
+					runtime.EventsEmit(a.ctx, "log", logMsg)
+					if strings.Contains(errMsg, "APIGW.0301") ||
+						strings.Contains(errMsg, "Unauthorized") ||
+						strings.Contains(errMsg, "failed to get domain id") ||
+						strings.Contains(errMsg, "domain id") {
+						result.Error = "华为云查询报错，请至控制台查看详情"
+					} else {
+						result.Error = fmt.Sprintf("查询出错: %v", r)
+					}
+				}
+			}()
+
+			switch p {
 		case "aliyun":
 			if conf.Providers.Alicloud.AccessKey == "" || conf.Providers.Alicloud.SecretKey == "" {
 				result.Error = i18n.T("app_cred_aliyun_missing")
@@ -597,6 +620,8 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 		default:
 			result.Error = i18n.T("app_provider_unsupported")
 		}
+		}() // end of defer recover wrapper
+
 		results = append(results, result)
 	}
 	return results, nil

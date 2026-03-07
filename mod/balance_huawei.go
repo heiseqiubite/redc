@@ -33,7 +33,7 @@ func QueryHuaweiBalance(accessKey string, secretKey string, region string) (stri
 		request := &bssmodel.ShowCustomerAccountBalancesRequest{}
 		response, err := client.ShowCustomerAccountBalances(request)
 		if err != nil {
-			return "", "", err
+			return "", "", simplifyHuaweicloudError(err)
 		}
 		if response == nil || response.AccountBalances == nil || len(*response.AccountBalances) == 0 {
 			return "", "", fmt.Errorf("empty huaweicloud balance response")
@@ -83,7 +83,7 @@ func queryHuaweiBalanceIntl(accessKey string, secretKey string, region string) (
 	request := &bssintlmodel.ShowCustomerAccountBalancesRequest{}
 	response, err := client.ShowCustomerAccountBalances(request)
 	if err != nil {
-		return "", "", err
+		return "", "", simplifyHuaweicloudError(err)
 	}
 	if response == nil || response.AccountBalances == nil || len(*response.AccountBalances) == 0 {
 		return "", "", fmt.Errorf("empty huaweicloud balance response")
@@ -158,4 +158,24 @@ func formatHuaweiAmount(value interface{}) string {
 	default:
 		return fmt.Sprintf("%v", v)
 	}
+}
+
+func simplifyHuaweicloudError(err error) error {
+	if err == nil {
+		return nil
+	}
+	errStr := err.Error()
+	if strings.Contains(errStr, "APIGW.0301") ||
+		strings.Contains(errStr, "Unauthorized") ||
+		strings.Contains(errStr, "failed to get domain id") ||
+		strings.Contains(errStr, "domain id") {
+		return fmt.Errorf("华为云查询报错，请至控制台查看详情")
+	}
+	if strings.Contains(errStr, "context deadline exceeded") {
+		return fmt.Errorf("华为云查询报错，请至控制台查看详情")
+	}
+	if strings.Contains(errStr, "connection refused") || strings.Contains(errStr, "no such host") {
+		return fmt.Errorf("华为云查询报错，请至控制台查看详情")
+	}
+	return err
 }
