@@ -259,7 +259,7 @@
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 text-[11px] sm:text-[12px]">
           <div>
             <span class="text-gray-500">{t.transportMode}</span>
-            <p class="font-medium text-gray-900 mt-0.5">SSE (HTTP)</p>
+            <p class="font-medium text-gray-900 mt-0.5">Streamable HTTP</p>
           </div>
           <div>
             <span class="text-gray-500">{t.listenAddr}</span>
@@ -271,7 +271,7 @@
           </div>
           <div>
             <span class="text-gray-500">{t.msgEndpoint}</span>
-            <p class="font-mono font-medium text-gray-900 mt-0.5 text-[10px] sm:text-[11px] break-all">http://{mcpStatus.address}/message</p>
+            <p class="font-mono font-medium text-gray-900 mt-0.5 text-[10px] sm:text-[11px] break-all">http://{mcpStatus.address}/mcp</p>
           </div>
         </div>
       </div>
@@ -288,7 +288,7 @@
         <div>
           <span class="block text-[11px] sm:text-[12px] font-medium text-gray-500 mb-1.5">{t.transportMode}</span>
           <div class="inline-flex items-center h-9 sm:h-10 px-3 sm:px-4 text-[12px] sm:text-[13px] font-medium rounded-lg border bg-white text-gray-700 border-gray-300">
-            SSE (HTTP)
+            Streamable HTTP
           </div>
         </div>
         <div>

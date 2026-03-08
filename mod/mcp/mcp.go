@@ -17,7 +17,10 @@ import (
 )
 
 // MCP Protocol Version
-const MCPVersion = "2024-11-05"
+const MCPVersion = "2025-11-25"
+
+// Supported protocol versions (for negotiation)
+var supportedVersions = []string{"2025-11-25", "2024-11-05"}
 
 // MCP Message types
 type MCPRequest struct {
@@ -55,6 +58,7 @@ type InitializeResult struct {
 	ProtocolVersion string             `json:"protocolVersion"`
 	Capabilities    ServerCapabilities `json:"capabilities"`
 	ServerInfo      ServerInfo         `json:"serverInfo"`
+	Instructions    string             `json:"instructions,omitempty"`
 }
 
 type ServerCapabilities struct {
@@ -157,9 +161,35 @@ func (s *MCPServer) HandleRequest(req *MCPRequest) *MCPResponse {
 	}
 
 	switch req.Method {
+	// Notifications — no response needed (return nil)
+	case "notifications/initialized", "notifications/cancelled":
+		return nil
+
 	case "initialize":
+		// Version negotiation: parse client's requested version
+		negotiatedVersion := MCPVersion
+		if req.Params != nil {
+			var initParams struct {
+				ProtocolVersion string `json:"protocolVersion"`
+			}
+			if err := json.Unmarshal(req.Params, &initParams); err == nil && initParams.ProtocolVersion != "" {
+				// Check if we support the client's requested version
+				clientSupported := false
+				for _, v := range supportedVersions {
+					if v == initParams.ProtocolVersion {
+						clientSupported = true
+						negotiatedVersion = initParams.ProtocolVersion
+						break
+					}
+				}
+				if !clientSupported {
+					// Respond with our latest supported version
+					negotiatedVersion = MCPVersion
+				}
+			}
+		}
 		resp.Result = InitializeResult{
-			ProtocolVersion: MCPVersion,
+			ProtocolVersion: negotiatedVersion,
 			Capabilities: ServerCapabilities{
 				Tools: &ToolsCapability{
 					ListChanged: false,
@@ -173,6 +203,7 @@ func (s *MCPServer) HandleRequest(req *MCPRequest) *MCPResponse {
 				Name:    "redc",
 				Version: redc.Version,
 			},
+			Instructions: "RedC MCP Server - Cloud resource deployment and management via Terraform",
 		}
 
 	case "tools/list":
@@ -1466,6 +1497,10 @@ func (m *MCPServerManager) runStdioServer(ctx context.Context) {
 			}
 
 			resp := m.server.HandleRequest(&req)
+			if resp == nil {
+				// Notification — no response to send
+				continue
+			}
 			if err := encoder.Encode(resp); err != nil {
 				gologger.Error().Msgf("Failed to encode response: %v", err)
 			}
@@ -1473,7 +1508,7 @@ func (m *MCPServerManager) runStdioServer(ctx context.Context) {
 	}
 }
 
-// SSE transport
+// SSE transport (with Streamable HTTP support per 2025-11-25 spec)
 func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error {
 	// Normalize address
 	if strings.HasPrefix(addr, ":") || !strings.Contains(addr, ":") {
@@ -1486,11 +1521,85 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 
 	mux := http.NewServeMux()
 
+	// CORS preflight handler
+	setCORSHeaders := func(w http.ResponseWriter) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Accept, MCP-Session-Id")
+		w.Header().Set("Access-Control-Expose-Headers", "MCP-Session-Id")
+	}
+
+	// Streamable HTTP endpoint (2025-11-25 spec)
+	mux.HandleFunc("/mcp", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		if r.Method == "GET" {
+			// SSE stream for server-initiated messages
+			flusher, ok := w.(http.Flusher)
+			if !ok {
+				http.Error(w, "Streaming unsupported", http.StatusInternalServerError)
+				return
+			}
+			w.Header().Set("Content-Type", "text/event-stream")
+			w.Header().Set("Cache-Control", "no-cache")
+			w.Header().Set("Connection", "keep-alive")
+			fmt.Fprintf(w, ": connected\n\n")
+			flusher.Flush()
+
+			// Keep connection open until client disconnects or context cancelled
+			select {
+			case <-r.Context().Done():
+			case <-ctx.Done():
+			}
+			return
+		}
+
+		if r.Method == "POST" {
+			var req MCPRequest
+			if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				json.NewEncoder(w).Encode(MCPResponse{
+					JSONRPC: "2.0",
+					Error: &MCPError{
+						Code:    -32700,
+						Message: "Parse error",
+						Data:    err.Error(),
+					},
+				})
+				return
+			}
+
+			resp := m.server.HandleRequest(&req)
+			if resp == nil {
+				// Notification — accepted, no body
+				w.WriteHeader(http.StatusAccepted)
+				return
+			}
+
+			w.Header().Set("Content-Type", "application/json")
+			json.NewEncoder(w).Encode(resp)
+			return
+		}
+
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	})
+
+	// Legacy SSE endpoint (kept for backward compatibility)
 	mux.HandleFunc("/sse", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -1506,6 +1615,10 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 			}
 
 			resp := m.server.HandleRequest(&req)
+			if resp == nil {
+				w.WriteHeader(http.StatusAccepted)
+				return
+			}
 			data, _ := json.Marshal(resp)
 
 			fmt.Fprintf(w, "data: %s\n\n", data)
@@ -1517,7 +1630,13 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 		flusher.Flush()
 	})
 
+	// Legacy message endpoint (kept for backward compatibility)
 	mux.HandleFunc("/message", func(w http.ResponseWriter, r *http.Request) {
+		setCORSHeaders(w)
+		if r.Method == "OPTIONS" {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
 		if r.Method != "POST" {
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 			return
@@ -1530,15 +1649,21 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 		}
 
 		resp := m.server.HandleRequest(&req)
+		if resp == nil {
+			w.WriteHeader(http.StatusAccepted)
+			return
+		}
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(resp)
 	})
 
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		fmt.Fprintf(w, "redc MCP Server v%s\n", redc.Version)
+		setCORSHeaders(w)
+		fmt.Fprintf(w, "redc MCP Server v%s (protocol %s)\n", redc.Version, MCPVersion)
 		fmt.Fprintf(w, "Endpoints:\n")
-		fmt.Fprintf(w, "  POST /message - Send JSON-RPC messages\n")
-		fmt.Fprintf(w, "  GET  /sse     - SSE endpoint (for streaming)\n")
+		fmt.Fprintf(w, "  POST /mcp     - Streamable HTTP endpoint (2025-11-25)\n")
+		fmt.Fprintf(w, "  POST /message - JSON-RPC messages (legacy)\n")
+		fmt.Fprintf(w, "  GET  /sse     - SSE endpoint (legacy)\n")
 	})
 
 	m.httpServer = &http.Server{
@@ -1547,9 +1672,10 @@ func (m *MCPServerManager) runSSEServer(ctx context.Context, addr string) error 
 	}
 
 	go func() {
-		m.log("🚀 MCP SSE Server listening on %s", addr)
-		m.log("   POST endpoint: http://%s/message", addr)
-		m.log("   SSE endpoint:  http://%s/sse", addr)
+		m.log("🚀 MCP Server listening on %s", addr)
+		m.log("   Streamable HTTP: http://%s/mcp (2025-11-25)", addr)
+		m.log("   Legacy POST:     http://%s/message", addr)
+		m.log("   Legacy SSE:      http://%s/sse", addr)
 		m.log("   Protocol version: %s", MCPVersion)
 
 		if err := m.httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
