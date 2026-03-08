@@ -1,9 +1,20 @@
 <script>
   import { onMount } from 'svelte';
+  import { marked } from 'marked';
   import { AIChatStream, SaveTemplateFiles } from '../../../wailsjs/wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
 
   let { t, onTabChange = () => {} } = $props();
+
+  // Configure marked
+  marked.setOptions({ breaks: true, gfm: true });
+
+  // Render markdown to HTML (sanitize basic XSS)
+  function renderMarkdown(content) {
+    if (!content) return '';
+    const html = marked.parse(content);
+    return html;
+  }
 
   // State
   let mode = $state('free');
@@ -16,6 +27,14 @@
   let successMessage = $state('');
   let messagesContainer = $state(null);
 
+  // Conversation history state
+  let conversations = $state([]);   // Array of { id, title, mode, messages, updatedAt }
+  let activeConvId = $state('');     // Currently active conversation id
+  let showHistory = $state(false);   // Toggle history panel
+
+  const STORAGE_KEY = 'redc-ai-chat-conversations';
+  const MAX_CONVERSATIONS = 50;
+
   const modes = [
     { id: 'free', labelKey: 'aiChatFreeChat', icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
     { id: 'generate', labelKey: 'aiChatGenTemplate', icon: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5' },
@@ -23,12 +42,8 @@
     { id: 'cost', labelKey: 'aiChatCostOpt', icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
   ];
 
-  const welcomeMessages = {
-    free: 'aiChatWelcomeFree',
-    generate: 'aiChatWelcomeGenerate',
-    recommend: 'aiChatWelcomeRecommend',
-    cost: 'aiChatWelcomeCost'
-  };
+  const modeLabels = { free: 'aiChatFreeChat', generate: 'aiChatGenTemplate', recommend: 'aiChatRecommend', cost: 'aiChatCostOpt' };
+  const welcomeMessages = { free: 'aiChatWelcomeFree', generate: 'aiChatWelcomeGenerate', recommend: 'aiChatWelcomeRecommend', cost: 'aiChatWelcomeCost' };
 
   function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -38,22 +53,145 @@
     return { id: generateId(), role: 'assistant', content: t[welcomeMessages[m]] || '', timestamp: Date.now(), mode: m };
   }
 
-  // Restore state from localStorage
-  onMount(() => {
+  // Derive conversation title from first user message
+  function deriveTitle(msgs) {
+    const firstUser = msgs.find(m => m.role === 'user');
+    if (firstUser) {
+      const text = firstUser.content.trim();
+      return text.length > 30 ? text.slice(0, 30) + '...' : text;
+    }
+    return t.aiChatNewConversation || '新对话';
+  }
+
+  // Load all conversations from localStorage
+  function loadConversations() {
     try {
-      const saved = localStorage.getItem('redc-ai-chat-state');
+      const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (parsed.mode) mode = parsed.mode;
-        if (parsed.messages && parsed.messages.length > 0) {
-          messages = parsed.messages;
-        } else {
-          messages = [getWelcomeMessage(mode)];
+        if (Array.isArray(parsed)) {
+          conversations = parsed;
+          return;
         }
-      } else {
-        messages = [getWelcomeMessage(mode)];
       }
+      // Migrate from old single-conversation format
+      const oldSaved = localStorage.getItem('redc-ai-chat-state');
+      if (oldSaved) {
+        const parsed = JSON.parse(oldSaved);
+        if (parsed.messages && parsed.messages.length > 0) {
+          const conv = {
+            id: generateId(),
+            title: deriveTitle(parsed.messages),
+            mode: parsed.mode || 'free',
+            messages: parsed.messages,
+            updatedAt: Date.now()
+          };
+          conversations = [conv];
+          activeConvId = conv.id;
+          mode = conv.mode;
+          messages = conv.messages;
+          saveConversations();
+          localStorage.removeItem('redc-ai-chat-state');
+          return;
+        }
+      }
+      conversations = [];
     } catch {
+      conversations = [];
+    }
+  }
+
+  function saveConversations() {
+    try {
+      // Keep only recent conversations
+      const toSave = conversations.slice(0, MAX_CONVERSATIONS);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch {}
+  }
+
+  // Save current conversation state into conversations array
+  function syncCurrentConversation() {
+    if (!activeConvId) return;
+    const idx = conversations.findIndex(c => c.id === activeConvId);
+    const conv = {
+      id: activeConvId,
+      title: deriveTitle(messages),
+      mode,
+      messages,
+      updatedAt: Date.now()
+    };
+    if (idx >= 0) {
+      conversations[idx] = conv;
+    } else {
+      conversations = [conv, ...conversations];
+    }
+    conversations = [...conversations].sort((a, b) => b.updatedAt - a.updatedAt);
+    saveConversations();
+  }
+
+  // Switch to a conversation from history
+  function switchConversation(convId) {
+    if (convId === activeConvId) {
+      showHistory = false;
+      return;
+    }
+    // Save current first
+    syncCurrentConversation();
+    const conv = conversations.find(c => c.id === convId);
+    if (conv) {
+      activeConvId = conv.id;
+      mode = conv.mode;
+      messages = [...conv.messages];
+      streamingContent = '';
+      isStreaming = false;
+      error = '';
+      currentConversationId = '';
+    }
+    showHistory = false;
+  }
+
+  // Delete a conversation
+  function deleteConversation(convId, event) {
+    event.stopPropagation();
+    conversations = conversations.filter(c => c.id !== convId);
+    saveConversations();
+    if (convId === activeConvId) {
+      createNewConversation();
+    }
+  }
+
+  // Create a brand new conversation
+  function createNewConversation() {
+    // Save current if it has meaningful content
+    if (activeConvId && messages.length > 1) {
+      syncCurrentConversation();
+    }
+    const newId = generateId();
+    activeConvId = newId;
+    messages = [getWelcomeMessage(mode)];
+    streamingContent = '';
+    isStreaming = false;
+    error = '';
+    currentConversationId = '';
+    inputText = '';
+    showHistory = false;
+    // Don't save empty conversation to list yet — will save on first message
+  }
+
+  onMount(() => {
+    loadConversations();
+
+    // If we have conversations, load the most recent one
+    if (conversations.length > 0 && !activeConvId) {
+      const latest = conversations[0];
+      activeConvId = latest.id;
+      mode = latest.mode;
+      messages = [...latest.messages];
+    }
+
+    // If still no conversation, create a fresh one
+    if (!activeConvId) {
+      activeConvId = generateId();
       messages = [getWelcomeMessage(mode)];
     }
 
@@ -79,7 +217,7 @@
         streamingContent = '';
         isStreaming = false;
         currentConversationId = '';
-        saveState();
+        syncCurrentConversation();
       }
     });
 
@@ -88,13 +226,6 @@
       EventsOff('ai-chat-complete');
     };
   });
-
-  // Save state to localStorage
-  function saveState() {
-    try {
-      localStorage.setItem('redc-ai-chat-state', JSON.stringify({ mode, messages }));
-    } catch {}
-  }
 
   // Auto-scroll
   $effect(() => {
@@ -111,27 +242,20 @@
     }
   }
 
-  // Switch mode
+  // Switch mode — creates a new conversation with the new mode
   function switchMode(newMode) {
-    if (newMode === mode) return;
+    if (newMode === mode && !isStreaming) return;
+    // Save current if meaningful
+    if (activeConvId && messages.length > 1) {
+      syncCurrentConversation();
+    }
     mode = newMode;
+    activeConvId = generateId();
     messages = [getWelcomeMessage(newMode)];
     streamingContent = '';
     isStreaming = false;
     error = '';
     currentConversationId = '';
-    saveState();
-  }
-
-  // New conversation
-  function newConversation() {
-    messages = [getWelcomeMessage(mode)];
-    streamingContent = '';
-    isStreaming = false;
-    error = '';
-    currentConversationId = '';
-    inputText = '';
-    saveState();
   }
 
   // Send message
@@ -140,8 +264,6 @@
     if (!text || isStreaming) return;
 
     error = '';
-    const userMsg = { id: generateId(), role: 'assistant', content: '', timestamp: Date.now(), mode };
-    // Actually add user message
     const userMessage = { id: generateId(), role: 'user', content: text, timestamp: Date.now(), mode };
     messages = [...messages, userMessage];
     inputText = '';
@@ -154,7 +276,7 @@
     // Build messages for backend (only role + content)
     const chatMessages = messages
       .filter(m => m.role === 'user' || m.role === 'assistant')
-      .filter(m => m.content) // skip empty welcome messages if any issue
+      .filter(m => m.content)
       .map(m => ({ role: m.role, content: m.content }));
 
     try {
@@ -166,12 +288,14 @@
       currentConversationId = '';
     }
 
-    saveState();
+    syncCurrentConversation();
   }
 
-  // Parse Markdown template content and extract individual files
+  // Parse Markdown template content and extract individual files (operates on raw content)
+  /** @param {string} markdown */
+  /** @returns {Record<string, string>} */
   function parseTemplateMarkdown(markdown) {
-    const files = {};
+    const files = /** @type {Record<string, string>} */ ({});
     const fileBlocks = markdown.split(/^###\s+/m);
     for (const block of fileBlocks) {
       if (!block.trim()) continue;
@@ -220,10 +344,19 @@
       console.error('Failed to copy:', e);
     }
   }
+
+  function formatTime(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    if (isToday) return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleDateString([], { month: 'short', day: 'numeric' }) + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  }
 </script>
 
 <div class="flex flex-col h-[calc(100vh-8rem)]">
-  <!-- Mode selector -->
+  <!-- Mode selector + history toggle -->
   <div class="flex items-center gap-2 mb-4 flex-shrink-0">
     {#each modes as m}
       <button
@@ -238,9 +371,21 @@
       </button>
     {/each}
     <div class="flex-1"></div>
+    <!-- History toggle -->
+    <button
+      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer
+        {showHistory ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}"
+      onclick={() => showHistory = !showHistory}
+      title={t.aiChatHistory || '对话历史'}
+    >
+      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {t.aiChatHistory || '历史'}
+    </button>
     <button
       class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all cursor-pointer"
-      onclick={newConversation}
+      onclick={createNewConversation}
     >
       <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
         <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
@@ -272,129 +417,219 @@
     </div>
   {/if}
 
-  <!-- Messages -->
-  <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer}>
-    {#each messages as msg (msg.id)}
-      {#if msg.role === 'user'}
-        <!-- User message -->
-        <div class="flex justify-end">
-          <div class="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gray-900 text-white">
-            <p class="text-[13px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
-          </div>
+  <!-- Main content area with optional history panel -->
+  <div class="flex-1 flex gap-4 min-h-0 overflow-hidden">
+    <!-- History panel -->
+    {#if showHistory}
+      <div class="w-56 flex-shrink-0 bg-white border border-gray-100 rounded-xl flex flex-col overflow-hidden">
+        <div class="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between">
+          <span class="text-[12px] font-medium text-gray-700">{t.aiChatHistory || '对话历史'}</span>
+          <span class="text-[10px] text-gray-400">{conversations.length}</span>
         </div>
-      {:else}
-        <!-- Assistant message -->
-        <div class="flex justify-start">
-          <div class="max-w-[85%]">
-            <div class="flex items-start gap-2.5">
-              <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-                </svg>
-              </div>
-              <div class="flex-1 min-w-0">
-                <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
-                  <pre class="text-[13px] text-gray-900 whitespace-pre-wrap leading-relaxed font-[inherit]">{msg.content}</pre>
-                </div>
-                <!-- Action buttons -->
-                {#if msg.content}
-                  <div class="flex items-center gap-1 mt-1.5 ml-1">
-                    <button
-                      class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
-                      onclick={() => handleCopyContent(msg.content)}
-                    >
-                      <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
-                      </svg>
-                      {t.aiChatCopyContent || '复制'}
-                    </button>
-                    {#if mode === 'generate'}
-                      <button
-                        class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        onclick={() => handleSaveTemplate(msg.content)}
-                      >
-                        <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                        </svg>
-                        {t.aiChatSaveTemplate || '保存模板'}
-                      </button>
-                    {/if}
+        <div class="flex-1 overflow-y-auto">
+          {#if conversations.length === 0}
+            <div class="px-3 py-6 text-center text-[11px] text-gray-400">
+              {t.aiChatNoHistory || '暂无对话历史'}
+            </div>
+          {:else}
+            {#each conversations as conv (conv.id)}
+              <div
+                class="w-full text-left px-3 py-2.5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer group
+                  {conv.id === activeConvId ? 'bg-gray-50' : ''}"
+                onclick={() => switchConversation(conv.id)}
+                role="button"
+                onkeydown={(e) => e.key === 'Enter' && switchConversation(conv.id)}
+                tabindex="0"
+              >
+                <div class="flex items-start justify-between gap-1">
+                  <div class="min-w-0 flex-1">
+                    <p class="text-[12px] font-medium text-gray-800 truncate {conv.id === activeConvId ? 'text-rose-600' : ''}">{conv.title}</p>
+                    <div class="flex items-center gap-1.5 mt-0.5">
+                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{t[modeLabels[conv.mode]] || conv.mode}</span>
+                      <span class="text-[10px] text-gray-400">{formatTime(conv.updatedAt)}</span>
+                    </div>
                   </div>
-                {/if}
-              </div>
-            </div>
-          </div>
-        </div>
-      {/if}
-    {/each}
-
-    <!-- Streaming indicator -->
-    {#if isStreaming}
-      <div class="flex justify-start">
-        <div class="max-w-[85%]">
-          <div class="flex items-start gap-2.5">
-            <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
-              <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
-              </svg>
-            </div>
-            <div class="flex-1 min-w-0">
-              <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
-                {#if streamingContent}
-                  <pre class="text-[13px] text-gray-900 whitespace-pre-wrap leading-relaxed font-[inherit]">{streamingContent}<span class="inline-block w-1.5 h-4 bg-rose-500 animate-pulse ml-0.5 align-middle"></span></pre>
-                {:else}
-                  <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
-                      <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                      <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <button
+                    class="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-red-50 hover:text-red-500 text-gray-300 transition-all cursor-pointer flex-shrink-0"
+                    onclick={(e) => deleteConversation(conv.id, e)}
+                    title={t.delete || '删除'}
+                  >
+                    <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
                     </svg>
-                    <span class="text-[12px] text-gray-400">{t.aiChatStreaming || 'AI 思考中...'}</span>
-                  </div>
-                {/if}
+                  </button>
+                </div>
               </div>
-            </div>
-          </div>
+            {/each}
+          {/if}
         </div>
       </div>
     {/if}
 
-    <!-- Scroll sentinel -->
-    <div class="h-1"></div>
-  </div>
+    <!-- Chat area -->
+    <div class="flex-1 flex flex-col min-w-0">
+      <!-- Messages -->
+      <div class="flex-1 overflow-y-auto space-y-4 pb-4" bind:this={messagesContainer}>
+        {#each messages as msg (msg.id)}
+          {#if msg.role === 'user'}
+            <!-- User message -->
+            <div class="flex justify-end">
+              <div class="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gray-900 text-white">
+                <p class="text-[13px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+              </div>
+            </div>
+          {:else}
+            <!-- Assistant message with markdown -->
+            <div class="flex justify-start">
+              <div class="max-w-[85%]">
+                <div class="flex items-start gap-2.5">
+                  <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                    <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                    </svg>
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
+                      <div class="md-content text-[13px] text-gray-900 leading-relaxed">
+                        {@html renderMarkdown(msg.content)}
+                      </div>
+                    </div>
+                    <!-- Action buttons -->
+                    {#if msg.content}
+                      <div class="flex items-center gap-1 mt-1.5 ml-1">
+                        <button
+                          class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
+                          onclick={() => handleCopyContent(msg.content)}
+                        >
+                          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" />
+                          </svg>
+                          {t.aiChatCopyContent || '复制'}
+                        </button>
+                        {#if msg.mode === 'generate'}
+                          <button
+                            class="flex items-center gap-1 px-2 py-1 rounded text-[11px] text-gray-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            onclick={() => handleSaveTemplate(msg.content)}
+                          >
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                            </svg>
+                            {t.aiChatSaveTemplate || '保存模板'}
+                          </button>
+                        {/if}
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              </div>
+            </div>
+          {/if}
+        {/each}
 
-  <!-- Input area -->
-  <div class="flex-shrink-0 border-t border-gray-100 pt-3">
-    <div class="flex items-end gap-2">
-      <textarea
-        class="flex-1 px-4 py-2.5 text-[13px] bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
-        rows="2"
-        placeholder={t.aiChatPlaceholder || '输入消息... Ctrl/Cmd+Enter 发送'}
-        bind:value={inputText}
-        onkeydown={(e) => {
-          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-            e.preventDefault();
-            sendMessage();
-          }
-        }}
-        disabled={isStreaming}
-      ></textarea>
-      <button
-        class="px-4 h-10 bg-gray-900 text-white text-[12px] font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer flex-shrink-0"
-        onclick={sendMessage}
-        disabled={isStreaming || !inputText.trim()}
-      >
+        <!-- Streaming indicator -->
         {#if isStreaming}
-          <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-        {:else}
-          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-          </svg>
+          <div class="flex justify-start">
+            <div class="max-w-[85%]">
+              <div class="flex items-start gap-2.5">
+                <div class="w-7 h-7 rounded-lg bg-rose-600 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <svg class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+                  </svg>
+                </div>
+                <div class="flex-1 min-w-0">
+                  <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">
+                    {#if streamingContent}
+                      <div class="md-content text-[13px] text-gray-900 leading-relaxed">
+                        {@html renderMarkdown(streamingContent)}
+                        <span class="inline-block w-1.5 h-4 bg-rose-500 animate-pulse ml-0.5 align-middle"></span>
+                      </div>
+                    {:else}
+                      <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24">
+                          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span class="text-[12px] text-gray-400">{t.aiChatStreaming || 'AI 思考中...'}</span>
+                      </div>
+                    {/if}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         {/if}
-        {t.aiChatSend || '发送'}
-      </button>
+
+        <div class="h-1"></div>
+      </div>
+
+      <!-- Input area -->
+      <div class="flex-shrink-0 border-t border-gray-100 pt-3">
+        <div class="flex items-end gap-2">
+          <textarea
+            class="flex-1 px-4 py-2.5 text-[13px] bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
+            rows="2"
+            placeholder={t.aiChatPlaceholder || '输入消息... Ctrl/Cmd+Enter 发送'}
+            bind:value={inputText}
+            onkeydown={(e) => {
+              if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                e.preventDefault();
+                sendMessage();
+              }
+            }}
+            disabled={isStreaming}
+          ></textarea>
+          <button
+            class="px-4 h-10 bg-gray-900 text-white text-[12px] font-medium rounded-xl hover:bg-gray-800 transition-colors disabled:opacity-50 flex items-center gap-2 cursor-pointer flex-shrink-0"
+            onclick={sendMessage}
+            disabled={isStreaming || !inputText.trim()}
+          >
+            {#if isStreaming}
+              <svg class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            {:else}
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+              </svg>
+            {/if}
+            {t.aiChatSend || '发送'}
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<style>
+  /* Markdown content styles */
+  .md-content :global(h1) { font-size: 1.25em; font-weight: 700; margin: 0.8em 0 0.4em; }
+  .md-content :global(h2) { font-size: 1.1em; font-weight: 600; margin: 0.7em 0 0.3em; }
+  .md-content :global(h3) { font-size: 1em; font-weight: 600; margin: 0.6em 0 0.3em; }
+  .md-content :global(p) { margin: 0.4em 0; }
+  .md-content :global(ul), .md-content :global(ol) { margin: 0.4em 0; padding-left: 1.5em; }
+  .md-content :global(li) { margin: 0.2em 0; }
+  .md-content :global(code) {
+    background: #f3f4f6; padding: 0.15em 0.4em; border-radius: 4px;
+    font-size: 0.9em; font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, monospace;
+  }
+  .md-content :global(pre) {
+    background: #1f2937; color: #e5e7eb; padding: 0.8em 1em; border-radius: 8px;
+    overflow-x: auto; margin: 0.5em 0; font-size: 0.85em; line-height: 1.6;
+  }
+  .md-content :global(pre code) {
+    background: none; padding: 0; color: inherit; font-size: inherit;
+  }
+  .md-content :global(blockquote) {
+    border-left: 3px solid #d1d5db; padding-left: 0.8em; margin: 0.5em 0;
+    color: #6b7280; font-style: italic;
+  }
+  .md-content :global(table) { width: 100%; border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
+  .md-content :global(th), .md-content :global(td) { border: 1px solid #e5e7eb; padding: 0.4em 0.6em; text-align: left; }
+  .md-content :global(th) { background: #f9fafb; font-weight: 600; }
+  .md-content :global(hr) { border: none; border-top: 1px solid #e5e7eb; margin: 0.8em 0; }
+  .md-content :global(a) { color: #2563eb; text-decoration: underline; }
+  .md-content :global(strong) { font-weight: 600; }
+  .md-content :global(> *:first-child) { margin-top: 0; }
+  .md-content :global(> *:last-child) { margin-bottom: 0; }
+</style>

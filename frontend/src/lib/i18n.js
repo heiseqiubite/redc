@@ -265,6 +265,8 @@ export const i18n = {
     aiChatStreaming: 'AI 思考中...',
     aiChatRedirectHint: 'AI 模板生成、场景推荐、成本优化等功能已迁移至 AI 对话页面，支持多轮对话和流式输出。',
     goToAIChat: '前往 AI 对话',
+    aiChatHistory: '历史',
+    aiChatNoHistory: '暂无对话历史',
   },
   en: {
     dashboard: 'Dashboard', console: 'Console', settings: 'Settings', credentials: 'Credentials', registry: 'Template Registry', ai: 'AI Integration', localTemplates: 'Local Templates', specialModules: 'Special Modules',
@@ -543,6 +545,8 @@ export const i18n = {
     aiChatStreaming: 'AI is thinking...',
     aiChatRedirectHint: 'AI template generation, scenario recommendations, and cost optimization have moved to the AI Chat page, with multi-turn conversations and streaming output.',
     goToAIChat: 'Go to AI Chat',
+    aiChatHistory: 'History',
+    aiChatNoHistory: 'No conversation history',
   }
 };
 
