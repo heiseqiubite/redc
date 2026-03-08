@@ -438,6 +438,10 @@ export function StartSSHTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['StartSSHTerminal'](arg1, arg2, arg3);
 }
 
+export function StartSSHTerminalDirect(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['StartSSHTerminalDirect'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
 export function StartSSHTerminalInstance(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['StartSSHTerminalInstance'](arg1, arg2, arg3, arg4);
 }

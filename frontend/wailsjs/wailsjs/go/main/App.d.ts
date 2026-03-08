@@ -224,6 +224,8 @@ export function StartPortForward(arg1:string,arg2:number,arg3:string,arg4:number
 
 export function StartSSHTerminal(arg1:string,arg2:number,arg3:number):Promise<string>;
 
+export function StartSSHTerminalDirect(arg1:string,arg2:number,arg3:string,arg4:string,arg5:string,arg6:number,arg7:number):Promise<string>;
+
 export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg4:number):Promise<string>;
 
 export function StopCase(arg1:string):Promise<void>;

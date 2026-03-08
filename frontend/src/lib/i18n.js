@@ -171,6 +171,7 @@ export const i18n = {
     sendToAI: '发送到 AI 分析', analyzeTerminalPrompt: '请帮我分析以下终端输出内容',
     sshActiveCases: '运行中的场景', sshNoCasesRunning: '暂无运行中的场景', sshManualInput: '手动输入 ID →', sshBackToCases: '返回场景列表', predefined: '预定义', custom: '自定义',
     sshSelectInstance: '选择实例', sshMultiInstanceHint: '点击单个实例连接，或一键全部连接', sshConnectAll: '全部连接', sshCloseAll: '关闭所有连接', sshCloseAllConfirm: '确定关闭所有 SSH 连接吗？此操作不可撤销。',
+    sshDialogCases: 'RedC 场景', sshDialogExternal: '外部服务器', sshExtHost: '主机地址', sshExtPort: '端口', sshExtUser: '用户名', sshExtAuthMode: '认证方式', sshExtPassword: '密码', sshExtKey: '密钥', sshExtKeyPath: '密钥路径', sshExtPasswordPlaceholder: '输入密码',
     // Scheduled Tasks
     execSuccess: '执行成功', execFailed: '执行失败',
     uploadFile: '上传文件', downloadFile: '下载文件',
@@ -471,6 +472,7 @@ export const i18n = {
     sendToAI: 'Send to AI Analysis', analyzeTerminalPrompt: 'Please help me analyze the following terminal output',
     sshActiveCases: 'Active Scenarios', sshNoCasesRunning: 'No running scenarios', sshManualInput: 'Manual ID input →', sshBackToCases: 'Back to case list', predefined: 'Predefined', custom: 'Custom',
     sshSelectInstance: 'Select Instance', sshMultiInstanceHint: 'Click an instance to connect, or connect all at once', sshConnectAll: 'Connect All', sshCloseAll: 'Close All', sshCloseAllConfirm: 'Close all SSH connections? This cannot be undone.',
+    sshDialogCases: 'RedC Scenarios', sshDialogExternal: 'External Server', sshExtHost: 'Host', sshExtPort: 'Port', sshExtUser: 'Username', sshExtAuthMode: 'Auth Method', sshExtPassword: 'Password', sshExtKey: 'Key', sshExtKeyPath: 'Key Path', sshExtPasswordPlaceholder: 'Enter password',
     // Scheduled Tasks
     execSuccess: 'Exec Success', execFailed: 'Exec Failed',
     uploadFile: 'Upload File', downloadFile: 'Download File',

@@ -501,6 +501,46 @@ func (a *App) StartSSHTerminalInstance(caseID string, instanceIndex int, rows, c
 	return sessionID, nil
 }
 
+// StartSSHTerminalDirect 直接连接外部 SSH 服务器（不依赖 RedC 场景）
+func (a *App) StartSSHTerminalDirect(host string, port int, user, password, keyPath string, rows, cols int) (string, error) {
+	if host == "" || user == "" {
+		return "", fmt.Errorf("host and user are required")
+	}
+	if port <= 0 {
+		port = 22
+	}
+
+	sshConfig := &sshutil.SSHConfig{
+		Host:     host,
+		Port:     port,
+		User:     user,
+		Password: password,
+		KeyPath:  keyPath,
+		Timeout:  15 * time.Second,
+	}
+
+	client, err := sshutil.NewClient(sshConfig)
+	if err != nil {
+		return "", fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+	}
+
+	session, err := client.NewTerminalSession(rows, cols)
+	if err != nil {
+		client.Close()
+		return "", fmt.Errorf(i18n.Tf("app_terminal_session_failed", err))
+	}
+
+	sessionID := fmt.Sprintf("ext-%s-%d-%d", host, port, time.Now().Unix())
+
+	terminalSessionsMu.Lock()
+	terminalSessions[sessionID] = session
+	terminalSessionsMu.Unlock()
+
+	go a.readTerminalOutput(sessionID, session)
+
+	return sessionID, nil
+}
+
 // readTerminalOutput 读取终端输出并发送到前端
 func (a *App) readTerminalOutput(sessionID string, session *sshutil.TerminalSession) {
 	buf := make([]byte, 4096)

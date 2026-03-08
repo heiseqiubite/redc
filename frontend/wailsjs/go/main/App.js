@@ -414,6 +414,10 @@ export function StartSSHTerminalInstance(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['StartSSHTerminalInstance'](arg1, arg2, arg3, arg4);
 }
 
+export function StartSSHTerminalDirect(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['StartSSHTerminalDirect'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+}
+
 export function StopCase(arg1) {
   return window['go']['main']['App']['StopCase'](arg1);
 }

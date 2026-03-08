@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
-  import { StartSSHTerminal, StartSSHTerminalInstance, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, GetSSHInfosForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/wailsjs/go/main/App.js';
+  import { StartSSHTerminal, StartSSHTerminalInstance, StartSSHTerminalDirect, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, GetSSHInfosForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import FileManager from '../Cases/FileManager.svelte';
   import { loadUserdataTemplates, getGroupedTemplates, userdataCategoryNames } from '../../lib/userdataTemplates.js';
@@ -18,6 +18,15 @@
   let showManualInput = $state(false);
   let multiInstances = $state([]);
   let multiInstanceCase = $state(null);
+  let dialogMode = $state('cases'); // 'cases' | 'external'
+
+  // --- External SSH server state ---
+  let extHost = $state('');
+  let extPort = $state('22');
+  let extUser = $state('root');
+  let extPassword = $state('');
+  let extKeyPath = $state('');
+  let extAuthMode = $state('password'); // 'password' | 'key'
 
   // --- Right panel state: 'none' | 'portForward' | 'userdata' | 'fileManager' ---
   let rightPanel = $state('none');
@@ -234,7 +243,12 @@
     const cols = session.terminal?.cols || 80;
 
     try {
-      const sid = await StartSSHTerminalInstance(session.caseId, session.instanceIndex || 0, rows, cols);
+      let sid;
+      if (session.isExternal) {
+        sid = await StartSSHTerminalDirect(session.host, session.extPort || 22, session.user, session.extPassword || '', session.extKeyPath || '', rows, cols);
+      } else {
+        sid = await StartSSHTerminalInstance(session.caseId, session.instanceIndex || 0, rows, cols);
+      }
       session.sessionId = sid;
 
       EventsOn(`terminal-output-${sid}`, (data) => {
@@ -299,10 +313,17 @@
   async function openNewSessionDialog() {
     showNewSessionDialog = true;
     showManualInput = false;
+    dialogMode = 'cases';
     newSessionCaseId = '';
     newSessionCaseName = '';
     multiInstances = [];
     multiInstanceCase = null;
+    extHost = '';
+    extPort = '22';
+    extUser = 'root';
+    extPassword = '';
+    extKeyPath = '';
+    extAuthMode = 'password';
     casesLoading = true;
     try {
       const cases = await ListCases();
@@ -352,6 +373,49 @@
     newSessionCaseId = '';
     newSessionCaseName = '';
     showNewSessionDialog = false;
+  }
+
+  async function handleExternalSessionSubmit() {
+    const host = extHost.trim();
+    const user = extUser.trim();
+    if (!host || !user) return;
+
+    const port = parseInt(extPort) || 22;
+    const password = extAuthMode === 'password' ? extPassword : '';
+    const keyPath = extAuthMode === 'key' ? extKeyPath.trim() : '';
+    const label = `${user}@${host}${port !== 22 ? ':' + port : ''}`;
+
+    if (!xtermModules) return;
+
+    const session = {
+      id: crypto.randomUUID(),
+      caseId: null,
+      caseName: label,
+      instanceIndex: 0,
+      sessionId: null,
+      terminal: null,
+      fitAddon: null,
+      containerEl: null,
+      resizeObserver: null,
+      connected: false,
+      connecting: true,
+      error: '',
+      host,
+      user,
+      isExternal: true,
+      extPort: port,
+      extPassword: password,
+      extKeyPath: keyPath,
+    };
+
+    sessions = [...sessions, session];
+    const idx = sessions.length - 1;
+    activeSessionIndex = idx;
+    showNewSessionDialog = false;
+
+    await tick();
+    const reactiveSession = sessions[idx];
+    initSessionTerminal(reactiveSession);
   }
 
   function sessionLabel(session) {
@@ -815,9 +879,118 @@
     onkeydown={(e) => { if (e.key === 'Escape') showNewSessionDialog = false; }}
   >
     <div class="bg-white rounded-xl border border-gray-100 w-full max-w-md p-5 shadow-2xl">
-      <h3 class="text-[15px] font-semibold text-gray-900 mb-4">{t.sshNewSession || '新建会话'}</h3>
+      <h3 class="text-[15px] font-semibold text-gray-900 mb-3">{t.sshNewSession || '新建会话'}</h3>
 
-      {#if multiInstances.length > 0 && multiInstanceCase}
+      <!-- Dialog mode tabs: 场景 / 外部服务器 -->
+      {#if multiInstances.length === 0 && !showManualInput}
+      <div class="flex gap-1 mb-4 bg-gray-100 p-1 rounded-lg">
+        <button
+          class="flex-1 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all cursor-pointer {dialogMode === 'cases' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+          onclick={() => dialogMode = 'cases'}
+        >
+          {t.sshDialogCases || 'RedC 场景'}
+        </button>
+        <button
+          class="flex-1 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all cursor-pointer {dialogMode === 'external' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+          onclick={() => dialogMode = 'external'}
+        >
+          {t.sshDialogExternal || '外部服务器'}
+        </button>
+      </div>
+      {/if}
+
+      {#if dialogMode === 'external' && multiInstances.length === 0 && !showManualInput}
+        <!-- External SSH server form -->
+        <div class="space-y-3">
+          <div class="grid grid-cols-3 gap-2">
+            <div class="col-span-2">
+              <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtHost || '主机地址'}</label>
+              <input
+                type="text"
+                class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="192.168.1.100"
+                bind:value={extHost}
+                onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
+              />
+            </div>
+            <div>
+              <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtPort || '端口'}</label>
+              <input
+                type="number"
+                class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+                placeholder="22"
+                bind:value={extPort}
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtUser || '用户名'}</label>
+            <input
+              type="text"
+              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="root"
+              bind:value={extUser}
+              onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
+            />
+          </div>
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtAuthMode || '认证方式'}</label>
+            <div class="flex gap-1 bg-gray-100 p-1 rounded-lg">
+              <button
+                class="flex-1 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all cursor-pointer {extAuthMode === 'password' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+                onclick={() => extAuthMode = 'password'}
+              >
+                {t.sshExtPassword || '密码'}
+              </button>
+              <button
+                class="flex-1 px-3 py-1.5 text-[12px] font-medium rounded-md transition-all cursor-pointer {extAuthMode === 'key' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+                onclick={() => extAuthMode = 'key'}
+              >
+                {t.sshExtKey || '密钥'}
+              </button>
+            </div>
+          </div>
+          {#if extAuthMode === 'password'}
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtPassword || '密码'}</label>
+            <input
+              type="password"
+              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder={t.sshExtPasswordPlaceholder || '输入密码'}
+              bind:value={extPassword}
+              onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
+            />
+          </div>
+          {:else}
+          <div>
+            <label class="block text-[12px] font-medium text-gray-700 mb-1">{t.sshExtKeyPath || '密钥路径'}</label>
+            <input
+              type="text"
+              class="w-full px-3 py-2 text-[13px] border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-red-500"
+              placeholder="~/.ssh/id_rsa"
+              bind:value={extKeyPath}
+              onkeydown={(e) => { if (e.key === 'Enter') handleExternalSessionSubmit(); }}
+            />
+          </div>
+          {/if}
+        </div>
+        <div class="flex items-center justify-end gap-2 mt-5">
+          <button
+            class="h-10 px-5 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+            onclick={() => showNewSessionDialog = false}
+          >
+            {t.cancel || '取消'}
+          </button>
+          <button
+            class="h-10 px-5 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            onclick={handleExternalSessionSubmit}
+            disabled={!extHost.trim() || !extUser.trim()}
+          >
+            {t.sshConnect || '连接'}
+          </button>
+        </div>
+
+      {:else if multiInstances.length > 0 && multiInstanceCase}
         <!-- Multi-instance picker -->
         <div class="mb-4">
           <div class="flex items-center gap-2 mb-3">
