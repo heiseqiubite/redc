@@ -563,7 +563,7 @@
       </div>
 
       <!-- Input area -->
-      <div class="flex-shrink-0 border-t border-gray-100 pt-3">
+      <div class="flex-shrink-0 border-t border-gray-100 pt-3 pb-1 px-0.5">
         <div class="flex items-end gap-2">
           <textarea
             class="flex-1 px-4 py-2.5 text-[13px] bg-white border border-gray-200 rounded-xl text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-900 focus:border-transparent transition-shadow resize-none"
