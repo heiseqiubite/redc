@@ -111,6 +111,7 @@ let { t, onTabChange = () => {} } = $props();
   let elkNodes = $state([]);
   let elkEdges = $state([]);
   let svgViewBox = $state('0 0 800 600');
+  let topoZoom = $state(1);
   
   let copiedKey = $state(null);
   let copiedAllKey = $state(null);
@@ -431,6 +432,7 @@ let { t, onTabChange = () => {} } = $props();
     planPreviewModal = { show: true, caseName, caseId, loading: true, error: '', data: null };
     elkNodes = [];
     elkEdges = [];
+    topoZoom = 1;
     try {
       const data = await GetCasePlanPreview(caseId);
       if (data && data.hasChanges && data.resources && data.resources.length > 0) {
@@ -1672,7 +1674,7 @@ let { t, onTabChange = () => {} } = $props();
 <!-- Plan Preview Topology Modal -->
 {#if planPreviewModal.show}
   <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick={() => planPreviewModal = { ...planPreviewModal, show: false }}>
-    <div class="bg-white rounded-xl border border-gray-100 shadow-2xl w-[90vw] max-w-[900px] max-h-[85vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-2xl w-[92vw] max-w-[1100px] max-h-[90vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
       <!-- Header -->
       <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
         <div class="flex items-center gap-2">
@@ -1752,37 +1754,52 @@ let { t, onTabChange = () => {} } = $props();
 
           <!-- Topology SVG -->
           {#if elkNodes.length > 0}
-            <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-auto" style="max-height: 55vh;">
-              <svg viewBox={svgViewBox} preserveAspectRatio="xMidYMid meet" class="w-full" style="min-height: 250px; max-height: 50vh;">
-                <defs>
-                  <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                    <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
-                  </marker>
-                </defs>
+            <div class="relative">
+              <!-- Zoom controls -->
+              <div class="absolute top-2 right-2 z-10 flex items-center gap-1 bg-white/90 backdrop-blur rounded-lg border border-gray-200 shadow-sm px-1 py-0.5">
+                <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = Math.max(0.3, topoZoom - 0.15)} title="缩小">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M5 12h14" /></svg>
+                </button>
+                <span class="text-[11px] text-gray-400 min-w-[36px] text-center">{Math.round(topoZoom * 100)}%</span>
+                <button class="w-7 h-7 flex items-center justify-center text-gray-500 hover:text-gray-800 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = Math.min(3, topoZoom + 0.15)} title="放大">
+                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M12 5v14m-7-7h14" /></svg>
+                </button>
+                <button class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors cursor-pointer" onclick={() => topoZoom = 1} title="重置">
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25" /></svg>
+                </button>
+              </div>
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-auto" style="max-height: 65vh;"
+                onwheel={(e) => { e.preventDefault(); topoZoom = Math.min(3, Math.max(0.3, topoZoom + (e.deltaY > 0 ? -0.08 : 0.08))); }}>
+                <svg viewBox={svgViewBox} preserveAspectRatio="xMidYMid meet" class="w-full" style="min-height: 350px; transform: scale({topoZoom}); transform-origin: center top;">
+                  <defs>
+                    <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                      <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
+                    </marker>
+                  </defs>
 
-                <!-- Edges -->
-                {#each elkEdges as edge}
-                  <path d={edgePath(edge)} fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrowhead)" class="transition-colors hover:stroke-blue-400" />
-                {/each}
+                  {#each elkEdges as edge}
+                    <path d={edgePath(edge)} fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrowhead)" class="transition-colors hover:stroke-blue-400" />
+                  {/each}
 
-                <!-- Nodes -->
-                {#each elkNodes as node}
-                  <g transform="translate({node.x}, {node.y})">
-                    <rect width={node.w} height={node.h} rx="8" ry="8"
-                      fill="white" stroke={node.color.border} stroke-width="2" class="drop-shadow-sm" />
-                    <circle cx="14" cy={node.h / 2} r="4" fill={node.color.border} />
-                    <text x="26" y="18" font-size="11" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">
-                      {node.label}
-                    </text>
-                    <text x="26" y="34" font-size="9" fill="#9ca3af" font-family="system-ui, sans-serif">
-                      {node.resource?.name || ''}
-                    </text>
-                    <text x={node.w - 10} y="18" font-size="11" font-weight="700" fill={node.color.text} text-anchor="end" font-family="system-ui, sans-serif">
-                      {node.color.label}
-                    </text>
-                  </g>
-                {/each}
-              </svg>
+                  {#each elkNodes as node}
+                    <g transform="translate({node.x}, {node.y})">
+                      <rect width={node.w} height={node.h} rx="8" ry="8"
+                        fill="white" stroke={node.color.border} stroke-width="2" class="drop-shadow-sm" />
+                      <circle cx="14" cy={node.h / 2} r="4" fill={node.color.border} />
+                      <text x="26" y="18" font-size="11" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">
+                        {node.label}
+                      </text>
+                      <text x="26" y="34" font-size="9" fill="#9ca3af" font-family="system-ui, sans-serif">
+                        {node.resource?.name || ''}
+                      </text>
+                      <text x={node.w - 10} y="18" font-size="11" font-weight="700" fill={node.color.text} text-anchor="end" font-family="system-ui, sans-serif">
+                        {node.color.label}
+                      </text>
+                    </g>
+                  {/each}
+                </svg>
+              </div>
             </div>
           {:else}
             <!-- Fallback: simple resource list -->
