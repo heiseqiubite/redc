@@ -282,9 +282,36 @@ func (te *TerraformExecutor) ShowPlan(ctx context.Context) error {
 	return nil
 }
 
+// GetPlanResourceChanges parses the plan file and returns structured resource changes
+func (te *TerraformExecutor) GetPlanResourceChanges(ctx context.Context) ([]*tfjson.ResourceChange, error) {
+	plan, err := te.tf.ShowPlanFile(ctx, RedcPlanPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read plan file: %w", err)
+	}
+	return plan.ResourceChanges, nil
+}
+
+// GetGraph runs terraform graph and returns DOT format string
+func (te *TerraformExecutor) GetGraph(ctx context.Context) (string, error) {
+	dot, err := te.tf.Graph(ctx, tfexec.GraphPlan(RedcPlanPath))
+	if err != nil {
+		// Fallback: try graph without plan file
+		dot, err = te.tf.Graph(ctx)
+		if err != nil {
+			return "", fmt.Errorf("failed to get terraform graph: %w", err)
+		}
+	}
+	return dot, nil
+}
+
 // createContextWithTimeout creates a context with a default timeout
 func createContextWithTimeout() (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.Background(), TerraformTimeout)
+}
+
+// CreateContextWithTimeout is the exported version for use in app layer
+func CreateContextWithTimeout() (context.Context, context.CancelFunc) {
+	return createContextWithTimeout()
 }
 
 // retryOperation retries an operation up to maxRetries times

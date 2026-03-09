@@ -185,6 +185,9 @@ export const i18n = {
     // Scheduled Tasks
     scheduledTasks: '定时任务', scheduledTasksDesc: '查看和管理所有待执行的定时任务',
     scheduleStart: '定时启动', scheduleStop: '定时停止',
+    planPreview: '资源拓扑预览', planPreviewBtn: '预览', planToCreate: '创建', planToUpdate: '更新', planToDelete: '删除', planToRecreate: '重建',
+    planNoChanges: '没有资源变更', planNoPlanFile: 'Plan 文件不存在，请重新创建场景', planStartScene: '启动场景',
+    planResources: '个资源', planDependencies: '条依赖', planLoading: '正在解析 Plan 文件...',
     noScheduledTasks: '暂无待执行的定时任务', remaining: '剩余',
     hour: '小时', minute: '分钟', second: '秒', hoursLater: '小时后执行', minutesLater: '分钟后执行',
     scheduleType: '时间设置', relativeTime: '相对时间', absoluteTime: '绝对时间', date: '日期',
@@ -486,6 +489,9 @@ export const i18n = {
     // Scheduled Tasks
     scheduledTasks: 'Scheduled Tasks', scheduledTasksDesc: 'View and manage all pending scheduled tasks',
     scheduleStart: 'Schedule Start', scheduleStop: 'Schedule Stop',
+    planPreview: 'Resource Topology Preview', planPreviewBtn: 'Preview', planToCreate: 'Create', planToUpdate: 'Update', planToDelete: 'Delete', planToRecreate: 'Recreate',
+    planNoChanges: 'No resource changes', planNoPlanFile: 'Plan file not found, please recreate the case', planStartScene: 'Start Scene',
+    planResources: 'resources', planDependencies: 'dependencies', planLoading: 'Parsing plan file...',
     noScheduledTasks: 'No pending scheduled tasks', remaining: 'Remaining',
     hour: 'h', minute: 'm', second: 's', hoursLater: 'hours later', minutesLater: 'minutes later',
     scheduleType: 'Time Settings', relativeTime: 'Relative Time', absoluteTime: 'Absolute Time', date: 'Date',

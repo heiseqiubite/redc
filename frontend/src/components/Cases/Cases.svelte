@@ -1,11 +1,12 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile, GetCasePlanPreview } from '../../../wailsjs/go/main/App.js';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import SSHModal from './SSHModal.svelte';
   import ScheduleDialog from './ScheduleDialog.svelte';
   import ScheduledTasksManager from './ScheduledTasksManager.svelte';
+  import ELK from 'elkjs/lib/elk.bundled.js';
 
 let { t, onTabChange = () => {} } = $props();
   let cases = $state([]);
@@ -104,6 +105,12 @@ let { t, onTabChange = () => {} } = $props();
   
   // Error display state
   let showErrorDetail = $state(false);
+  
+  // Plan preview state
+  let planPreviewModal = $state({ show: false, caseName: '', caseId: '', loading: false, error: '', data: null });
+  let elkNodes = $state([]);
+  let elkEdges = $state([]);
+  let svgViewBox = $state('0 0 800 600');
   
   let copiedKey = $state(null);
   let copiedAllKey = $state(null);
@@ -417,6 +424,163 @@ let { t, onTabChange = () => {} } = $props();
       error = e.message || String(e);
       await refresh();
     }
+  }
+
+  // Plan preview topology
+  async function handlePlanPreview(caseId, caseName) {
+    planPreviewModal = { show: true, caseName, caseId, loading: true, error: '', data: null };
+    elkNodes = [];
+    elkEdges = [];
+    try {
+      const data = await GetCasePlanPreview(caseId);
+      if (data && data.hasChanges && data.resources && data.resources.length > 0) {
+        await layoutTopology(data);
+      }
+      planPreviewModal = { ...planPreviewModal, data, loading: false };
+    } catch (e) {
+      planPreviewModal = { ...planPreviewModal, loading: false, error: e.message || String(e) };
+    }
+  }
+
+  function getActionColor(actions) {
+    if (!actions || actions.length === 0) return { border: '#9ca3af', bg: '#f9fafb', text: '#6b7280', label: '?' };
+    if (actions.length === 2 && actions[0] === 'delete' && actions[1] === 'create')
+      return { border: '#3b82f6', bg: '#eff6ff', text: '#2563eb', label: '↻' };
+    switch (actions[0]) {
+      case 'create': return { border: '#10b981', bg: '#ecfdf5', text: '#059669', label: '+' };
+      case 'update': return { border: '#f59e0b', bg: '#fffbeb', text: '#d97706', label: '~' };
+      case 'delete': return { border: '#ef4444', bg: '#fef2f2', text: '#dc2626', label: '-' };
+      default: return { border: '#9ca3af', bg: '#f9fafb', text: '#6b7280', label: '·' };
+    }
+  }
+
+  function getNodeLabel(resource) {
+    const parts = resource.type.split('_');
+    // e.g. aws_instance → Instance, volcengine_ecs_instance → ECS Instance
+    if (parts.length <= 1) return resource.type;
+    const provider = parts[0];
+    const rest = parts.slice(1).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+    return rest;
+  }
+
+  async function layoutTopology(data) {
+    try {
+      const elk = new ELK();
+
+      const NODE_W = 180;
+      const NODE_H = 48;
+
+      // Build address set for filtering edges
+      const addrSet = new Set(data.resources.map(r => r.address));
+
+      // Dynamic spacing based on node count
+      const nodeCount = data.resources.length;
+      const nodeSpacing = nodeCount > 8 ? '25' : '35';
+      const layerSpacing = nodeCount > 8 ? '40' : '50';
+
+      const graph = {
+        id: 'root',
+        layoutOptions: {
+          'elk.algorithm': 'layered',
+          'elk.direction': 'DOWN',
+          'elk.spacing.nodeNode': nodeSpacing,
+          'elk.layered.spacing.nodeNodeBetweenLayers': layerSpacing,
+          'elk.padding': '[top=15,left=15,bottom=15,right=15]',
+          'elk.layered.nodePlacement.strategy': 'BRANDES_KOEPF',
+        },
+        children: data.resources.map(r => ({
+          id: r.address,
+          width: NODE_W,
+          height: NODE_H,
+        })),
+        edges: (data.edges || [])
+          .filter(e => addrSet.has(e.from) && addrSet.has(e.to))
+          .map((e, i) => ({
+            id: `e${i}`,
+            sources: [e.from],
+            targets: [e.to],
+          })),
+      };
+
+      const layout = await elk.layout(graph);
+
+      // Build resource map for colors
+      const resMap = {};
+      data.resources.forEach(r => { resMap[r.address] = r; });
+
+      const newNodes = (layout.children || []).map(n => ({
+        id: n.id,
+        x: n.x,
+        y: n.y,
+        w: n.width,
+        h: n.height,
+        resource: resMap[n.id],
+        color: getActionColor(resMap[n.id]?.actions),
+        label: getNodeLabel(resMap[n.id] || {}),
+      }));
+
+      const newEdges = (layout.edges || []).map(e => {
+        const sections = e.sections || [];
+        if (sections.length > 0) {
+          const s = sections[0];
+          return {
+            id: e.id,
+            startPoint: s.startPoint,
+            endPoint: s.endPoint,
+            bendPoints: s.bendPoints || [],
+          };
+        }
+        // Fallback: center-to-center
+        const src = newNodes.find(n => n.id === (e.sources?.[0]));
+        const tgt = newNodes.find(n => n.id === (e.targets?.[0]));
+        if (src && tgt) {
+          return {
+            id: e.id,
+            startPoint: { x: src.x + src.w / 2, y: src.y + src.h },
+            endPoint: { x: tgt.x + tgt.w / 2, y: tgt.y },
+            bendPoints: [],
+          };
+        }
+        return null;
+      }).filter(Boolean);
+
+      // Calculate viewBox
+      const padding = 40;
+      const maxX = Math.max(...newNodes.map(n => n.x + n.w), 400) + padding * 2;
+      const maxY = Math.max(...newNodes.map(n => n.y + n.h), 200) + padding * 2;
+
+      // Assign to state in one batch
+      elkNodes = newNodes;
+      elkEdges = newEdges;
+      svgViewBox = `0 0 ${maxX} ${maxY}`;
+    } catch (e) {
+      console.error('ELK layout failed:', e);
+    }
+  }
+
+  function edgePath(edge) {
+    const { startPoint, endPoint, bendPoints } = edge;
+    if (bendPoints.length === 0) {
+      // Straight line with slight curve
+      const midY = (startPoint.y + endPoint.y) / 2;
+      return `M ${startPoint.x} ${startPoint.y} C ${startPoint.x} ${midY}, ${endPoint.x} ${midY}, ${endPoint.x} ${endPoint.y}`;
+    }
+    // Multiple bend points
+    let d = `M ${startPoint.x} ${startPoint.y}`;
+    const pts = [startPoint, ...bendPoints, endPoint];
+    for (let i = 1; i < pts.length; i++) {
+      const prev = pts[i - 1];
+      const curr = pts[i];
+      const midY = (prev.y + curr.y) / 2;
+      d += ` C ${prev.x} ${midY}, ${curr.x} ${midY}, ${curr.x} ${curr.y}`;
+    }
+    return d;
+  }
+
+  function handleStartFromPreview() {
+    const caseId = planPreviewModal.caseId;
+    planPreviewModal = { show: false, caseName: '', caseId: '', loading: false, error: '', data: null };
+    handleStart(caseId);
   }
   
   async function handleStop(caseId) {
@@ -1119,6 +1283,19 @@ let { t, onTabChange = () => {} } = $props();
                     {stateConfig[c.state]?.label || t.processing}...
                   </span>
                 {:else if c.state !== 'running'}
+                  <!-- 预览按钮 -->
+                  {#if c.state === 'created' || c.state === 'stopped'}
+                    <button 
+                      class="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded transition-colors"
+                      onclick={() => handlePlanPreview(c.id, c.name)}
+                      title={t.planPreviewBtn || '预览'}
+                    >
+                      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </button>
+                  {/if}
                   <!-- 定时启动按钮 -->
                   <button 
                     class="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
@@ -1490,4 +1667,152 @@ let { t, onTabChange = () => {} } = $props();
       }
     }}
   />
+{/if}
+
+<!-- Plan Preview Topology Modal -->
+{#if planPreviewModal.show}
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick={() => planPreviewModal = { ...planPreviewModal, show: false }}>
+    <div class="bg-white rounded-xl border border-gray-100 shadow-2xl w-[90vw] max-w-[900px] max-h-[85vh] flex flex-col" onclick={(e) => e.stopPropagation()}>
+      <!-- Header -->
+      <div class="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <h3 class="text-[15px] font-semibold text-gray-900">{t.planPreview || '资源拓扑预览'}</h3>
+          <span class="text-[13px] text-gray-500">— {planPreviewModal.caseName}</span>
+        </div>
+        <button class="p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors" onclick={() => planPreviewModal = { ...planPreviewModal, show: false }}>
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body -->
+      <div class="flex-1 overflow-auto px-6 py-4">
+        {#if planPreviewModal.loading}
+          <div class="flex items-center justify-center py-16">
+            <svg class="animate-spin h-6 w-6 text-indigo-500 mr-3" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+            </svg>
+            <span class="text-[13px] text-gray-500">{t.planLoading || '正在解析 Plan 文件...'}</span>
+          </div>
+        {:else if planPreviewModal.error}
+          <div class="flex items-center justify-center py-16">
+            <div class="text-center">
+              <svg class="w-10 h-10 text-gray-300 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+              <p class="text-[13px] text-gray-500">{planPreviewModal.error.includes('not found') ? (t.planNoPlanFile || 'Plan 文件不存在') : planPreviewModal.error}</p>
+            </div>
+          </div>
+        {:else if planPreviewModal.data && !planPreviewModal.data.hasChanges}
+          <div class="flex items-center justify-center py-16">
+            <p class="text-[13px] text-gray-500">{t.planNoChanges || '没有资源变更'}</p>
+          </div>
+        {:else if planPreviewModal.data}
+          <!-- Stats bar -->
+          <div class="flex items-center gap-3 mb-5">
+            {#if planPreviewModal.data.toCreate > 0}
+              <div class="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 border border-emerald-200 rounded-lg">
+                <span class="text-emerald-600 font-bold text-[13px]">+</span>
+                <span class="text-[12px] font-medium text-emerald-700">{t.planToCreate || '创建'} {planPreviewModal.data.toCreate}</span>
+              </div>
+            {/if}
+            {#if planPreviewModal.data.toUpdate > 0}
+              <div class="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 border border-amber-200 rounded-lg">
+                <span class="text-amber-600 font-bold text-[13px]">~</span>
+                <span class="text-[12px] font-medium text-amber-700">{t.planToUpdate || '更新'} {planPreviewModal.data.toUpdate}</span>
+              </div>
+            {/if}
+            {#if planPreviewModal.data.toDelete > 0}
+              <div class="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 border border-red-200 rounded-lg">
+                <span class="text-red-600 font-bold text-[13px]">-</span>
+                <span class="text-[12px] font-medium text-red-700">{t.planToDelete || '删除'} {planPreviewModal.data.toDelete}</span>
+              </div>
+            {/if}
+            {#if planPreviewModal.data.toRecreate > 0}
+              <div class="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
+                <span class="text-blue-600 font-bold text-[13px]">↻</span>
+                <span class="text-[12px] font-medium text-blue-700">{t.planToRecreate || '重建'} {planPreviewModal.data.toRecreate}</span>
+              </div>
+            {/if}
+            <div class="ml-auto text-[12px] text-gray-400">
+              {planPreviewModal.data.resources.length} {t.planResources || '个资源'}
+              {#if elkEdges.length > 0}
+                · {elkEdges.length} {t.planDependencies || '条依赖'}
+              {:else if planPreviewModal.data.edges && planPreviewModal.data.edges.length > 0}
+                · {planPreviewModal.data.edges.length} {t.planDependencies || '条依赖'}
+              {/if}
+            </div>
+          </div>
+
+          <!-- Topology SVG -->
+          {#if elkNodes.length > 0}
+            <div class="bg-gray-50 rounded-xl border border-gray-200 overflow-auto" style="max-height: 55vh;">
+              <svg viewBox={svgViewBox} preserveAspectRatio="xMidYMid meet" class="w-full" style="min-height: 250px; max-height: 50vh;">
+                <defs>
+                  <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+                    <polygon points="0 0, 8 3, 0 6" fill="#94a3b8" />
+                  </marker>
+                </defs>
+
+                <!-- Edges -->
+                {#each elkEdges as edge}
+                  <path d={edgePath(edge)} fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#arrowhead)" class="transition-colors hover:stroke-blue-400" />
+                {/each}
+
+                <!-- Nodes -->
+                {#each elkNodes as node}
+                  <g transform="translate({node.x}, {node.y})">
+                    <rect width={node.w} height={node.h} rx="8" ry="8"
+                      fill="white" stroke={node.color.border} stroke-width="2" class="drop-shadow-sm" />
+                    <circle cx="14" cy={node.h / 2} r="4" fill={node.color.border} />
+                    <text x="26" y="18" font-size="11" font-weight="600" fill="#374151" font-family="system-ui, sans-serif">
+                      {node.label}
+                    </text>
+                    <text x="26" y="34" font-size="9" fill="#9ca3af" font-family="system-ui, sans-serif">
+                      {node.resource?.name || ''}
+                    </text>
+                    <text x={node.w - 10} y="18" font-size="11" font-weight="700" fill={node.color.text} text-anchor="end" font-family="system-ui, sans-serif">
+                      {node.color.label}
+                    </text>
+                  </g>
+                {/each}
+              </svg>
+            </div>
+          {:else}
+            <!-- Fallback: simple resource list -->
+            <div class="space-y-1.5">
+              {#each planPreviewModal.data.resources as r}
+                {@const color = getActionColor(r.actions)}
+                <div class="flex items-center gap-2 px-3 py-2 bg-white rounded-lg border" style="border-color: {color.border}20;">
+                  <span class="w-5 h-5 rounded flex items-center justify-center text-[11px] font-bold" style="background: {color.bg}; color: {color.text};">{color.label}</span>
+                  <span class="text-[12px] font-medium text-gray-700">{r.type}</span>
+                  <span class="text-[12px] text-gray-400">.{r.name}</span>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        {/if}
+      </div>
+
+      <!-- Footer -->
+      <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+        <button
+          class="h-9 px-4 text-[13px] font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+          onclick={() => planPreviewModal = { ...planPreviewModal, show: false }}
+        >{t.close || '关闭'}</button>
+        {#if planPreviewModal.data && planPreviewModal.data.hasChanges}
+          <button
+            class="h-9 px-4 text-[13px] font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors cursor-pointer"
+            onclick={handleStartFromPreview}
+          >{t.planStartScene || '启动场景'}</button>
+        {/if}
+      </div>
+    </div>
+  </div>
 {/if}

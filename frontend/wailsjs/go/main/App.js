@@ -158,6 +158,10 @@ export function GetCaseOutputs(arg1) {
   return window['go']['main']['App']['GetCaseOutputs'](arg1);
 }
 
+export function GetCasePlanPreview(arg1) {
+  return window['go']['main']['App']['GetCasePlanPreview'](arg1);
+}
+
 export function GetConfig() {
   return window['go']['main']['App']['GetConfig']();
 }

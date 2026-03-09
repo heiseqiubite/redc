@@ -258,6 +258,161 @@ func (a *App) DeployCase(templateName string, name string, vars map[string]strin
 	return a.CreateCase(templateName, name, vars)
 }
 
+// PlanResourceChange represents a single resource change in the plan
+type PlanResourceChange struct {
+	Address      string   `json:"address"`
+	Type         string   `json:"type"`
+	Name         string   `json:"name"`
+	ProviderName string   `json:"providerName"`
+	Actions      []string `json:"actions"`
+	IsData       bool     `json:"isData"`
+}
+
+// PlanEdge represents a dependency edge between two resources
+type PlanEdge struct {
+	From string `json:"from"`
+	To   string `json:"to"`
+}
+
+// PlanPreview contains the full plan preview data for topology visualization
+type PlanPreview struct {
+	HasChanges bool                 `json:"hasChanges"`
+	ToCreate   int                  `json:"toCreate"`
+	ToUpdate   int                  `json:"toUpdate"`
+	ToDelete   int                  `json:"toDelete"`
+	ToRecreate int                  `json:"toRecreate"`
+	Resources  []PlanResourceChange `json:"resources"`
+	Edges      []PlanEdge           `json:"edges"`
+}
+
+// GetCasePlanPreview returns structured plan preview data for a case
+func (a *App) GetCasePlanPreview(caseID string) (*PlanPreview, error) {
+	a.mu.Lock()
+	if a.project == nil {
+		a.mu.Unlock()
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
+	}
+	project := a.project
+	a.mu.Unlock()
+
+	c, err := project.GetCase(caseID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get case: %w", err)
+	}
+	if c == nil || c.Path == "" {
+		return nil, fmt.Errorf("case not found or path is empty")
+	}
+
+	// Check plan file exists
+	planFile := filepath.Join(c.Path, redc.RedcPlanPath)
+	if _, err := os.Stat(planFile); err != nil {
+		return nil, fmt.Errorf("plan file not found")
+	}
+
+	te, err := redc.NewTerraformExecutor(c.Path)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create terraform executor: %w", err)
+	}
+
+	ctx, cancel := redc.CreateContextWithTimeout()
+	defer cancel()
+
+	preview := &PlanPreview{
+		Resources: []PlanResourceChange{},
+		Edges:     []PlanEdge{},
+	}
+
+	// 1. Parse plan file for resource changes
+	resourceChanges, err := te.GetPlanResourceChanges(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse plan: %w", err)
+	}
+
+	if resourceChanges == nil || len(resourceChanges) == 0 {
+		return preview, nil
+	}
+
+	preview.HasChanges = true
+	for _, rc := range resourceChanges {
+		actions := make([]string, len(rc.Change.Actions))
+		for i, a := range rc.Change.Actions {
+			actions[i] = string(a)
+		}
+
+		// Skip no-op
+		if len(actions) == 1 && actions[0] == "no-op" {
+			continue
+		}
+
+		isData := strings.HasPrefix(rc.Address, "data.")
+		prc := PlanResourceChange{
+			Address:      rc.Address,
+			Type:         rc.Type,
+			Name:         rc.Name,
+			ProviderName: rc.ProviderName,
+			Actions:      actions,
+			IsData:       isData,
+		}
+		preview.Resources = append(preview.Resources, prc)
+
+		// Count by action
+		if len(actions) == 1 {
+			switch actions[0] {
+			case "create":
+				preview.ToCreate++
+			case "update":
+				preview.ToUpdate++
+			case "delete":
+				preview.ToDelete++
+			}
+		} else if len(actions) == 2 && actions[0] == "delete" && actions[1] == "create" {
+			preview.ToRecreate++
+		}
+	}
+
+	// 2. Get dependency graph via terraform graph
+	dot, err := te.GetGraph(ctx)
+	if err == nil && dot != "" {
+		preview.Edges = parseDOTEdges(dot)
+	}
+
+	return preview, nil
+}
+
+// parseDOTEdges extracts edges from DOT format string
+func parseDOTEdges(dot string) []PlanEdge {
+	edgeRegex := regexp.MustCompile(`"([^"]+)"\s*->\s*"([^"]+)"`)
+	seen := make(map[string]bool)
+	var edges []PlanEdge
+	for _, line := range strings.Split(dot, "\n") {
+		matches := edgeRegex.FindStringSubmatch(line)
+		if len(matches) == 3 {
+			from := normalizeDOTNode(matches[1])
+			to := normalizeDOTNode(matches[2])
+			if from == "" || to == "" || from == to {
+				continue
+			}
+			key := from + "->" + to
+			if !seen[key] {
+				seen[key] = true
+				edges = append(edges, PlanEdge{From: from, To: to})
+			}
+		}
+	}
+	if edges == nil {
+		edges = []PlanEdge{}
+	}
+	return edges
+}
+
+// normalizeDOTNode strips terraform graph prefixes/suffixes to get clean resource addresses
+func normalizeDOTNode(name string) string {
+	name = strings.TrimPrefix(name, "[root] ")
+	name = strings.TrimSuffix(name, " (expand)")
+	name = strings.TrimSuffix(name, " (close)")
+	return name
+}
+
 // GetCaseOutputs returns the terraform outputs for a case
 func (a *App) GetCaseOutputs(caseID string) (map[string]string, error) {
 	a.mu.Lock()

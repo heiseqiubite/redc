@@ -344,6 +344,85 @@ export namespace main {
 	        this.protocolVersion = source["protocolVersion"];
 	    }
 	}
+	export class PlanEdge {
+	    from: string;
+	    to: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanEdge(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.from = source["from"];
+	        this.to = source["to"];
+	    }
+	}
+	export class PlanResourceChange {
+	    address: string;
+	    type: string;
+	    name: string;
+	    providerName: string;
+	    actions: string[];
+	    isData: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanResourceChange(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.address = source["address"];
+	        this.type = source["type"];
+	        this.name = source["name"];
+	        this.providerName = source["providerName"];
+	        this.actions = source["actions"];
+	        this.isData = source["isData"];
+	    }
+	}
+	export class PlanPreview {
+	    hasChanges: boolean;
+	    toCreate: number;
+	    toUpdate: number;
+	    toDelete: number;
+	    toRecreate: number;
+	    resources: PlanResourceChange[];
+	    edges: PlanEdge[];
+	
+	    static createFrom(source: any = {}) {
+	        return new PlanPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hasChanges = source["hasChanges"];
+	        this.toCreate = source["toCreate"];
+	        this.toUpdate = source["toUpdate"];
+	        this.toDelete = source["toDelete"];
+	        this.toRecreate = source["toRecreate"];
+	        this.resources = this.convertValues(source["resources"], PlanResourceChange);
+	        this.edges = this.convertValues(source["edges"], PlanEdge);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class PortForwardInfo {
 	    id: string;
 	    caseId: string;
