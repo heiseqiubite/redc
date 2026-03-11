@@ -109,3 +109,15 @@ func (nm *NotificationManager) SendSpotTerminated(sceneName, ips string) {
 	message := i18n.Tf("notify_spot_terminated_msg", sceneName, ips)
 	nm.Send(title, message)
 }
+
+func (nm *NotificationManager) SendSpotRecovered(sceneName string) {
+	title := i18n.T("notify_spot_recovered")
+	message := i18n.Tf("notify_spot_recovered_msg", sceneName)
+	nm.Send(title, message)
+}
+
+func (nm *NotificationManager) SendSpotRecoverFailed(sceneName string) {
+	title := i18n.T("notify_spot_recover_failed")
+	message := i18n.Tf("notify_spot_recover_failed_msg", sceneName)
+	nm.Send(title, message)
+}

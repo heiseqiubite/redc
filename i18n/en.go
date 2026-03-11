@@ -101,6 +101,10 @@ var enMessages = map[string]string{
 	"notify_scene_failed_msg":    "Scene \"%s\" %s failed",
 	"notify_spot_terminated":     "Spot Instance Reclaimed",
 	"notify_spot_terminated_msg": "Instance(s) in scene \"%s\" (%s) have been reclaimed by provider",
+	"notify_spot_recovered":         "Spot Instance Recovered",
+	"notify_spot_recovered_msg":     "Spot instance in scene \"%s\" has been auto-recovered",
+	"notify_spot_recover_failed":     "Spot Recovery Failed",
+	"notify_spot_recover_failed_msg": "Auto-recovery failed for scene \"%s\", no available inventory",
 
 	// ============ app.go (GUI backend) ============
 	"config_load_success":        "Configuration loaded successfully",
@@ -539,6 +543,9 @@ var enMessages = map[string]string{
 	"app_spot_monitor_start_success":  "Spot instance monitor started",
 	"app_spot_monitor_stopped":        "Spot instance monitor stopped",
 	"app_spot_terminated":             "Spot instance terminated by provider: %s",
+	"app_spot_recovering":             "Auto-recovering spot instance: %s",
+	"app_spot_recovered":              "Spot instance auto-recovered: %s",
+	"app_spot_recover_failed":         "Spot instance auto-recovery failed: %s - %v",
 
 	// GitHub/版本相关
 	"github_connect_failed": "Cannot connect to GitHub",

@@ -250,6 +250,10 @@ export function GetShowWelcomeDialog() {
   return window['go']['main']['App']['GetShowWelcomeDialog']();
 }
 
+export function GetSpotAutoRecoverEnabled() {
+  return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
+}
+
 export function GetSpotMonitorEnabled() {
   return window['go']['main']['App']['GetSpotMonitorEnabled']();
 }
@@ -508,6 +512,10 @@ export function SetNotificationEnabled(arg1) {
 
 export function SetShowWelcomeDialog(arg1) {
   return window['go']['main']['App']['SetShowWelcomeDialog'](arg1);
+}
+
+export function SetSpotAutoRecoverEnabled(arg1) {
+  return window['go']['main']['App']['SetSpotAutoRecoverEnabled'](arg1);
 }
 
 export function SetSpotMonitorEnabled(arg1) {

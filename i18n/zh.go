@@ -99,8 +99,12 @@ var zhMessages = map[string]string{
 	"notify_scene_stopped_msg":   "场景「%s」已成功停止",
 	"notify_scene_failed":        "场景操作失败",
 	"notify_scene_failed_msg":    "场景「%s」%s失败",
-	"notify_spot_terminated":     "抢占式实例已回收",
+	"notify_spot_terminated":         "抢占式实例已回收",
 	"notify_spot_terminated_msg": "场景「%s」的实例 (%s) 已被云厂商回收",
+	"notify_spot_recovered":         "抢占式实例已恢复",
+	"notify_spot_recovered_msg":     "场景「%s」的抢占式实例已自动恢复",
+	"notify_spot_recover_failed":     "抢占式实例恢复失败",
+	"notify_spot_recover_failed_msg": "场景「%s」的抢占式实例自动恢复失败，可能暂无库存",
 
 	// ============ app.go (GUI backend) ============
 	"config_load_success":        "配置加载成功",
@@ -539,6 +543,9 @@ var zhMessages = map[string]string{
 	"app_spot_monitor_start_success":  "Spot 实例监控已启动",
 	"app_spot_monitor_stopped":        "Spot 实例监控已停止",
 	"app_spot_terminated":             "抢占式实例已被回收: %s",
+	"app_spot_recovering":             "正在自动恢复抢占式实例: %s",
+	"app_spot_recovered":              "抢占式实例已自动恢复: %s",
+	"app_spot_recover_failed":         "抢占式实例自动恢复失败: %s - %v",
 
 	// GitHub/版本相关
 	"github_connect_failed": "无法连接 GitHub",

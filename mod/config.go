@@ -28,10 +28,11 @@ const MaxTfDepth = 2
 
 // GUISettings GUI 配置结构体
 type GUISettings struct {
-	DisableRightClick   bool   `json:"disableRightClick"`
-	NotificationEnabled bool   `json:"notificationEnabled"`
-	SpotMonitorEnabled  bool   `json:"spotMonitorEnabled"`
-	DebugEnabled        bool   `json:"debugEnabled"`
+	DisableRightClick      bool   `json:"disableRightClick"`
+	NotificationEnabled    bool   `json:"notificationEnabled"`
+	SpotMonitorEnabled     bool   `json:"spotMonitorEnabled"`
+	SpotAutoRecoverEnabled bool   `json:"spotAutoRecoverEnabled"`
+	DebugEnabled           bool   `json:"debugEnabled"`
 	HttpProxy           string `json:"httpProxy"`
 	HttpsProxy          string `json:"httpsProxy"`
 	Socks5Proxy         string `json:"socks5Proxy"`

@@ -202,7 +202,7 @@ func (m *SpotMonitor) probeSSH(ip string) bool {
 	return false
 }
 
-// handleTerminated reports terminated IPs and optionally marks the case.
+// handleTerminated reports terminated IPs and optionally recovers them.
 func (m *SpotMonitor) handleTerminated(c *redc.Case, downIPs []string, totalIPs int) {
 	allDown := len(downIPs) >= totalIPs
 
@@ -234,6 +234,79 @@ func (m *SpotMonitor) handleTerminated(c *redc.Case, downIPs []string, totalIPs 
 	}
 
 	// Trigger refresh
+	m.app.emitRefresh()
+
+	// Auto-recover if enabled
+	if m.isAutoRecoverEnabled() {
+		m.attemptRecover(c, downIPs)
+	}
+}
+
+// isAutoRecoverEnabled checks the GUI settings for auto-recover flag.
+func (m *SpotMonitor) isAutoRecoverEnabled() bool {
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return false
+	}
+	return settings.SpotAutoRecoverEnabled
+}
+
+// attemptRecover runs terraform plan+apply to replenish terminated spot instances.
+// Uses low-level TfPlan/TfApply directly to bypass the state==running check in Case.TfApply().
+func (m *SpotMonitor) attemptRecover(c *redc.Case, downIPs []string) {
+	m.app.emitLog(fmt.Sprintf("🔄 %s", i18n.Tf("app_spot_recovering", c.Name)))
+
+	// Emit recovering event
+	runtime.EventsEmit(m.app.ctx, "spot-recovering", map[string]interface{}{
+		"caseId":   c.Id,
+		"caseName": c.Name,
+	})
+
+	// Run terraform plan + apply directly (bypass Case.TfApply which rejects running state)
+	if err := redc.TfPlan(c.Path, c.Parameter...); err != nil {
+		m.app.emitLog(fmt.Sprintf("❌ %s", i18n.Tf("app_spot_recover_failed", c.Name, err)))
+		if m.app.notificationMgr != nil {
+			m.app.notificationMgr.SendSpotRecoverFailed(c.Name)
+		}
+		runtime.EventsEmit(m.app.ctx, "spot-recover-failed", map[string]interface{}{
+			"caseId":   c.Id,
+			"caseName": c.Name,
+			"error":    err.Error(),
+		})
+		return
+	}
+
+	if err := redc.TfApply(c.Path, c.Parameter...); err != nil {
+		m.app.emitLog(fmt.Sprintf("❌ %s", i18n.Tf("app_spot_recover_failed", c.Name, err)))
+		if m.app.notificationMgr != nil {
+			m.app.notificationMgr.SendSpotRecoverFailed(c.Name)
+		}
+		runtime.EventsEmit(m.app.ctx, "spot-recover-failed", map[string]interface{}{
+			"caseId":   c.Id,
+			"caseName": c.Name,
+			"error":    err.Error(),
+		})
+		return
+	}
+
+	// Ensure state is running
+	if c.State == redc.StateTerminated {
+		c.StatusChange(redc.StateRunning)
+	}
+
+	// Success — clear alerts for this case so new IPs can be monitored
+	m.ResetAlert(c.Id)
+
+	m.app.emitLog(fmt.Sprintf("✅ %s", i18n.Tf("app_spot_recovered", c.Name)))
+	if m.app.notificationMgr != nil {
+		m.app.notificationMgr.SendSpotRecovered(c.Name)
+	}
+
+	runtime.EventsEmit(m.app.ctx, "spot-recovered", map[string]interface{}{
+		"caseId":   c.Id,
+		"caseName": c.Name,
+	})
+
 	m.app.emitRefresh()
 }
 

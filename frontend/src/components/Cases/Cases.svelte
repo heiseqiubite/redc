@@ -21,8 +21,9 @@ let { t, onTabChange = () => {} } = $props();
   let variableValues = $state({});
   let error = $state('');
 
-  // Spot termination toast
+  // Spot termination/recovery toast
   let spotTerminatedToast = $state({ show: false, caseName: '', downIPs: [], allDown: false, timer: null });
+  let spotRecoveryToast = $state({ show: false, caseName: '', status: '', timer: null }); // status: 'recovering' | 'recovered' | 'failed'
   
   // SSH Modal state
   let sshModal = $state({ show: false, caseId: null, caseName: '' });
@@ -182,6 +183,31 @@ let { t, onTabChange = () => {} } = $props();
       };
       refresh();
     });
+
+    EventsOn('spot-recovering', (data) => {
+      if (spotRecoveryToast.timer) clearTimeout(spotRecoveryToast.timer);
+      spotRecoveryToast = { show: true, caseName: data.caseName || '', status: 'recovering', timer: null };
+    });
+
+    EventsOn('spot-recovered', (data) => {
+      if (spotRecoveryToast.timer) clearTimeout(spotRecoveryToast.timer);
+      spotRecoveryToast = {
+        show: true, caseName: data.caseName || '', status: 'recovered',
+        timer: setTimeout(() => { spotRecoveryToast = { show: false, caseName: '', status: '', timer: null }; }, 10000)
+      };
+      // Hide terminated toast
+      if (spotTerminatedToast.timer) clearTimeout(spotTerminatedToast.timer);
+      spotTerminatedToast = { show: false, caseName: '', downIPs: [], allDown: false, timer: null };
+      refresh();
+    });
+
+    EventsOn('spot-recover-failed', (data) => {
+      if (spotRecoveryToast.timer) clearTimeout(spotRecoveryToast.timer);
+      spotRecoveryToast = {
+        show: true, caseName: data.caseName || '', status: 'failed',
+        timer: setTimeout(() => { spotRecoveryToast = { show: false, caseName: '', status: '', timer: null }; }, 15000)
+      };
+    });
   });
   
   onDestroy(() => {
@@ -191,6 +217,9 @@ let { t, onTabChange = () => {} } = $props();
     }
     if (spotTerminatedToast.timer) {
       clearTimeout(spotTerminatedToast.timer);
+    }
+    if (spotRecoveryToast.timer) {
+      clearTimeout(spotRecoveryToast.timer);
     }
     if (costEstimateDebounceTimer) {
       clearTimeout(costEstimateDebounceTimer);
@@ -1933,6 +1962,35 @@ let { t, onTabChange = () => {} } = $props();
         {/if}
       </div>
       <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => spotTerminatedToast = { show: false, caseName: '', downIPs: [], allDown: false, timer: null }}>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+  </div>
+{/if}
+
+<!-- Spot Recovery Toast -->
+{#if spotRecoveryToast.show}
+  <div class="fixed bottom-6 right-6 z-[9998] max-w-sm" style={spotTerminatedToast.show ? 'bottom: 7rem' : ''}>
+    <div class="flex items-start gap-3 rounded-xl shadow-lg px-4 py-3 {spotRecoveryToast.status === 'recovered' ? 'bg-emerald-50 border border-emerald-300' : spotRecoveryToast.status === 'failed' ? 'bg-amber-50 border border-amber-300' : 'bg-blue-50 border border-blue-300'}">
+      <span class="mt-0.5 {spotRecoveryToast.status === 'recovered' ? 'text-emerald-500' : spotRecoveryToast.status === 'failed' ? 'text-amber-500' : 'text-blue-500'}">
+        {#if spotRecoveryToast.status === 'recovering'}
+          <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        {:else if spotRecoveryToast.status === 'recovered'}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg>
+        {:else}
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z" /></svg>
+        {/if}
+      </span>
+      <div class="flex-1">
+        <p class="text-[13px] font-semibold {spotRecoveryToast.status === 'recovered' ? 'text-emerald-800' : spotRecoveryToast.status === 'failed' ? 'text-amber-800' : 'text-blue-800'}">
+          {spotRecoveryToast.status === 'recovering' ? (t.spotRecovering || '正在自动恢复...') : spotRecoveryToast.status === 'recovered' ? (t.spotRecovered || '✅ 已自动恢复') : (t.spotRecoverFailed || '⚠️ 自动恢复失败')}
+        </p>
+        <p class="text-[12px] mt-0.5 {spotRecoveryToast.status === 'recovered' ? 'text-emerald-600' : spotRecoveryToast.status === 'failed' ? 'text-amber-600' : 'text-blue-600'}">{spotRecoveryToast.caseName}</p>
+        {#if spotRecoveryToast.status === 'failed'}
+          <p class="text-[11px] text-amber-500 mt-0.5">{t.spotRecoverFailedHint || '可能暂无库存，稍后将重试'}</p>
+        {/if}
+      </div>
+      <button class="opacity-50 hover:opacity-100 cursor-pointer" onclick={() => spotRecoveryToast = { show: false, caseName: '', status: '', timer: null }}>
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
       </button>
     </div>

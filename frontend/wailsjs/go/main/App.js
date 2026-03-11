@@ -426,6 +426,14 @@ export function GetSpotMonitorEnabled() {
   return window['go']['main']['App']['GetSpotMonitorEnabled']();
 }
 
+export function SetSpotAutoRecoverEnabled(arg1) {
+  return window['go']['main']['App']['SetSpotAutoRecoverEnabled'](arg1);
+}
+
+export function GetSpotAutoRecoverEnabled() {
+  return window['go']['main']['App']['GetSpotAutoRecoverEnabled']();
+}
+
 export function SetLanguage(arg1) {
   return window['go']['main']['App']['SetLanguage'](arg1);
 }

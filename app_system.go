@@ -522,6 +522,29 @@ func (a *App) GetSpotMonitorEnabled() bool {
 	return settings.SpotMonitorEnabled
 }
 
+func (a *App) SetSpotAutoRecoverEnabled(enabled bool) error {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	settings.SpotAutoRecoverEnabled = enabled
+	return redc.SaveGUISettings(settings)
+}
+
+func (a *App) GetSpotAutoRecoverEnabled() bool {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return false
+	}
+	return settings.SpotAutoRecoverEnabled
+}
+
 func (a *App) SetLanguage(lang string) error {
 	a.mu.Lock()
 	defer a.mu.Unlock()

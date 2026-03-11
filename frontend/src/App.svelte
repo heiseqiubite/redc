@@ -3,7 +3,7 @@
   import { onMount, onDestroy } from 'svelte';
   import { i18n as i18nData } from './lib/i18n.js';
   import { EventsOn, EventsOff, WindowMinimise, WindowMaximise, WindowUnmaximise, WindowIsMaximised, Quit, Environment } from '../wailsjs/runtime/runtime.js';
-  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick, CheckForUpdates, GetLanguage, SetLanguage, GetShowWelcomeDialog, GetSpotMonitorEnabled } from '../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, GetConfig, GetVersion, GetMCPStatus, StartMCPServer, StopMCPServer, GetResourceSummary, GetBalances, GetTerraformMirrorConfig, GetNotificationEnabled, GetCurrentProject, ListProjects, SwitchProject, CreateProject, GetDisableRightClick, SetDisableRightClick, CheckForUpdates, GetLanguage, SetLanguage, GetShowWelcomeDialog, GetSpotMonitorEnabled, GetSpotAutoRecoverEnabled } from '../wailsjs/go/main/App.js';
   import Console from './components/Console/Console.svelte';
   import CloudResources from './components/Resources/CloudResources.svelte';
   import Compose from './components/Compose/Compose.svelte';
@@ -32,6 +32,7 @@
   let terraformMirror = $state({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] });
   let notificationEnabled = $state(false);
   let spotMonitorEnabled = $state(false);
+  let spotAutoRecoverEnabled = $state(false);
   let rightClickDisabled = $state(true);
   let rightClickDisabledSync = true; // 同步变量用于右键处理
   let appVersion = $state('');
@@ -201,7 +202,7 @@
     isLoading = true;
     error = '';
     try {
-      [cases, templates, config, terraformMirror, notificationEnabled, rightClickDisabled, lang, appVersion, spotMonitorEnabled] = await Promise.all([
+      [cases, templates, config, terraformMirror, notificationEnabled, rightClickDisabled, lang, appVersion, spotMonitorEnabled, spotAutoRecoverEnabled] = await Promise.all([
         ListCases(),
         ListTemplates(),
         GetConfig(),
@@ -210,7 +211,8 @@
         GetDisableRightClick(),
         GetLanguage(),
         GetVersion(),
-        GetSpotMonitorEnabled()
+        GetSpotMonitorEnabled(),
+        GetSpotAutoRecoverEnabled()
       ]);
       rightClickDisabledSync = rightClickDisabled;
       debugEnabled = !!config.debugEnabled;
@@ -409,7 +411,7 @@
               <Compose {t} onTabChange={(tab) => activeTab = tab} />
 
             {:else if activeTab === 'settings'}
-              <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:spotMonitorEnabled bind:rightClickDisabled />
+              <Settings {t} bind:config bind:terraformMirror bind:debugEnabled bind:notificationEnabled bind:spotMonitorEnabled bind:spotAutoRecoverEnabled bind:rightClickDisabled />
 
             {:else if activeTab === 'registry'}
               <Registry {t} />

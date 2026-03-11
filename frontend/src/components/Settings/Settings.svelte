@@ -1,7 +1,7 @@
 <script>
-  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled } from '../../../wailsjs/go/main/App.js';
+  import { SaveProxyConfig, SetDebugLogging, GetTerraformMirrorConfig, SaveTerraformMirrorConfig, TestTerraformEndpoints, SetNotificationEnabled, SetDisableRightClick, SetSpotMonitorEnabled, SetSpotAutoRecoverEnabled } from '../../../wailsjs/go/main/App.js';
 
-let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
+let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
   let proxySaving = $state(false);
   let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } });
@@ -13,6 +13,7 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
   let debugSaving = $state(false);
   let notificationSaving = $state(false);
   let spotMonitorSaving = $state(false);
+  let spotAutoRecoverSaving = $state(false);
   let rightClickSaving = $state(false);
   
   // Initialize forms when props change
@@ -158,6 +159,19 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       console.error('Failed to toggle spot monitor:', e);
     } finally {
       spotMonitorSaving = false;
+    }
+  }
+
+  async function handleToggleSpotAutoRecover() {
+    const nextValue = !spotAutoRecoverEnabled;
+    spotAutoRecoverSaving = true;
+    try {
+      await SetSpotAutoRecoverEnabled(nextValue);
+      spotAutoRecoverEnabled = nextValue;
+    } catch (e) {
+      console.error('Failed to toggle spot auto recover:', e);
+    } finally {
+      spotAutoRecoverSaving = false;
     }
   }
 
@@ -483,6 +497,26 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
           class:translate-x-6={spotMonitorEnabled} class:translate-x-1={!spotMonitorEnabled}></span>
       </button>
     </div>
+    <!-- Spot 自动恢复（仅在监控开启时显示） -->
+    {#if spotMonitorEnabled}
+    <div class="flex items-center justify-between px-4 sm:px-5 py-3.5 ml-4 border-l-2 border-gray-200">
+      <div>
+        <div class="text-[13px] sm:text-[14px] font-medium text-gray-900">{t.spotAutoRecover || 'Spot 自动恢复'}</div>
+        <div class="text-[11px] sm:text-[12px] text-gray-500 mt-0.5">{t.spotAutoRecoverDesc || '检测到实例被回收时自动执行 terraform apply 补齐'}</div>
+      </div>
+      <button
+        class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class:bg-emerald-500={spotAutoRecoverEnabled}
+        class:bg-gray-300={!spotAutoRecoverEnabled}
+        onclick={handleToggleSpotAutoRecover}
+        disabled={spotAutoRecoverSaving}
+        aria-label={spotAutoRecoverEnabled ? t.disable : t.enable}
+      >
+        <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+          class:translate-x-6={spotAutoRecoverEnabled} class:translate-x-1={!spotAutoRecoverEnabled}></span>
+      </button>
+    </div>
+    {/if}
     <!-- 右键菜单 -->
     <div class="flex items-center justify-between px-4 sm:px-5 py-3.5">
       <div>
