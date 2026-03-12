@@ -8,7 +8,8 @@
         "新增：内嵌 HTTP Server — 设置页面可一键启动内嵌 HTTP Server，桌面应用与浏览器访问同时运行",
         "新增：Bearer Token 认证 — HTTP 模式下自动生成访问 Token，支持 Authorization 头或 URL 参数传递",
         "新增：SSE 事件推送 — 所有实时事件（日志、刷新、AI 流式输出、Terminal 输出）通过 SSE 推送到浏览器",
-        "新增：前端 HTTP Transport Polyfill — 浏览器模式自动替换 Wails 通信层，前端代码无需修改即可复用"
+        "新增：前端 HTTP Transport Polyfill — 浏览器模式自动替换 Wails 通信层，前端代码无需修改即可复用",
+        "修复：Windows 黑框问题 — 本地 patch terraform-exec，为 terraform 子进程设置 SysProcAttr.HideWindow=true，彻底消除 GUI 模式下弹出 cmd.exe 黑框"
       ]
     },
     {
