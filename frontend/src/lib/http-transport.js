@@ -11,6 +11,9 @@
 
 let sseSource = null;
 const sseListeners = {};  // { eventName: [{ cb, remaining }] }
+let sseReconnectAttempts = 0;
+const SSE_MAX_RECONNECT = 10;
+let serverDisconnected = false;
 
 function getToken() {
   return localStorage.getItem('redc_token') || '';
@@ -22,26 +25,60 @@ function buildHeaders() {
 }
 
 async function apiCall(method, args) {
-  const resp = await fetch('/api/call', {
-    method: 'POST',
-    headers: buildHeaders(),
-    body: JSON.stringify({ method, args }),
-  });
-  if (resp.status === 401) {
-    // Token invalid — prompt for new token
-    promptToken();
-    throw new Error('Unauthorized');
+  if (serverDisconnected) {
+    throw new Error('服务器已断开连接 / Server disconnected');
   }
-  const data = await resp.json();
-  if (data.error) throw new Error(data.error);
-  return data.result;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 15000);
+  try {
+    const resp = await fetch('/api/call', {
+      method: 'POST',
+      headers: buildHeaders(),
+      body: JSON.stringify({ method, args }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (resp.status === 401) {
+      promptToken();
+      throw new Error('Unauthorized');
+    }
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error);
+    // Successful call — reset disconnect state
+    if (serverDisconnected) {
+      serverDisconnected = false;
+      sseReconnectAttempts = 0;
+      hideDisconnectBanner();
+      connectSSE();
+    }
+    return data.result;
+  } catch (e) {
+    clearTimeout(timeout);
+    if (e.name === 'AbortError') {
+      serverDisconnected = true;
+      showDisconnectBanner();
+      throw new Error('请求超时，服务器可能已关闭 / Request timeout');
+    }
+    throw e;
+  }
 }
 
 function connectSSE() {
   if (sseSource) return;
+  if (sseReconnectAttempts >= SSE_MAX_RECONNECT) {
+    serverDisconnected = true;
+    showDisconnectBanner();
+    return;
+  }
   const token = getToken();
   const url = token ? `/api/events?token=${token}` : '/api/events';
   sseSource = new EventSource(url);
+
+  sseSource.onopen = () => {
+    sseReconnectAttempts = 0;
+    serverDisconnected = false;
+    hideDisconnectBanner();
+  };
 
   sseSource.onmessage = (e) => {
     try {
@@ -61,9 +98,19 @@ function connectSSE() {
   };
 
   sseSource.onerror = () => {
-    sseSource = null;
-    // Reconnect after 3s
-    setTimeout(connectSSE, 3000);
+    if (sseSource) {
+      sseSource.close();
+      sseSource = null;
+    }
+    sseReconnectAttempts++;
+    if (sseReconnectAttempts >= SSE_MAX_RECONNECT) {
+      serverDisconnected = true;
+      showDisconnectBanner();
+      return;
+    }
+    // Exponential backoff: 2s, 4s, 8s, ... up to 30s
+    const delay = Math.min(2000 * Math.pow(2, sseReconnectAttempts - 1), 30000);
+    setTimeout(connectSSE, delay);
   };
 }
 
@@ -95,6 +142,29 @@ function promptToken() {
     connectSSE();
   }
 }
+
+function showDisconnectBanner() {
+  if (document.getElementById('redc-disconnect-banner')) return;
+  const banner = document.createElement('div');
+  banner.id = 'redc-disconnect-banner';
+  banner.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;background:#dc2626;color:#fff;text-align:center;padding:10px 16px;font-size:14px;font-family:system-ui,sans-serif;';
+  banner.innerHTML = '⚠️ 服务器连接已断开 / Server disconnected &nbsp;&nbsp;' +
+    '<button onclick="window.__redcReconnect__()" style="background:#fff;color:#dc2626;border:none;padding:4px 12px;border-radius:4px;cursor:pointer;font-size:13px;">重新连接 / Reconnect</button>';
+  document.body.prepend(banner);
+}
+
+function hideDisconnectBanner() {
+  const el = document.getElementById('redc-disconnect-banner');
+  if (el) el.remove();
+}
+
+// Global reconnect handler
+window.__redcReconnect__ = function() {
+  serverDisconnected = false;
+  sseReconnectAttempts = 0;
+  hideDisconnectBanner();
+  connectSSE();
+};
 
 export function installHTTPTransport() {
   // Install window['go']['main']['App'] proxy
