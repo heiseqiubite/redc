@@ -80,9 +80,10 @@ type RuntimeService struct {
 
 // ComposeOptions 编排选项
 type ComposeOptions struct {
-	File     string
-	Profiles []string
-	Project  *mod.RedcProject
+	File        string
+	Profiles    []string
+	Project     *mod.RedcProject
+	LogCallback func(message string) // optional callback for GUI log streaming
 }
 
 // ComposeContext 核心上下文，贯穿整个生命周期
@@ -93,6 +94,14 @@ type ComposeContext struct {
 	ConfigRaw     ComposeConfig              // 原始 YAML
 	LogMgr        *gologger.LogManager       // 日志管理器
 	Project       *mod.RedcProject           // 项目引用
+	LogCallback   func(message string)       // optional GUI log callback
+}
+
+// emitLog sends a log message to the callback if set
+func (ctx *ComposeContext) emitLog(msg string) {
+	if ctx.LogCallback != nil {
+		ctx.LogCallback(msg)
+	}
 }
 
 // --- 核心初始化逻辑 ---
@@ -158,6 +167,7 @@ func NewComposeContext(opts ComposeOptions) (*ComposeContext, error) {
 		ConfigRaw:     cfg,
 		LogMgr:        logMgr,
 		Project:       opts.Project,
+		LogCallback:   opts.LogCallback,
 	}, nil
 }
 

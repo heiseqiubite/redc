@@ -580,44 +580,39 @@ type ComposeTemplate struct {
 	Path        string `json:"path"`
 }
 
-// ListComposeTemplates returns compose templates from the compose-templates subdirectory
+// ListComposeTemplates returns compose templates from compose-templates subdirectory
+// and any other template with "template": "compose" in case.json
 func ListComposeTemplates() ([]*ComposeTemplate, error) {
-	composeDir := filepath.Join(TemplateDir, "compose-templates")
-	if _, err := os.Stat(composeDir); os.IsNotExist(err) {
-		return nil, nil
-	}
-
-	dirs, err := ScanTemplateDirs(composeDir, 2)
-	if err != nil {
-		return nil, err
-	}
-
 	var templates []*ComposeTemplate
-	for _, dirPath := range dirs {
+	seen := make(map[string]bool)
+
+	// Helper to parse a compose template from a directory
+	parseComposeDir := func(dirPath string, nameOverride string) {
 		casePath := filepath.Join(dirPath, TmplCaseFile)
 		composePath := filepath.Join(dirPath, TmplComposeFile)
 
 		caseData, err := os.ReadFile(casePath)
 		if err != nil {
-			continue
+			return
 		}
 
 		var meta struct {
-			Name        string `json:"name"`
-			NameZh      string `json:"nameZh"`
-			Type        string `json:"type"`
-			Category    string `json:"category"`
-			Description string `json:"description"`
-			User        string `json:"user"`
-			Version     string `json:"version"`
+			Name        string       `json:"name"`
+			NameZh      string       `json:"nameZh"`
+			Type        string       `json:"type"`
+			Category    string       `json:"category"`
+			Description string       `json:"description"`
+			User        string       `json:"user"`
+			Version     string       `json:"version"`
+			Template    TemplateType `json:"template"`
 		}
 		if err := json.Unmarshal(caseData, &meta); err != nil {
-			continue
+			return
 		}
 
 		composeData, err := os.ReadFile(composePath)
 		if err != nil {
-			continue
+			return
 		}
 
 		absDirPath, err := filepath.Abs(dirPath)
@@ -625,8 +620,17 @@ func ListComposeTemplates() ([]*ComposeTemplate, error) {
 			absDirPath = dirPath
 		}
 
+		name := meta.Name
+		if nameOverride != "" {
+			name = nameOverride
+		}
+		if seen[absDirPath] {
+			return
+		}
+		seen[absDirPath] = true
+
 		templates = append(templates, &ComposeTemplate{
-			Name:        meta.Name,
+			Name:        name,
 			NameZh:      meta.NameZh,
 			Type:        meta.Type,
 			Category:    meta.Category,
@@ -636,6 +640,43 @@ func ListComposeTemplates() ([]*ComposeTemplate, error) {
 			ComposeFile: string(composeData),
 			Path:        absDirPath,
 		})
+	}
+
+	// 1. Scan compose-templates/ subdirectory (legacy path)
+	composeDir := filepath.Join(TemplateDir, "compose-templates")
+	if _, err := os.Stat(composeDir); err == nil {
+		dirs, err := ScanTemplateDirs(composeDir, 2)
+		if err == nil {
+			for _, dirPath := range dirs {
+				parseComposeDir(dirPath, "")
+			}
+		}
+	}
+
+	// 2. Scan all templates for those with template: "compose" in case.json
+	allDirs, err := ScanTemplateDirs(TemplateDir, 3)
+	if err == nil {
+		for _, dirPath := range allDirs {
+			casePath := filepath.Join(dirPath, TmplCaseFile)
+			caseData, err := os.ReadFile(casePath)
+			if err != nil {
+				continue
+			}
+			var meta struct {
+				Template TemplateType `json:"template"`
+			}
+			if err := json.Unmarshal(caseData, &meta); err != nil {
+				continue
+			}
+			if meta.Template == TemplateTypeCompose {
+				relPath, relErr := filepath.Rel(TemplateDir, dirPath)
+				name := filepath.Base(dirPath)
+				if relErr == nil {
+					name = filepath.ToSlash(relPath)
+				}
+				parseComposeDir(dirPath, name)
+			}
+		}
 	}
 
 	return templates, nil

@@ -1,8 +1,10 @@
 <script>
 
   import { ComposePreview, ComposeUp, ComposeDown, SelectComposeFile } from '../../../wailsjs/go/main/App.js';
+  import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import { loadComposeTemplates } from '../../lib/composeTemplates.js';
-  import { onMount } from 'svelte';
+  import { composeState, initComposeEvents, dismissComposeStatus, onComposeStateChange } from '../../lib/composeState.js';
+  import { onMount, onDestroy, tick } from 'svelte';
   import ELK from 'elkjs/lib/elk.bundled.js';
 
   let { t, onTabChange } = $props();
@@ -11,9 +13,50 @@
   let selectedTemplate = $state(null);
   let templatesLoading = $state(true);
 
+  // Reactive mirror of persistent compose state
+  let composeStatus = $state(composeState.status);
+  let composeAction = $state(composeState.action);
+  let composeStatusError = $state(composeState.error);
+  let composeLogs = $state(composeState.logs);
+  let logContainerEl = $state(null);
+
+  // Destroy confirmation dialog
+  let destroyConfirm = $state({ show: false, loading: false });
+
+  let unsubscribe = null;
+
   onMount(async () => {
     composeTemplates = await loadComposeTemplates();
     templatesLoading = false;
+
+    // Initialize persistent event listeners (only once globally)
+    initComposeEvents(EventsOn);
+
+    // Sync from persistent state on mount
+    composeStatus = composeState.status;
+    composeAction = composeState.action;
+    composeStatusError = composeState.error;
+    composeLogs = composeState.logs;
+
+    // Subscribe to updates
+    unsubscribe = onComposeStateChange((s) => {
+      composeStatus = s.status;
+      composeAction = s.action;
+      composeStatusError = s.error;
+      composeLogs = [...composeState.logs];
+      if (s.status === 'done') {
+        setTimeout(() => previewCompose(), 500);
+      }
+      tick().then(() => {
+        if (logContainerEl) {
+          logContainerEl.scrollTop = logContainerEl.scrollHeight;
+        }
+      });
+    });
+  });
+
+  onDestroy(() => {
+    if (unsubscribe) unsubscribe();
   });
 
   // State
@@ -21,7 +64,6 @@
   let composeProfiles = $state('');
   let composeSummary = $state(null);
   let composeLoading = $state(false);
-  let composeActionLoading = $state(false);
   let composeError = $state('');
   let hasManuallyPreviewed = $state(false);
   let lastPreviewedPath = $state('');
@@ -230,15 +272,25 @@
       return;
     }
     
-    composeActionLoading = true;
     composeError = '';
+    composeLogs = [];
     try {
       await ComposeUp(composeFilePath, parseComposeProfiles(composeProfiles));
     } catch (e) {
       composeError = e.message || String(e);
-    } finally {
-      composeActionLoading = false;
     }
+  }
+
+  function showDestroyConfirm() {
+    if (!composeFilePath) {
+      composeError = t.composeFile + ' ' + t.paramRequired;
+      return;
+    }
+    destroyConfirm = { show: true, loading: false };
+  }
+
+  function cancelDestroy() {
+    destroyConfirm = { show: false, loading: false };
   }
 
   export async function handleComposeDown() {
@@ -247,15 +299,20 @@
       return;
     }
     
-    composeActionLoading = true;
+    destroyConfirm = { ...destroyConfirm, loading: true };
     composeError = '';
+    composeLogs = [];
     try {
       await ComposeDown(composeFilePath, parseComposeProfiles(composeProfiles));
+      destroyConfirm = { show: false, loading: false };
     } catch (e) {
       composeError = e.message || String(e);
-    } finally {
-      composeActionLoading = false;
+      destroyConfirm = { show: false, loading: false };
     }
+  }
+
+  function dismissStatus() {
+    dismissComposeStatus();
   }
 
 </script>
@@ -348,29 +405,97 @@
       <button
         class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50"
         onclick={previewCompose}
-        disabled={composeLoading}
+        disabled={composeLoading || composeStatus === 'running'}
       >
         {composeLoading ? t.loading : t.previewCompose}
       </button>
       <button
-        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
+        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={handleComposeUp}
-        disabled={composeActionLoading}
+        disabled={composeStatus === 'running'}
       >
-        {composeActionLoading ? t.processing : t.composeUp}
+        {#if composeStatus === 'running' && composeAction === 'up'}
+          <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          {t.processing || '处理中...'}
+        {:else}
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 010 1.972l-11.54 6.347a1.125 1.125 0 01-1.667-.986V5.653z" /></svg>
+          {t.composeUp}
+        {/if}
       </button>
       <button
-        class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50"
-        onclick={handleComposeDown}
-        disabled={composeActionLoading}
+        class="h-9 px-4 bg-red-500 text-white text-[12px] font-medium rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+        onclick={showDestroyConfirm}
+        disabled={composeStatus === 'running'}
       >
-        {composeActionLoading ? t.processing : t.composeDown}
+        {#if composeStatus === 'running' && composeAction === 'down'}
+          <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          {t.processing || '处理中...'}
+        {:else}
+          <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5.25 7.5A2.25 2.25 0 017.5 5.25h9a2.25 2.25 0 012.25 2.25v9a2.25 2.25 0 01-2.25 2.25h-9a2.25 2.25 0 01-2.25-2.25v-9z" /></svg>
+          {t.composeDown}
+        {/if}
       </button>
     </div>
     {#if composeError}
       <div class="mt-3 text-[12px] text-red-500">{composeError}</div>
     {/if}
   </div>
+
+  <!-- Compose operation status & log panel -->
+  {#if composeStatus !== 'idle'}
+    <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <!-- Status header -->
+      <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between {composeStatus === 'running' ? 'bg-blue-50' : composeStatus === 'done' ? 'bg-emerald-50' : 'bg-red-50'}">
+        <div class="flex items-center gap-2.5">
+          {#if composeStatus === 'running'}
+            <div class="w-4 h-4 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+            <span class="text-[13px] font-medium text-blue-700">
+              {composeAction === 'up' ? (t.composeDeploying || '正在部署编排...') : (t.composeDestroying || '正在销毁编排...')}
+            </span>
+          {:else if composeStatus === 'done'}
+            <svg class="w-4 h-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+            <span class="text-[13px] font-medium text-emerald-700">
+              {composeAction === 'up' ? (t.composeUpDone || '编排部署完成') : (t.composeDownDone || '编排销毁完成')}
+            </span>
+          {:else if composeStatus === 'error'}
+            <svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+            <span class="text-[13px] font-medium text-red-700">
+              {composeAction === 'up' ? (t.composeUpFailed || '编排部署失败') : (t.composeDownFailed || '编排销毁失败')}
+            </span>
+          {/if}
+        </div>
+        {#if composeStatus !== 'running'}
+          <button
+            class="text-[11px] text-gray-400 hover:text-gray-600 transition-colors"
+            onclick={dismissStatus}
+          >{t.dismiss || '关闭'}</button>
+        {/if}
+      </div>
+
+      <!-- Error message -->
+      {#if composeStatus === 'error' && composeStatusError}
+        <div class="px-5 py-3 bg-red-50 border-b border-red-100 text-[12px] text-red-600">{composeStatusError}</div>
+      {/if}
+
+      <!-- Log panel -->
+      {#if composeLogs.length > 0}
+        <div
+          class="bg-gray-900 px-4 py-3 max-h-48 overflow-y-auto font-mono text-[11px] leading-5"
+          bind:this={logContainerEl}
+        >
+          {#each composeLogs as log}
+            <div class="text-gray-300">
+              <span class="text-gray-500 select-none">{log.time}</span>
+              <span class="ml-2">{log.message}</span>
+            </div>
+          {/each}
+          {#if composeStatus === 'running'}
+            <div class="text-gray-500 animate-pulse">▍</div>
+          {/if}
+        </div>
+      {/if}
+    </div>
+  {/if}
 
   <div class="bg-white rounded-xl border border-gray-100 p-5">
     <div class="flex items-center justify-between mb-4">
@@ -555,6 +680,45 @@
       <div class="px-6 py-4 border-t border-gray-100 flex justify-end">
         <button class="h-9 px-5 bg-gray-100 text-gray-700 text-[12px] font-medium rounded-lg hover:bg-gray-200 transition-colors" onclick={() => composeTopoModal = false}>
           {t.close || '关闭'}
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+{#if destroyConfirm.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onclick={cancelDestroy}>
+    <div class="bg-white rounded-xl shadow-xl w-full max-w-sm mx-4 overflow-hidden" onclick={e => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+            </svg>
+          </div>
+          <div>
+            <div class="text-[14px] font-semibold text-gray-900">{t.composeDestroyConfirmTitle || '确认销毁编排'}</div>
+            <div class="text-[12px] text-gray-500 mt-0.5">{t.composeDestroyConfirmDesc || '此操作将销毁所有编排服务和关联资源，不可撤销'}</div>
+          </div>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+          onclick={cancelDestroy}
+          disabled={destroyConfirm.loading}
+        >{t.cancel}</button>
+        <button
+          class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
+          onclick={handleComposeDown}
+          disabled={destroyConfirm.loading}
+        >
+          {#if destroyConfirm.loading}
+            <div class="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+          {/if}
+          {t.composeDestroyConfirm || '确认销毁'}
         </button>
       </div>
     </div>

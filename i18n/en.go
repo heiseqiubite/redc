@@ -322,8 +322,12 @@ var enMessages = map[string]string{
 	"compose_verify_start":    "Validating template config...",
 	"compose_verify_done":     "Template validation passed",
 	"compose_deploy_service":  "Starting to deploy service: %s (Type: %s)",
+	"compose_deploy_total":    "Starting compose deployment, %d services total",
+	"compose_deploy_progress": "Deploy progress: %d/%d",
 	"compose_setup_start":     "Starting to execute Setup post-tasks...",
 	"compose_destroy_service": "Destroying service: %s",
+	"compose_destroy_total":   "Starting compose teardown, %d services total",
+	"compose_destroy_progress": "Destroy progress: %d/%d",
 	"compose_destroy_failed":  "Failed to destroy service [%s]: %v",
 
 	// ============ app.go ============

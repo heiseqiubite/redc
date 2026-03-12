@@ -322,8 +322,12 @@ var zhMessages = map[string]string{
 	"compose_verify_start":    "正在预检模版配置...",
 	"compose_verify_done":     "模版预检通过",
 	"compose_deploy_service":  "开始部署服务: %s (Type: %s)",
+	"compose_deploy_total":    "开始编排部署，共 %d 个服务",
+	"compose_deploy_progress": "部署进度: %d/%d",
 	"compose_setup_start":     "开始执行 Setup 后置任务...",
 	"compose_destroy_service": "正在销毁服务: %s",
+	"compose_destroy_total":   "开始编排销毁，共 %d 个服务",
+	"compose_destroy_progress": "销毁进度: %d/%d",
 	"compose_destroy_failed":  "销毁服务 [%s] 失败: %v",
 
 	// ============ app.go ============

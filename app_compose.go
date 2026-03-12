@@ -78,16 +78,23 @@ func (a *App) ComposeUp(filePath string, profiles []string) error {
 		File:     filePath,
 		Profiles: profiles,
 		Project:  project,
+		LogCallback: func(msg string) {
+			a.emitEvent("compose-log", map[string]string{"message": msg})
+		},
 	}
 
 	a.emitLog(i18n.Tf("app_compose_up_start", filePath))
+	a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "running"})
 	go func() {
 		defer a.emitRefresh()
 		if err := compose.RunComposeUp(opts); err != nil {
-			a.emitLog(i18n.Tf("app_compose_up_failed", err))
+			errMsg := i18n.Tf("app_compose_up_failed", err)
+			a.emitLog(errMsg)
+			a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "error", "error": errMsg})
 			return
 		}
 		a.emitLog(i18n.T("app_compose_up_done"))
+		a.emitEvent("compose-status", map[string]string{"action": "up", "phase": "done"})
 	}()
 	return nil
 }
@@ -113,16 +120,23 @@ func (a *App) ComposeDown(filePath string, profiles []string) error {
 		File:     filePath,
 		Profiles: profiles,
 		Project:  project,
+		LogCallback: func(msg string) {
+			a.emitEvent("compose-log", map[string]string{"message": msg})
+		},
 	}
 
 	a.emitLog(i18n.Tf("app_compose_down_start", filePath))
+	a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "running"})
 	go func() {
 		defer a.emitRefresh()
 		if err := compose.RunComposeDown(opts); err != nil {
-			a.emitLog(i18n.Tf("app_compose_down_failed", err))
+			errMsg := i18n.Tf("app_compose_down_failed", err)
+			a.emitLog(errMsg)
+			a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "error", "error": errMsg})
 			return
 		}
 		a.emitLog(i18n.T("app_compose_down_done"))
+		a.emitEvent("compose-status", map[string]string{"action": "down", "phase": "done"})
 	}()
 	return nil
 }

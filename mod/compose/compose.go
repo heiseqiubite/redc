@@ -1,6 +1,7 @@
 package compose
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -27,8 +28,11 @@ func RunComposeUp(opts ComposeOptions) error {
 		return err
 	}
 
+	ctx.emitLog(i18n.Tf("compose_deploy_total", len(ctx.RuntimeSvcs)))
+
 	// 2. 编排循环
 	pendingCount := len(ctx.RuntimeSvcs)
+	deployed := 0
 	for pendingCount > 0 {
 		deployedInThisLoop := 0
 
@@ -41,7 +45,9 @@ func RunComposeUp(opts ComposeOptions) error {
 			}
 
 			if canDeploy(svc, ctx.RuntimeSvcs) {
-				gologger.Info().Msgf("%s", i18n.Tf("compose_deploy_service", svc.Name, svc.Spec.Image))
+				msg := i18n.Tf("compose_deploy_service", svc.Name, svc.Spec.Image)
+				gologger.Info().Msgf("%s", msg)
+				ctx.emitLog(msg)
 
 				if err := processServiceUp(svc, ctx); err != nil {
 					return fmt.Errorf("部署服务 [%s] 失败: %v", svc.Name, err)
@@ -49,7 +55,9 @@ func RunComposeUp(opts ComposeOptions) error {
 
 				svc.IsDeployed = true
 				deployedInThisLoop++
+				deployed++
 				pendingCount--
+				ctx.emitLog(i18n.Tf("compose_deploy_progress", deployed, deployed+pendingCount))
 			}
 		}
 
@@ -60,8 +68,10 @@ func RunComposeUp(opts ComposeOptions) error {
 
 	// 3. 执行 Setup
 	if len(ctx.ConfigRaw.Setup) > 0 {
-		gologger.Info().Msg(i18n.T("compose_setup_start"))
-		if err := runSetupTasks(ctx.ConfigRaw.Setup, ctx.RuntimeSvcs, ctx.LogMgr); err != nil {
+		msg := i18n.T("compose_setup_start")
+		gologger.Info().Msg(msg)
+		ctx.emitLog(msg)
+		if err := runSetupTasks(ctx.ConfigRaw.Setup, ctx.RuntimeSvcs, ctx); err != nil {
 			return err
 		}
 	}
@@ -94,6 +104,9 @@ func RunComposeDown(opts ComposeOptions) error {
 		}
 	}
 
+	ctx.emitLog(i18n.Tf("compose_destroy_total", pendingCount))
+	destroyed := 0
+
 	// 逆序销毁
 	for pendingCount > 0 {
 		destroyedInThisLoop := 0
@@ -106,14 +119,20 @@ func RunComposeDown(opts ComposeOptions) error {
 		}
 
 		if canDestroy(svc, ctx.RuntimeSvcs) {
-			gologger.Info().Msgf("%s", i18n.Tf("compose_destroy_service", svc.Name))
+			msg := i18n.Tf("compose_destroy_service", svc.Name)
+			gologger.Info().Msgf("%s", msg)
+			ctx.emitLog(msg)
 			if err := svc.CaseRef.TfDestroy(); err != nil {
-				gologger.Error().Msgf("%s", i18n.Tf("compose_destroy_failed", svc.Name, err))
+				errMsg := i18n.Tf("compose_destroy_failed", svc.Name, err)
+				gologger.Error().Msgf("%s", errMsg)
+				ctx.emitLog(errMsg)
 			}
 
 			svc.IsDeployed = false
 			destroyedInThisLoop++
+			destroyed++
 			pendingCount--
+			ctx.emitLog(i18n.Tf("compose_destroy_progress", destroyed, destroyed+pendingCount))
 		}
 	}
 
@@ -160,6 +179,7 @@ func processServiceUp(svc *RuntimeService, ctx *ComposeContext) error {
 	}
 
 	// TF Apply
+	ctx.emitLog(fmt.Sprintf("[%s] Terraform Apply...", svc.Name))
 	p := ctx.Project
 	c, err := p.GetCase(svc.Name)
 	if err != nil {
@@ -171,6 +191,7 @@ func processServiceUp(svc *RuntimeService, ctx *ComposeContext) error {
 	if err := c.TfApply(); err != nil {
 		return fmt.Errorf("Terraform Apply fail: %v", err)
 	}
+	ctx.emitLog(fmt.Sprintf("[%s] Terraform Apply 完成", svc.Name))
 	svc.CaseRef = c
 
 	// Output Cache
@@ -180,10 +201,10 @@ func processServiceUp(svc *RuntimeService, ctx *ComposeContext) error {
 	}
 
 	// SSH Actions
-	return runSSHActions(svc, ctx.LogMgr)
+	return runSSHActions(svc, ctx)
 }
 
-func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
+func runSSHActions(svc *RuntimeService, ctx *ComposeContext) error {
 	if svc.Spec.Command == "" && len(svc.Spec.Volumes) == 0 && len(svc.Spec.Downloads) == 0 {
 		return nil
 	}
@@ -201,11 +222,19 @@ func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 	}
 	defer client.Close()
 
-	logger, _ := logMgr.NewServiceLogger(svc.Name)
+	logger, _ := ctx.LogMgr.NewServiceLogger(svc.Name)
+	// Build a writer that writes to file logger + GUI callback
 	var writer io.Writer = os.Stdout
 	if logger != nil {
 		defer logger.Close()
-		writer = logger
+		if ctx.LogCallback != nil {
+			cbWriter := &callbackWriter{prefix: svc.Name, cb: ctx.LogCallback}
+			writer = io.MultiWriter(logger, cbWriter)
+		} else {
+			writer = logger
+		}
+	} else if ctx.LogCallback != nil {
+		writer = &callbackWriter{prefix: svc.Name, cb: ctx.LogCallback}
 	}
 
 	// Volumes
@@ -213,7 +242,9 @@ func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 		parts := strings.Split(vol, ":")
 		if len(parts) == 2 {
 			localPath, remotePath := parts[0], parts[1]
-			gologger.Info().Msgf("[%s] Uploading %s -> %s", svc.Name, localPath, remotePath)
+			msg := fmt.Sprintf("[%s] Uploading %s -> %s", svc.Name, localPath, remotePath)
+			gologger.Info().Msg(msg)
+			ctx.emitLog(msg)
 			if err := client.Upload(localPath, remotePath); err != nil {
 				gologger.Error().Msgf("[%s] Upload failed: %v", svc.Name, err)
 			}
@@ -222,7 +253,9 @@ func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 
 	// Command
 	if svc.Spec.Command != "" {
-		gologger.Info().Msgf("[%s] Running init command...", svc.Name)
+		msg := fmt.Sprintf("[%s] Running init command...", svc.Name)
+		gologger.Info().Msg(msg)
+		ctx.emitLog(msg)
 		if err := client.RunCommandWithLogger(svc.Spec.Command, writer); err != nil {
 			gologger.Error().Msgf("[%s] Command failed: %v", svc.Name, err)
 		}
@@ -233,7 +266,9 @@ func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 		parts := strings.Split(dl, ":")
 		if len(parts) == 2 {
 			remotePath, localPath := parts[0], parts[1]
-			gologger.Info().Msgf("[%s] Downloading %s -> %s", svc.Name, remotePath, localPath)
+			msg := fmt.Sprintf("[%s] Downloading %s -> %s", svc.Name, remotePath, localPath)
+			gologger.Info().Msg(msg)
+			ctx.emitLog(msg)
 			if err := client.Download(remotePath, localPath); err != nil {
 				gologger.Error().Msgf("[%s] Download failed: %v", svc.Name, err)
 			}
@@ -242,14 +277,29 @@ func runSSHActions(svc *RuntimeService, logMgr *gologger.LogManager) error {
 	return nil
 }
 
-func runSetupTasks(tasks []SetupTask, svcs map[string]*RuntimeService, logMgr *gologger.LogManager) error {
+// callbackWriter is an io.Writer that forwards lines to the GUI log callback
+type callbackWriter struct {
+	prefix string
+	cb     func(string)
+}
+
+func (w *callbackWriter) Write(p []byte) (n int, err error) {
+	scanner := bufio.NewScanner(bytes.NewReader(p))
+	for scanner.Scan() {
+		text := scanner.Text()
+		if text != "" {
+			w.cb(fmt.Sprintf("[%s] %s", w.prefix, text))
+		}
+	}
+	return len(p), nil
+}
+
+func runSetupTasks(tasks []SetupTask, svcs map[string]*RuntimeService, ctx *ComposeContext) error {
 	gologger.Debug().Msgf("Running Setup Tasks %d...", len(tasks))
 	for _, task := range tasks {
 		// 1. 查找目标实例 (支持裂变/多实例)
 		var targets []*RuntimeService
 		for _, s := range svcs {
-			// 关键修正：通过 RawName 匹配。
-			// 例如 task.Service 是 "web"，这里会匹配到 "web-1", "web-2" 等
 			if s.RawName == task.Service {
 				targets = append(targets, s)
 			}
@@ -258,7 +308,9 @@ func runSetupTasks(tasks []SetupTask, svcs map[string]*RuntimeService, logMgr *g
 			gologger.Warning().Msgf("Setup task [%s] skipped: No active instances found for service group '%s'", task.Name, task.Service)
 			continue
 		}
-		gologger.Info().Msgf("Setup task [%s] matched %d instance(s) of service '%s'", task.Name, len(targets), task.Service)
+		msg := fmt.Sprintf("[setup] Task [%s] matched %d instance(s) of '%s'", task.Name, len(targets), task.Service)
+		gologger.Info().Msg(msg)
+		ctx.emitLog(msg)
 		// 2. 遍历所有匹配的实例并执行命令
 		for _, targetSvc := range targets {
 			cmds, err := expandVariable(task.Command, svcs, targetSvc)
@@ -281,29 +333,31 @@ func runSetupTasks(tasks []SetupTask, svcs map[string]*RuntimeService, logMgr *g
 				}
 				defer client.Close()
 
-				logger, _ := logMgr.NewServiceLogger("setup")
+				logger, _ := ctx.LogMgr.NewServiceLogger("setup")
 				if logger != nil {
 					logger.ServiceName = "setup"
 					defer logger.Close()
 				}
 
 				for _, cmd := range cmds {
-					gologger.Info().Msgf("[setup] Task: %s | Cmd: %s", task.Name, cmd)
+					cmdMsg := fmt.Sprintf("[setup] Task: %s | Cmd: %s", task.Name, cmd)
+					gologger.Info().Msg(cmdMsg)
+					ctx.emitLog(cmdMsg)
 
 					// 1. 创建一个 Buffer 来捕获输出 (包括 stdout 和 stderr)
 					var outputBuf bytes.Buffer
 
-					// 2. 构造 MultiWriter: 既写入日志文件，又写入 Buffer
-					// 如果 logger 为 nil，则只写入 buffer
-					var combinedWriter io.Writer
+					// 2. 构造 MultiWriter: 既写入日志文件，又写入 Buffer + GUI
+					writers := []io.Writer{&outputBuf}
 					if logger != nil {
-						combinedWriter = io.MultiWriter(logger, &outputBuf)
-					} else {
-						combinedWriter = &outputBuf
+						writers = append(writers, logger)
 					}
+					if ctx.LogCallback != nil {
+						writers = append(writers, &callbackWriter{prefix: "setup", cb: ctx.LogCallback})
+					}
+					combinedWriter := io.MultiWriter(writers...)
 
 					// 3. 执行命令
-					// RunCommandWithLogger 内部还会再叠加 os.Stdout/Stderr
 					runErr := client.RunCommandWithLogger(cmd, combinedWriter)
 
 					// 4. 获取结果字符串 (去除首尾空白)
@@ -311,7 +365,7 @@ func runSetupTasks(tasks []SetupTask, svcs map[string]*RuntimeService, logMgr *g
 
 					task.Outputs = outputStr
 
-					// 6. 错误处理：如果执行失败，返回错误信息，并附带刚才捕获的输出以便调试
+					// 6. 错误处理
 					if runErr != nil {
 						gologger.Error().Msgf("[setup] Task failed: %v | Output: %s", runErr, outputStr)
 						return fmt.Errorf("cmd execution failed: %w, output: %s", runErr, outputStr)
