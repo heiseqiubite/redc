@@ -628,6 +628,62 @@ export namespace main {
 	        this.installed = source["installed"];
 	    }
 	}
+	export class TemplateValidateDiagnostic {
+	    severity: string;
+	    summary: string;
+	    detail: string;
+	    filename: string;
+	    line: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplateValidateDiagnostic(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.severity = source["severity"];
+	        this.summary = source["summary"];
+	        this.detail = source["detail"];
+	        this.filename = source["filename"];
+	        this.line = source["line"];
+	    }
+	}
+	export class TemplateValidateResult {
+	    valid: boolean;
+	    error_count: number;
+	    warning_count: number;
+	    diagnostics: TemplateValidateDiagnostic[];
+	
+	    static createFrom(source: any = {}) {
+	        return new TemplateValidateResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.valid = source["valid"];
+	        this.error_count = source["error_count"];
+	        this.warning_count = source["warning_count"];
+	        this.diagnostics = this.convertValues(source["diagnostics"], TemplateValidateDiagnostic);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class TemplateVariable {
 	    name: string;
 	    type: string;

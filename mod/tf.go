@@ -137,6 +137,22 @@ func TfOutput(Path string) (map[string]tfexec.OutputMeta, error) {
 	return outputs, nil
 }
 
+// TfValidate runs terraform validate to check syntax and configuration
+func TfValidate(Path string) (*tfjson.ValidateOutput, error) {
+	ctx, cancel := createContextWithTimeout()
+	defer cancel()
+	gologger.Debug().Msgf("Validating terraform in %s\n", Path)
+	te, err := NewTerraformExecutor(Path)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.Tf("tf_exec_config_failed", err))
+	}
+	result, err := te.Validate(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("terraform validate failed: %w", err)
+	}
+	return result, nil
+}
+
 func TfDestroy(Path string, opts []string) error {
 	ctx, cancel := createContextWithTimeout()
 	defer cancel()

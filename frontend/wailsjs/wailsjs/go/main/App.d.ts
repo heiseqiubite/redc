@@ -52,6 +52,8 @@ export function CreateCase(arg1:string,arg2:string,arg3:Record<string, string>):
 
 export function CreateCustomDeployment(arg1:mod.DeploymentConfig):Promise<mod.CustomDeployment>;
 
+export function CreateLocalTemplate(arg1:string,arg2:string):Promise<void>;
+
 export function CreateProfile(arg1:string,arg2:string,arg3:string):Promise<mod.ProfileInfo>;
 
 export function CreateProject(arg1:string):Promise<void>;
@@ -65,6 +67,8 @@ export function DeleteCustomDeployment(arg1:string):Promise<void>;
 export function DeleteProfile(arg1:string):Promise<void>;
 
 export function DeleteRemoteFile(arg1:string,arg2:string):Promise<void>;
+
+export function DeleteTemplateFile(arg1:string,arg2:string):Promise<void>;
 
 export function DeployCase(arg1:string,arg2:string,arg3:Record<string, string>):Promise<void>;
 
@@ -327,6 +331,8 @@ export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.Fil
 export function UploadUserdataScript(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 
 export function ValidateDeploymentConfig(arg1:mod.DeploymentConfig):Promise<mod.ValidationResult>;
+
+export function ValidateTemplate(arg1:string):Promise<main.TemplateValidateResult>;
 
 export function WriteRemoteFileContent(arg1:string,arg2:string,arg3:string):Promise<void>;
 

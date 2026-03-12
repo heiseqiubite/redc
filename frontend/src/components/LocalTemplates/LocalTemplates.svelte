@@ -1,7 +1,7 @@
 <script>
 
   import { onMount } from 'svelte';
-  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates } from '../../../wailsjs/go/main/App.js';
+  import { ListAllTemplates, GetTemplateVariables, RemoveTemplate, CopyTemplate, GetTemplateFiles, SaveTemplateFiles, CopyFileTo, ExportTemplates, ImportTemplates, CreateLocalTemplate, DeleteTemplateFile, ValidateTemplate } from '../../../wailsjs/go/main/App.js';
   import { selectFile, selectSaveFile } from '../../lib/file-dialog.js';
   import CodeEditor from '../CodeEditor/CodeEditor.svelte';
 
@@ -332,6 +332,18 @@
   let exporting = $state(false);
   let importing = $state(false);
   let exportMessage = $state('');
+
+  // Create template dialog state
+  let createTemplateDialog = $state({ show: false, name: '', scaffold: 'blank', loading: false, error: '' });
+
+  // File add inline input state (in templateEditor sidebar)
+  let addingFile = $state({ show: false, name: '' });
+
+  // Delete file confirmation state
+  let deleteFileConfirm = $state({ show: false, fileName: '' });
+
+  // Template validation state
+  let validateResult = $state({ show: false, loading: false, templateName: '', result: null });
   
   // Export selected templates
   async function handleExportTemplates() {
@@ -394,6 +406,122 @@
 
 
   // ============================================================================
+  // Create Template Functions
+  // ============================================================================
+
+  function showCreateTemplateDialog() {
+    createTemplateDialog = { show: true, name: '', scaffold: 'blank', loading: false, error: '' };
+  }
+
+  function cancelCreateTemplate() {
+    createTemplateDialog = { show: false, name: '', scaffold: 'blank', loading: false, error: '' };
+  }
+
+  async function confirmCreateTemplate() {
+    const name = createTemplateDialog.name.trim();
+    if (!name) {
+      createTemplateDialog = { ...createTemplateDialog, error: t.templateNameRequired || '请输入模板名称' };
+      return;
+    }
+    // Validate name: allow letters, digits, -, _, /
+    if (!/^[a-zA-Z0-9][a-zA-Z0-9_\-/]*$/.test(name)) {
+      createTemplateDialog = { ...createTemplateDialog, error: t.templateNameInvalid || '名称只能包含字母、数字、-、_、/' };
+      return;
+    }
+    if (name.includes('..')) {
+      createTemplateDialog = { ...createTemplateDialog, error: t.templateNameInvalid || '名称包含非法字符' };
+      return;
+    }
+    createTemplateDialog = { ...createTemplateDialog, loading: true, error: '' };
+    try {
+      await CreateLocalTemplate(name, createTemplateDialog.scaffold);
+      createTemplateDialog = { show: false, name: '', scaffold: 'blank', loading: false, error: '' };
+      await loadLocalTemplates();
+      // Auto-open editor for the new template
+      const newTmpl = localTemplates.find(t => t.name === name);
+      if (newTmpl) {
+        openTemplateEditor(newTmpl);
+      }
+    } catch (e) {
+      createTemplateDialog = { ...createTemplateDialog, loading: false, error: e.message || String(e) };
+    }
+  }
+
+  // ============================================================================
+  // Template Editor File Management
+  // ============================================================================
+
+  function showAddFile() {
+    addingFile = { show: true, name: '' };
+  }
+
+  function cancelAddFile() {
+    addingFile = { show: false, name: '' };
+  }
+
+  function confirmAddFile() {
+    const fname = addingFile.name.trim();
+    if (!fname) return;
+    // Prevent duplicates
+    if (templateEditor.files[fname] !== undefined) {
+      addingFile = { show: false, name: '' };
+      return;
+    }
+    templateEditor.files[fname] = '';
+    templateEditor = { ...templateEditor, active: fname };
+    addingFile = { show: false, name: '' };
+  }
+
+  function showDeleteFileConfirm(fileName) {
+    deleteFileConfirm = { show: true, fileName };
+  }
+
+  function cancelDeleteFile() {
+    deleteFileConfirm = { show: false, fileName: '' };
+  }
+
+  async function confirmDeleteFile() {
+    const fname = deleteFileConfirm.fileName;
+    deleteFileConfirm = { show: false, fileName: '' };
+    if (!fname) return;
+
+    try {
+      await DeleteTemplateFile(templateEditor.name, fname);
+      const newFiles = { ...templateEditor.files };
+      delete newFiles[fname];
+      const names = Object.keys(newFiles);
+      templateEditor = {
+        ...templateEditor,
+        files: newFiles,
+        active: templateEditor.active === fname ? (names[0] || '') : templateEditor.active,
+      };
+    } catch (e) {
+      templateEditor = { ...templateEditor, error: e.message || String(e) };
+    }
+  }
+
+  // ============================================================================
+  // Template Validation Functions
+  // ============================================================================
+
+  async function handleValidateTemplate(tmpl) {
+    validateResult = { show: true, loading: true, templateName: tmpl.name, result: null };
+    try {
+      const result = await ValidateTemplate(tmpl.name);
+      validateResult = { show: true, loading: false, templateName: tmpl.name, result };
+    } catch (e) {
+      validateResult = {
+        show: true, loading: false, templateName: tmpl.name,
+        result: { valid: false, error_count: 1, warning_count: 0, diagnostics: [{ severity: 'error', summary: e.message || String(e), detail: '', filename: '', line: 0 }] }
+      };
+    }
+  }
+
+  function closeValidateResult() {
+    validateResult = { show: false, loading: false, templateName: '', result: null };
+  }
+
+  // ============================================================================
   // Lifecycle
   // ============================================================================
 
@@ -449,6 +577,12 @@
         disabled={exporting || !hasSelection}
       >
         {exporting ? t.loading : (t.exportTemplates || '导出')}
+      </button>
+      <button 
+        class="h-10 px-5 text-white bg-emerald-600 hover:bg-emerald-700 text-[13px] font-medium rounded-lg transition-colors"
+        onclick={showCreateTemplateDialog}
+      >
+        {t.createTemplate || '新建模板'}
       </button>
     </div>
   </div>
@@ -576,31 +710,52 @@
               <td class="px-3 py-3.5 w-[320px]">
                 <span class="text-[12px] text-gray-500 break-words whitespace-normal" title={tmpl.description}>{tmpl.description || '-'}</span>
               </td>
-              <td class="pl-4 pr-6 py-3.5 text-right w-[240px]">
-                <div class="flex flex-col gap-2 items-end">
-                  <div class="flex items-center gap-2">
+              <td class="pl-4 pr-6 py-3.5 text-right w-[220px]">
+                <div class="flex flex-col gap-1.5 items-end">
+                  <div class="flex items-center gap-1.5">
+                    <!-- Icon buttons: clone, validate, delete -->
                     <button 
-                      class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors whitespace-nowrap"
+                      class="w-7 h-7 flex items-center justify-center text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-gray-700 transition-colors"
                       onclick={() => handleCloneTemplate(tmpl)}
-                    >{t.cloneTemplate}</button>
+                      title={t.cloneTemplate}
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16h8M8 12h8m-6 8h6a2 2 0 002-2V8l-6-6H8a2 2 0 00-2 2v16a2 2 0 002 2z" />
+                      </svg>
+                    </button>
                     <button 
-                      class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-indigo-700 bg-indigo-50 rounded-md hover:bg-indigo-100 transition-colors whitespace-nowrap"
-                      onclick={() => openTemplateEditor(tmpl)}
-                    >{t.editTemplate}</button>
-                  </div>
-                  <div class="flex items-center gap-2">
-                    <button 
-                      class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
-                      onclick={() => showTemplateDetail(tmpl)}
-                    >{t.viewParams}</button>
+                      class="w-7 h-7 flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-md hover:bg-emerald-100 hover:text-emerald-700 transition-colors"
+                      onclick={() => handleValidateTemplate(tmpl)}
+                      title={t.validateTemplate || '语法检查'}
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                    </button>
                     {#if deletingTemplate[tmpl.name]}
-                      <span class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-amber-600 text-center">{t.deleting}</span>
+                      <span class="w-7 h-7 flex items-center justify-center">
+                        <div class="w-3.5 h-3.5 border-2 border-gray-200 border-t-amber-500 rounded-full animate-spin"></div>
+                      </span>
                     {:else}
                       <button 
-                        class="min-w-[100px] px-2.5 py-1 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors whitespace-nowrap"
+                        class="w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 rounded-md hover:bg-red-100 hover:text-red-700 transition-colors"
                         onclick={() => showDeleteTemplateConfirm(tmpl.name)}
-                      >{t.delete}</button>
+                        title={t.delete}
+                      >
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     {/if}
+                    <!-- Text buttons: view params, edit -->
+                    <button 
+                      class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
+                      onclick={() => showTemplateDetail(tmpl)}
+                    >{t.viewParams}</button>
+                    <button 
+                      class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
+                      onclick={() => openTemplateEditor(tmpl)}
+                    >{t.editTemplate}</button>
                   </div>
                 </div>
               </td>
@@ -718,8 +873,8 @@
     <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
       <div class="px-6 py-5">
         <div class="flex items-center gap-3 mb-3">
-          <div class="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center">
-            <svg class="w-5 h-5 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center">
+            <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8M8 12h8m-6 8h6a2 2 0 002-2V8a2 2 0 00-2-2h-2l-2-2H8a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </div>
@@ -742,7 +897,7 @@
           onclick={cancelCloneTemplate}
         >{t.cancel}</button>
         <button 
-          class="px-4 py-2 text-[13px] font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+          class="px-4 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
           onclick={confirmCloneTemplate}
         >{t.cloneTemplate}</button>
       </div>
@@ -881,6 +1036,10 @@
             onclick={closeTemplateEditor}
           >{t.close}</button>
           <button
+            class="px-3 py-1.5 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors"
+            onclick={() => handleValidateTemplate({ name: templateEditor.name })}
+          >{t.validateTemplate || '语法检查'}</button>
+          <button
             class="px-3 py-1.5 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
             onclick={saveTemplateEditor}
             disabled={templateEditor.saving}
@@ -888,14 +1047,54 @@
         </div>
       </div>
       <div class="flex h-[calc(100%-73px)]">
-        <div class="w-64 border-r border-gray-100 overflow-auto">
+        <div class="w-64 border-r border-gray-100 overflow-auto flex flex-col">
           <div class="px-4 py-3 text-[12px] font-semibold text-gray-600">{t.templateFiles}</div>
-          {#each Object.keys(templateEditor.files) as fname}
+          <div class="flex-1 overflow-auto">
+            {#each Object.keys(templateEditor.files) as fname}
+              <div class="group flex items-center">
+                <button
+                  class="flex-1 text-left px-4 py-2 text-[12px] transition-colors truncate {templateEditor.active === fname ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
+                  onclick={() => templateEditor = { ...templateEditor, active: fname }}
+                  title={fname}
+                >{fname}</button>
+                <button
+                  class="w-6 h-6 flex items-center justify-center text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity mr-1 flex-shrink-0"
+                  onclick={() => showDeleteFileConfirm(fname)}
+                  title={t.deleteFile || '删除文件'}
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            {/each}
+          </div>
+          <!-- Add file input or button -->
+          {#if addingFile.show}
+            <div class="px-3 py-2 border-t border-gray-100">
+              <input
+                type="text"
+                class="w-full h-8 px-2 text-[12px] bg-gray-50 border border-gray-200 rounded text-gray-900 placeholder-gray-400 focus:ring-1 focus:ring-emerald-500 focus:border-emerald-500"
+                placeholder={t.newFileName || '文件名（如 main.tf）'}
+                bind:value={addingFile.name}
+                onkeydown={(e) => { if (e.key === 'Enter') confirmAddFile(); if (e.key === 'Escape') cancelAddFile(); }}
+              />
+              <div class="flex gap-1 mt-1">
+                <button class="flex-1 h-6 text-[11px] text-gray-600 bg-gray-100 rounded hover:bg-gray-200 transition-colors" onclick={cancelAddFile}>{t.cancel}</button>
+                <button class="flex-1 h-6 text-[11px] text-white bg-emerald-500 rounded hover:bg-emerald-600 transition-colors" onclick={confirmAddFile}>{t.confirm || '确认'}</button>
+              </div>
+            </div>
+          {:else}
             <button
-              class="w-full text-left px-4 py-2 text-[12px] transition-colors {templateEditor.active === fname ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50'}"
-              onclick={() => templateEditor = { ...templateEditor, active: fname }}
-            >{fname}</button>
-          {/each}
+              class="mx-3 my-2 h-8 flex items-center justify-center gap-1 text-[12px] text-gray-500 border border-dashed border-gray-300 rounded hover:border-emerald-400 hover:text-emerald-600 transition-colors"
+              onclick={showAddFile}
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              {t.addFile || '新建文件'}
+            </button>
+          {/if}
         </div>
         <div class="flex-1 p-4 flex flex-col overflow-hidden">
           {#if templateEditor.error}
@@ -926,6 +1125,195 @@
           {/if}
         </div>
       </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Create Template Dialog -->
+{#if createTemplateDialog.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 overflow-visible" onclick={cancelCreateTemplate}>
+    <div class="bg-white rounded-xl border border-gray-200 max-w-md w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-4">
+          <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.createTemplate || '新建模板'}</h3>
+            <p class="text-[13px] text-gray-500">{t.createTemplateHint || '创建一个新的 Terraform 模板'}</p>
+          </div>
+        </div>
+
+        <label for="newTemplateName" class="block text-[12px] font-medium text-gray-500 mb-1.5">{t.templateName || '模板名称'}</label>
+        <input
+          id="newTemplateName"
+          type="text"
+          class="w-full h-10 px-3 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-emerald-500 focus:ring-offset-1 transition-shadow mb-4"
+          placeholder={t.templateNamePlaceholder || '例如: my-template 或 myteam/ecs'}
+          bind:value={createTemplateDialog.name}
+          onkeydown={(e) => { if (e.key === 'Enter') confirmCreateTemplate(); }}
+        />
+
+        <label class="block text-[12px] font-medium text-gray-500 mb-2">{t.scaffoldType || '脚手架类型'}</label>
+        <div class="grid grid-cols-2 gap-2">
+          <button
+            class="px-3 py-2.5 text-left rounded-lg border transition-colors {createTemplateDialog.scaffold === 'blank' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}"
+            onclick={() => createTemplateDialog = { ...createTemplateDialog, scaffold: 'blank' }}
+          >
+            <div class="text-[13px] font-medium">{t.scaffoldBlank || '空白模板'}</div>
+            <div class="text-[11px] mt-0.5 opacity-70">{t.scaffoldBlankDesc || '基础注释，自由编写'}</div>
+          </button>
+          <button
+            class="px-3 py-2.5 text-left rounded-lg border transition-colors {createTemplateDialog.scaffold === 'with-userdata' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-gray-200 text-gray-600 hover:bg-gray-50'}"
+            onclick={() => createTemplateDialog = { ...createTemplateDialog, scaffold: 'with-userdata' }}
+          >
+            <div class="text-[13px] font-medium">{t.scaffoldUserdata || '含 Userdata'}</div>
+            <div class="text-[11px] mt-0.5 opacity-70">{t.scaffoldUserdataDesc || '包含初始化脚本文件'}</div>
+          </button>
+        </div>
+
+        {#if createTemplateDialog.error}
+          <div class="mt-3 text-[12px] text-red-600 bg-red-50 rounded-lg px-3 py-2">{createTemplateDialog.error}</div>
+        {/if}
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+          onclick={cancelCreateTemplate}
+          disabled={createTemplateDialog.loading}
+        >{t.cancel}</button>
+        <button
+          class="px-4 py-2 text-[13px] font-medium text-white bg-emerald-600 rounded-lg hover:bg-emerald-700 transition-colors disabled:opacity-50"
+          onclick={confirmCreateTemplate}
+          disabled={createTemplateDialog.loading}
+        >{createTemplateDialog.loading ? t.loading : (t.create || '创建')}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Delete File Confirmation Modal -->
+{#if deleteFileConfirm.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] overflow-visible" onclick={cancelDeleteFile}>
+    <div class="bg-white rounded-xl border border-gray-200 max-w-sm w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+            <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="text-[15px] font-semibold text-gray-900">{t.deleteFileTitle || '删除文件'}</h3>
+            <p class="text-[13px] text-gray-500">{t.deleteFileHint || '确定要删除此文件吗？此操作不可撤销。'}</p>
+          </div>
+        </div>
+        <div class="px-3 py-2 bg-gray-50 rounded-lg">
+          <code class="text-[13px] text-gray-800">{deleteFileConfirm.fileName}</code>
+        </div>
+      </div>
+      <div class="px-6 py-4 bg-gray-50 flex justify-end gap-2">
+        <button
+          class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+          onclick={cancelDeleteFile}
+        >{t.cancel}</button>
+        <button
+          class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+          onclick={confirmDeleteFile}
+        >{t.delete}</button>
+      </div>
+    </div>
+  </div>
+{/if}
+
+<!-- Template Validation Result Modal -->
+{#if validateResult.show}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+  <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] overflow-visible" onclick={closeValidateResult}>
+    <div class="bg-white rounded-xl border border-gray-200 max-w-lg w-full mx-4 overflow-hidden" onclick={(e) => e.stopPropagation()}>
+      <div class="px-6 py-5">
+        <div class="flex items-center gap-3 mb-4">
+          {#if validateResult.loading}
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
+              <div class="w-5 h-5 border-2 border-gray-300 border-t-gray-700 rounded-full animate-spin"></div>
+            </div>
+            <div>
+              <h3 class="text-[15px] font-semibold text-gray-900">{t.validating || '验证中...'}</h3>
+              <p class="text-[13px] text-gray-500">{validateResult.templateName}</p>
+            </div>
+          {:else if validateResult.result?.valid}
+            <div class="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-[15px] font-semibold text-emerald-700">{t.validatePassed || '验证通过'}</h3>
+              <p class="text-[13px] text-gray-500">{validateResult.templateName}</p>
+            </div>
+          {:else}
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+              <svg class="w-5 h-5 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="text-[15px] font-semibold text-red-700">{t.validateFailed || '验证失败'}</h3>
+              <p class="text-[13px] text-gray-500">
+                {validateResult.templateName}
+                {#if validateResult.result}
+                  — {validateResult.result.error_count} {t.errors || '个错误'}{#if validateResult.result.warning_count > 0}, {validateResult.result.warning_count} {t.warnings || '个警告'}{/if}
+                {/if}
+              </p>
+            </div>
+          {/if}
+        </div>
+
+        {#if !validateResult.loading && validateResult.result}
+          {#if validateResult.result.valid}
+            <div class="px-4 py-3 bg-emerald-50 rounded-lg text-[13px] text-emerald-700">
+              {t.validatePassedMsg || '模板语法和参数配置正确，可以正常使用。'}
+            </div>
+          {:else if validateResult.result.diagnostics?.length > 0}
+            <div class="space-y-2 max-h-[300px] overflow-auto">
+              {#each validateResult.result.diagnostics as diag}
+                <div class="px-4 py-3 rounded-lg text-[12px] {diag.severity === 'error' ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'}">
+                  <div class="flex items-start gap-2">
+                    {#if diag.severity === 'error'}
+                      <span class="px-1.5 py-0.5 bg-red-100 text-red-700 rounded text-[10px] font-bold flex-shrink-0 mt-0.5">ERROR</span>
+                    {:else}
+                      <span class="px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-bold flex-shrink-0 mt-0.5">WARN</span>
+                    {/if}
+                    <div class="flex-1 min-w-0">
+                      <div class="font-medium text-gray-900">{diag.summary}</div>
+                      {#if diag.detail}
+                        <div class="text-gray-600 mt-1 break-words whitespace-pre-wrap">{diag.detail}</div>
+                      {/if}
+                      {#if diag.filename}
+                        <div class="text-gray-400 mt-1">
+                          📄 {diag.filename}{#if diag.line > 0}:{diag.line}{/if}
+                        </div>
+                      {/if}
+                    </div>
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        {/if}
+      </div>
+      {#if !validateResult.loading}
+        <div class="px-6 py-4 bg-gray-50 flex justify-end">
+          <button
+            class="px-4 py-2 text-[13px] font-medium text-gray-700 bg-white border border-gray-100 rounded-lg hover:bg-gray-50 transition-colors"
+            onclick={closeValidateResult}
+          >{t.close}</button>
+        </div>
+      {/if}
     </div>
   </div>
 {/if}

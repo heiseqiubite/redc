@@ -555,3 +555,254 @@ func (a *App) CopyFileTo(sourcePath string, destPath string) error {
 	_, err = io.Copy(destFile, sourceFile)
 	return err
 }
+
+// validTemplateName checks if a template name is safe (allows letters, digits, -, _, /)
+var validTemplateNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_\-/]*[a-zA-Z0-9]$|^[a-zA-Z0-9]$`)
+
+// CreateLocalTemplate creates a new empty template directory with scaffold files
+func (a *App) CreateLocalTemplate(name string, scaffold string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return fmt.Errorf(i18n.T("app_template_name_empty"))
+	}
+	if !validTemplateNameRe.MatchString(name) {
+		return fmt.Errorf(i18n.T("app_template_name_invalid"))
+	}
+	// Block path traversal
+	if strings.Contains(name, "..") {
+		return fmt.Errorf(i18n.T("app_template_name_invalid"))
+	}
+
+	tmplPath := filepath.Join(redc.TemplateDir, name)
+	if _, err := os.Stat(tmplPath); err == nil {
+		return fmt.Errorf(i18n.T("app_template_already_exists"))
+	}
+
+	if err := os.MkdirAll(tmplPath, 0755); err != nil {
+		return fmt.Errorf("failed to create directory: %w", err)
+	}
+
+	// Write scaffold files
+	files := scaffoldFiles(scaffold, name)
+	for fname, content := range files {
+		if err := os.WriteFile(filepath.Join(tmplPath, fname), []byte(content), 0644); err != nil {
+			return fmt.Errorf("failed to write %s: %w", fname, err)
+		}
+	}
+
+	a.emitLog(i18n.Tf("app_template_create_success", name))
+	a.emitRefresh()
+	return nil
+}
+
+func scaffoldFiles(scaffold string, name string) map[string]string {
+	baseName := filepath.Base(name)
+
+	caseJSON := fmt.Sprintf(`{
+  "name": "%s",
+  "description": "",
+  "version": "1.0.0",
+  "user": ""
+}`, baseName)
+
+	mainTF := `# =============================================================================
+# Terraform Main Configuration
+# =============================================================================
+#
+# Configure your provider and resources below.
+#
+# Example provider block:
+#   terraform {
+#     required_providers {
+#       alicloud = {
+#         source  = "aliyun/alicloud"
+#         version = "~> 1.200"
+#       }
+#     }
+#   }
+#
+#   provider "alicloud" {
+#     region = var.region
+#   }
+#
+# Example resource block:
+#   resource "alicloud_instance" "main" {
+#     instance_type        = var.instance_type
+#     image_id             = "ubuntu_22_04_x64_20G_alibase_20230815.vhd"
+#     security_groups      = [alicloud_security_group.default.id]
+#     vswitch_id           = alicloud_vswitch.default.id
+#     instance_name        = var.instance_name
+#     system_disk_category = "cloud_efficiency"
+#     user_data            = file("userdata")
+#   }
+#
+`
+
+	variablesTF := `# =============================================================================
+# Input Variables
+# =============================================================================
+#
+# Define your input variables here.
+#
+# variable "region" {
+#   description = "Cloud region"
+#   type        = string
+#   default     = "cn-hangzhou"
+# }
+#
+# variable "instance_type" {
+#   description = "Instance type"
+#   type        = string
+#   default     = "ecs.t6-c1m1.large"
+# }
+#
+# variable "instance_name" {
+#   description = "Instance name"
+#   type        = string
+#   default     = "redc-instance"
+# }
+#
+# variable "instance_password" {
+#   description = "Instance password"
+#   type        = string
+#   sensitive   = true
+# }
+`
+
+	outputsTF := `# =============================================================================
+# Outputs
+# =============================================================================
+#
+# Define your outputs here. Outputs with "ip" in the name will be used
+# by redc for SSH connections.
+#
+# output "ip" {
+#   value = alicloud_instance.main.public_ip
+# }
+#
+# output "password" {
+#   value     = var.instance_password
+#   sensitive = true
+# }
+`
+
+	switch scaffold {
+	case "with-userdata":
+		return map[string]string{
+			"case.json":    caseJSON,
+			"main.tf":      mainTF,
+			"variables.tf": variablesTF,
+			"outputs.tf":   outputsTF,
+			"userdata":     "#!/bin/bash\n# Add your initialization script here\necho \"Hello from redc\"\n",
+		}
+	default: // "blank"
+		return map[string]string{
+			"case.json":    caseJSON,
+			"main.tf":      mainTF,
+			"variables.tf": variablesTF,
+			"outputs.tf":   outputsTF,
+		}
+	}
+}
+
+// DeleteTemplateFile deletes a single file from a template directory
+func (a *App) DeleteTemplateFile(templateName string, fileName string) error {
+	tmplPath, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		return err
+	}
+
+	// Safety: ensure fileName doesn't contain path traversal
+	if strings.Contains(fileName, "..") || strings.Contains(fileName, "/") || strings.Contains(fileName, "\\") {
+		return fmt.Errorf("invalid file name")
+	}
+
+	filePath := filepath.Join(tmplPath, fileName)
+	if _, err := os.Stat(filePath); os.IsNotExist(err) {
+		return fmt.Errorf("file not found: %s", fileName)
+	}
+
+	if err := os.Remove(filePath); err != nil {
+		return fmt.Errorf("failed to delete file: %w", err)
+	}
+
+	a.emitLog(fmt.Sprintf("Deleted file %s from template %s", fileName, templateName))
+	return nil
+}
+
+// TemplateValidateResult holds the result of a terraform validate run
+type TemplateValidateResult struct {
+	Valid        bool                       `json:"valid"`
+	ErrorCount   int                        `json:"error_count"`
+	WarningCount int                        `json:"warning_count"`
+	Diagnostics  []TemplateValidateDiagnostic `json:"diagnostics"`
+}
+
+// TemplateValidateDiagnostic represents a single validation diagnostic
+type TemplateValidateDiagnostic struct {
+	Severity string `json:"severity"`
+	Summary  string `json:"summary"`
+	Detail   string `json:"detail"`
+	Filename string `json:"filename"`
+	Line     int    `json:"line"`
+}
+
+// ValidateTemplate runs terraform init + validate on a template to check syntax
+func (a *App) ValidateTemplate(templateName string) (*TemplateValidateResult, error) {
+	tmplPath, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		return nil, fmt.Errorf("%s", i18n.Tf("app_template_not_found", templateName))
+	}
+
+	a.emitLog(i18n.Tf("app_template_validate_start", templateName))
+
+	// Step 1: terraform init (needed before validate)
+	if err := redc.TfInit(tmplPath); err != nil {
+		return &TemplateValidateResult{
+			Valid:      false,
+			ErrorCount: 1,
+			Diagnostics: []TemplateValidateDiagnostic{
+				{Severity: "error", Summary: "terraform init failed", Detail: err.Error()},
+			},
+		}, nil
+	}
+
+	// Step 2: terraform validate
+	output, err := redc.TfValidate(tmplPath)
+	if err != nil {
+		return &TemplateValidateResult{
+			Valid:      false,
+			ErrorCount: 1,
+			Diagnostics: []TemplateValidateDiagnostic{
+				{Severity: "error", Summary: "terraform validate failed", Detail: err.Error()},
+			},
+		}, nil
+	}
+
+	result := &TemplateValidateResult{
+		Valid:        output.Valid,
+		ErrorCount:   output.ErrorCount,
+		WarningCount: output.WarningCount,
+	}
+
+	for _, d := range output.Diagnostics {
+		diag := TemplateValidateDiagnostic{
+			Severity: string(d.Severity),
+			Summary:  d.Summary,
+			Detail:   d.Detail,
+		}
+		if d.Range != nil {
+			diag.Filename = d.Range.Filename
+			diag.Line = d.Range.Start.Line
+		}
+		result.Diagnostics = append(result.Diagnostics, diag)
+	}
+
+	if result.Valid {
+		a.emitLog(i18n.Tf("app_template_validate_success", templateName))
+	} else {
+		a.emitLog(i18n.Tf("app_template_validate_failed", templateName))
+	}
+
+	return result, nil
+}

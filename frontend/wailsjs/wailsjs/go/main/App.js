@@ -94,6 +94,10 @@ export function CreateCustomDeployment(arg1) {
   return window['go']['main']['App']['CreateCustomDeployment'](arg1);
 }
 
+export function CreateLocalTemplate(arg1, arg2) {
+  return window['go']['main']['App']['CreateLocalTemplate'](arg1, arg2);
+}
+
 export function CreateProfile(arg1, arg2, arg3) {
   return window['go']['main']['App']['CreateProfile'](arg1, arg2, arg3);
 }
@@ -120,6 +124,10 @@ export function DeleteProfile(arg1) {
 
 export function DeleteRemoteFile(arg1, arg2) {
   return window['go']['main']['App']['DeleteRemoteFile'](arg1, arg2);
+}
+
+export function DeleteTemplateFile(arg1, arg2) {
+  return window['go']['main']['App']['DeleteTemplateFile'](arg1, arg2);
 }
 
 export function DeployCase(arg1, arg2, arg3) {
@@ -644,6 +652,10 @@ export function UploadUserdataScript(arg1, arg2, arg3) {
 
 export function ValidateDeploymentConfig(arg1) {
   return window['go']['main']['App']['ValidateDeploymentConfig'](arg1);
+}
+
+export function ValidateTemplate(arg1) {
+  return window['go']['main']['App']['ValidateTemplate'](arg1);
 }
 
 export function WriteRemoteFileContent(arg1, arg2, arg3) {

@@ -210,6 +210,11 @@ func (te *TerraformExecutor) Plan(ctx context.Context, opts ...tfexec.PlanOption
 	return err
 }
 
+// Validate runs terraform validate and returns structured output
+func (te *TerraformExecutor) Validate(ctx context.Context) (*tfjson.ValidateOutput, error) {
+	return te.tf.Validate(ctx)
+}
+
 // Destroy runs terraform destroy (auto-approve is the default behavior in terraform-exec)
 func (te *TerraformExecutor) Destroy(ctx context.Context, opts ...tfexec.DestroyOption) error {
 	return te.tf.Destroy(ctx, opts...)
