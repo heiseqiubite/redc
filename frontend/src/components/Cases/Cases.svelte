@@ -6,7 +6,7 @@
   import { toast } from '../../lib/toast.js';
   import SSHModal from './SSHModal.svelte';
   import ScheduleDialog from './ScheduleDialog.svelte';
-  import ScheduledTasksManager from './ScheduledTasksManager.svelte';
+  // import ScheduledTasksManager from './ScheduledTasksManager.svelte'; // Moved to TaskCenter
   import ELK from 'elkjs/lib/elk.bundled.js';
 
 let { t, onTabChange = () => {} } = $props();
@@ -33,7 +33,7 @@ let { t, onTabChange = () => {} } = $props();
   let scheduleDialog = $state({ show: false, caseId: null, caseName: '', action: '' });
   
   // Scheduled Tasks Manager refresh reference
-  let scheduledTasksManagerRefresh = { current: null };
+  // let scheduledTasksManagerRefresh = { current: null }; // Moved to TaskCenter
   
   // Cost estimation state
   let showCostEstimate = $state(false);
@@ -1297,8 +1297,7 @@ let { t, onTabChange = () => {} } = $props();
     {/if}
   </div>
 
-  <!-- Scheduled Tasks Manager -->
-  <ScheduledTasksManager {t} refresh={scheduledTasksManagerRefresh} />
+  <!-- Scheduled Tasks Manager moved to TaskCenter page -->
 
   <!-- Table -->
   <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -1950,10 +1949,6 @@ let { t, onTabChange = () => {} } = $props();
     onClose={() => scheduleDialog = { show: false, caseId: null, caseName: '', action: '' }}
     onSuccess={() => {
       refresh();
-      // 刷新定时任务管理器
-      if (scheduledTasksManagerRefresh.current) {
-        scheduledTasksManagerRefresh.current();
-      }
     }}
   />
 {/if}

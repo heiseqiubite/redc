@@ -11,14 +11,17 @@ import (
 
 // ScheduledTask 定时任务
 type ScheduledTask struct {
-	ID          string    `json:"id"`
-	CaseID      string    `json:"caseId"`
-	CaseName    string    `json:"caseName"`
-	Action      string    `json:"action"` // "start" or "stop"
-	ScheduledAt time.Time `json:"scheduledAt"`
-	CreatedAt   time.Time `json:"createdAt"`
-	Status      string    `json:"status"` // "pending", "completed", "failed", "cancelled"
-	Error       string    `json:"error,omitempty"`
+	ID             string    `json:"id"`
+	CaseID         string    `json:"caseId"`
+	CaseName       string    `json:"caseName"`
+	Action         string    `json:"action"` // "start" or "stop"
+	ScheduledAt    time.Time `json:"scheduledAt"`
+	CreatedAt      time.Time `json:"createdAt"`
+	Status         string    `json:"status"` // "pending", "completed", "failed", "cancelled"
+	Error          string    `json:"error,omitempty"`
+	RepeatType     string    `json:"repeatType,omitempty"`     // "once", "daily", "weekly", "interval"
+	RepeatInterval int       `json:"repeatInterval,omitempty"` // minutes, only for "interval" type
+	CompletedAt    time.Time `json:"completedAt,omitempty"`
 }
 
 // TaskScheduler 任务调度器
@@ -64,7 +67,10 @@ func (s *TaskScheduler) InitDB() error {
 		scheduled_at DATETIME NOT NULL,
 		created_at DATETIME NOT NULL,
 		status TEXT NOT NULL,
-		error TEXT
+		error TEXT,
+		repeat_type TEXT DEFAULT 'once',
+		repeat_interval INTEGER DEFAULT 0,
+		completed_at DATETIME
 	);
 	CREATE INDEX IF NOT EXISTS idx_case_id ON scheduled_tasks(case_id);
 	CREATE INDEX IF NOT EXISTS idx_status ON scheduled_tasks(status);
@@ -74,6 +80,15 @@ func (s *TaskScheduler) InitDB() error {
 	if _, err := db.Exec(createTableSQL); err != nil {
 		db.Close()
 		return fmt.Errorf("创建表失败: %v", err)
+	}
+
+	// Migrate: add columns if they don't exist (safe for existing DBs)
+	for _, col := range []string{
+		"ALTER TABLE scheduled_tasks ADD COLUMN repeat_type TEXT DEFAULT 'once'",
+		"ALTER TABLE scheduled_tasks ADD COLUMN repeat_interval INTEGER DEFAULT 0",
+		"ALTER TABLE scheduled_tasks ADD COLUMN completed_at DATETIME",
+	} {
+		db.Exec(col) // ignore "duplicate column" errors
 	}
 
 	s.db = db
@@ -89,7 +104,8 @@ func (s *TaskScheduler) InitDB() error {
 // loadTasksFromDB 从数据库加载待执行的任务
 func (s *TaskScheduler) loadTasksFromDB() error {
 	rows, err := s.db.Query(`
-		SELECT id, case_id, case_name, action, scheduled_at, created_at, status, error
+		SELECT id, case_id, case_name, action, scheduled_at, created_at, status, error,
+		       COALESCE(repeat_type, 'once'), COALESCE(repeat_interval, 0), completed_at
 		FROM scheduled_tasks
 		WHERE status = 'pending'
 	`)
@@ -104,7 +120,7 @@ func (s *TaskScheduler) loadTasksFromDB() error {
 	for rows.Next() {
 		task := &ScheduledTask{}
 		var scheduledAtStr, createdAtStr string
-		var errorStr sql.NullString
+		var errorStr, completedAtStr sql.NullString
 
 		err := rows.Scan(
 			&task.ID,
@@ -115,16 +131,24 @@ func (s *TaskScheduler) loadTasksFromDB() error {
 			&createdAtStr,
 			&task.Status,
 			&errorStr,
+			&task.RepeatType,
+			&task.RepeatInterval,
+			&completedAtStr,
 		)
 		if err != nil {
 			continue
 		}
 
-		// 解析时间
 		task.ScheduledAt, _ = time.Parse(time.RFC3339, scheduledAtStr)
 		task.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
 		if errorStr.Valid {
 			task.Error = errorStr.String
+		}
+		if completedAtStr.Valid {
+			task.CompletedAt, _ = time.Parse(time.RFC3339, completedAtStr.String)
+		}
+		if task.RepeatType == "" {
+			task.RepeatType = "once"
 		}
 
 		s.tasks[task.ID] = task
@@ -135,10 +159,14 @@ func (s *TaskScheduler) loadTasksFromDB() error {
 
 // saveTaskToDB 保存任务到数据库
 func (s *TaskScheduler) saveTaskToDB(task *ScheduledTask) error {
+	var completedAt string
+	if !task.CompletedAt.IsZero() {
+		completedAt = task.CompletedAt.Format(time.RFC3339)
+	}
 	_, err := s.db.Exec(`
 		INSERT OR REPLACE INTO scheduled_tasks 
-		(id, case_id, case_name, action, scheduled_at, created_at, status, error)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+		(id, case_id, case_name, action, scheduled_at, created_at, status, error, repeat_type, repeat_interval, completed_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
 		task.ID,
 		task.CaseID,
@@ -148,17 +176,24 @@ func (s *TaskScheduler) saveTaskToDB(task *ScheduledTask) error {
 		task.CreatedAt.Format(time.RFC3339),
 		task.Status,
 		task.Error,
+		task.RepeatType,
+		task.RepeatInterval,
+		completedAt,
 	)
 	return err
 }
 
 // updateTaskStatusInDB 更新任务状态到数据库
 func (s *TaskScheduler) updateTaskStatusInDB(taskID, status, errorMsg string) error {
+	var completedAt string
+	if status == "completed" || status == "failed" {
+		completedAt = time.Now().Format(time.RFC3339)
+	}
 	_, err := s.db.Exec(`
 		UPDATE scheduled_tasks 
-		SET status = ?, error = ?
+		SET status = ?, error = ?, completed_at = ?
 		WHERE id = ?
-	`, status, errorMsg, taskID)
+	`, status, errorMsg, completedAt, taskID)
 	return err
 }
 
@@ -239,18 +274,29 @@ func (s *TaskScheduler) executeTask(id string, task *ScheduledTask) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	now := time.Now()
 	if err != nil {
 		task.Status = "failed"
 		task.Error = err.Error()
+		task.CompletedAt = now
 		s.updateTaskStatusInDB(id, "failed", err.Error())
 	} else {
 		task.Status = "completed"
+		task.CompletedAt = now
 		s.updateTaskStatusInDB(id, "completed", "")
 	}
+
+	// Auto-renew periodic tasks (even on failure, schedule next)
+	s.scheduleNextRepeat(task)
 }
 
 // AddTask 添加定时任务
 func (s *TaskScheduler) AddTask(caseID, caseName, action string, scheduledAt time.Time) (*ScheduledTask, error) {
+	return s.AddTaskWithRepeat(caseID, caseName, action, scheduledAt, "once", 0)
+}
+
+// AddTaskWithRepeat 添加定时任务（支持周期重复）
+func (s *TaskScheduler) AddTaskWithRepeat(caseID, caseName, action string, scheduledAt time.Time, repeatType string, repeatInterval int) (*ScheduledTask, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -264,18 +310,33 @@ func (s *TaskScheduler) AddTask(caseID, caseName, action string, scheduledAt tim
 		return nil, fmt.Errorf("计划时间不能早于当前时间")
 	}
 
+	// 验证 repeatType
+	if repeatType == "" {
+		repeatType = "once"
+	}
+	switch repeatType {
+	case "once", "daily", "weekly", "interval":
+	default:
+		return nil, fmt.Errorf("无效的重复类型: %s", repeatType)
+	}
+	if repeatType == "interval" && repeatInterval <= 0 {
+		return nil, fmt.Errorf("自定义间隔必须大于0分钟")
+	}
+
 	// 生成任务 ID
 	taskID := fmt.Sprintf("%s-%s-%d", caseID, action, time.Now().Unix())
 
 	// 创建任务
 	task := &ScheduledTask{
-		ID:          taskID,
-		CaseID:      caseID,
-		CaseName:    caseName,
-		Action:      action,
-		ScheduledAt: scheduledAt,
-		CreatedAt:   time.Now(),
-		Status:      "pending",
+		ID:             taskID,
+		CaseID:         caseID,
+		CaseName:       caseName,
+		Action:         action,
+		ScheduledAt:    scheduledAt,
+		CreatedAt:      time.Now(),
+		Status:         "pending",
+		RepeatType:     repeatType,
+		RepeatInterval: repeatInterval,
 	}
 
 	s.tasks[taskID] = task
@@ -287,6 +348,52 @@ func (s *TaskScheduler) AddTask(caseID, caseName, action string, scheduledAt tim
 	}
 
 	return task, nil
+}
+
+// scheduleNextRepeat creates the next occurrence for a periodic task (caller must hold mu)
+func (s *TaskScheduler) scheduleNextRepeat(task *ScheduledTask) {
+	if task.RepeatType == "" || task.RepeatType == "once" {
+		return
+	}
+
+	var nextTime time.Time
+	now := time.Now()
+	switch task.RepeatType {
+	case "daily":
+		nextTime = task.ScheduledAt.Add(24 * time.Hour)
+		for nextTime.Before(now) {
+			nextTime = nextTime.Add(24 * time.Hour)
+		}
+	case "weekly":
+		nextTime = task.ScheduledAt.Add(7 * 24 * time.Hour)
+		for nextTime.Before(now) {
+			nextTime = nextTime.Add(7 * 24 * time.Hour)
+		}
+	case "interval":
+		interval := time.Duration(task.RepeatInterval) * time.Minute
+		nextTime = task.ScheduledAt.Add(interval)
+		for nextTime.Before(now) {
+			nextTime = nextTime.Add(interval)
+		}
+	default:
+		return
+	}
+
+	nextID := fmt.Sprintf("%s-%s-%d", task.CaseID, task.Action, time.Now().UnixNano())
+	nextTask := &ScheduledTask{
+		ID:             nextID,
+		CaseID:         task.CaseID,
+		CaseName:       task.CaseName,
+		Action:         task.Action,
+		ScheduledAt:    nextTime,
+		CreatedAt:      time.Now(),
+		Status:         "pending",
+		RepeatType:     task.RepeatType,
+		RepeatInterval: task.RepeatInterval,
+	}
+
+	s.tasks[nextID] = nextTask
+	s.saveTaskToDB(nextTask)
 }
 
 // CancelTask 取消任务
@@ -351,6 +458,56 @@ func (s *TaskScheduler) ListTasksByCase(caseID string) []*ScheduledTask {
 		}
 	}
 
+	return tasks
+}
+
+// ListAllTasksFromDB 从数据库读取所有任务（含历史，最近 7 天）
+func (s *TaskScheduler) ListAllTasksFromDB() []*ScheduledTask {
+	if s.db == nil {
+		return s.ListTasks()
+	}
+
+	cutoff := time.Now().Add(-7 * 24 * time.Hour).Format(time.RFC3339)
+	rows, err := s.db.Query(`
+		SELECT id, case_id, case_name, action, scheduled_at, created_at, status, error,
+		       COALESCE(repeat_type, 'once'), COALESCE(repeat_interval, 0), completed_at
+		FROM scheduled_tasks
+		WHERE created_at > ? OR status = 'pending'
+		ORDER BY scheduled_at DESC
+	`, cutoff)
+	if err != nil {
+		return s.ListTasks()
+	}
+	defer rows.Close()
+
+	var tasks []*ScheduledTask
+	for rows.Next() {
+		task := &ScheduledTask{}
+		var scheduledAtStr, createdAtStr string
+		var errorStr, completedAtStr sql.NullString
+
+		err := rows.Scan(
+			&task.ID, &task.CaseID, &task.CaseName, &task.Action,
+			&scheduledAtStr, &createdAtStr, &task.Status, &errorStr,
+			&task.RepeatType, &task.RepeatInterval, &completedAtStr,
+		)
+		if err != nil {
+			continue
+		}
+
+		task.ScheduledAt, _ = time.Parse(time.RFC3339, scheduledAtStr)
+		task.CreatedAt, _ = time.Parse(time.RFC3339, createdAtStr)
+		if errorStr.Valid {
+			task.Error = errorStr.String
+		}
+		if completedAtStr.Valid {
+			task.CompletedAt, _ = time.Parse(time.RFC3339, completedAtStr.String)
+		}
+		if task.RepeatType == "" {
+			task.RepeatType = "once"
+		}
+		tasks = append(tasks, task)
+	}
 	return tasks
 }
 

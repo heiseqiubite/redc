@@ -20,6 +20,7 @@
   import About from './components/About/About.svelte';
   import CustomDeployment from './components/CustomDeployment/CustomDeployment.svelte';
   import SSHManager from './components/SSH/SSHManager.svelte';
+  import TaskCenter from './components/TaskCenter/TaskCenter.svelte';
   import WelcomeDialog from './components/Welcome/WelcomeDialog.svelte';
   import Toast from './components/Toast/Toast.svelte';
 
@@ -315,7 +316,7 @@
     <!-- Header -->
     <header class="h-14 bg-white border-b border-gray-100 flex items-center justify-between px-6" style="--wails-draggable:drag">
       <h1 class="text-[15px] font-medium text-gray-900">
-        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'aiChat'}{t.aiChat}{:else if activeTab === 'sshManager'}{t.sshManager || 'SSH 终端管理'}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
+        {#if activeTab === 'dashboard'}{t.dashboard}{:else if activeTab === 'cases'}{t.sceneManage}{:else if activeTab === 'console'}{t.console}{:else if activeTab === 'resources'}{t.resources}{:else if activeTab === 'compose'}{t.compose}{:else if activeTab === 'registry'}{t.templateRepo}{:else if activeTab === 'localTemplates'}{t.localTmplManage}{:else if activeTab === 'ai'}{t.aiIntegration}{:else if activeTab === 'aiChat'}{t.aiChat}{:else if activeTab === 'sshManager'}{t.sshManager || 'SSH 终端管理'}{:else if activeTab === 'taskCenter'}{t.taskCenter || '任务中心'}{:else if activeTab === 'credentials'}{t.credentials}{:else if activeTab === 'specialModules'}{t.specialModules}{:else if activeTab === 'customDeployment'}{t.customDeployment}{:else if activeTab === 'about'}{t.about || '关于'}{:else}{t.settings}{/if}
       </h1>
       <div class="flex items-center gap-2" style="--wails-draggable:no-drag">
         <!-- Window Controls (Windows only, not in web mode) -->
@@ -435,6 +436,9 @@
 
             {:else if activeTab === 'customDeployment'}
               <CustomDeployment {t} onTabChange={(tab) => activeTab = tab} />
+
+            {:else if activeTab === 'taskCenter'}
+              <TaskCenter {t} />
 
             {:else if activeTab === 'about'}
               <About {t} version={appVersion} updateStatus={updateStatus} onCheckUpdate={checkForUpdates} />

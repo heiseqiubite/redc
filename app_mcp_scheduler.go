@@ -75,6 +75,10 @@ func (a *App) StopMCPServer() error {
 }
 
 func (a *App) ScheduleTask(caseID string, caseName string, action string, scheduledAt time.Time) (*redc.ScheduledTask, error) {
+	return a.ScheduleTaskWithRepeat(caseID, caseName, action, scheduledAt, "once", 0)
+}
+
+func (a *App) ScheduleTaskWithRepeat(caseID string, caseName string, action string, scheduledAt time.Time, repeatType string, repeatInterval int) (*redc.ScheduledTask, error) {
 	a.mu.Lock()
 	scheduler := a.taskScheduler
 	a.mu.Unlock()
@@ -83,12 +87,11 @@ func (a *App) ScheduleTask(caseID string, caseName string, action string, schedu
 		return nil, fmt.Errorf("%s", i18n.T("app_scheduler_not_init"))
 	}
 
-	task, err := scheduler.AddTask(caseID, caseName, action, scheduledAt)
+	task, err := scheduler.AddTaskWithRepeat(caseID, caseName, action, scheduledAt, repeatType, repeatInterval)
 	if err != nil {
 		return nil, err
 	}
 
-	// 发送通知
 	a.emitLog(i18n.Tf("app_cron_created", caseName, scheduledAt.Format("2006-01-02 15:04:05"), action))
 
 	return task, nil
@@ -146,4 +149,16 @@ func (a *App) ListCaseScheduledTasks(caseID string) []*redc.ScheduledTask {
 	}
 
 	return scheduler.ListTasksByCase(caseID)
+}
+
+func (a *App) ListAllScheduledTasks() []*redc.ScheduledTask {
+	a.mu.Lock()
+	scheduler := a.taskScheduler
+	a.mu.Unlock()
+
+	if scheduler == nil {
+		return []*redc.ScheduledTask{}
+	}
+
+	return scheduler.ListAllTasksFromDB()
 }

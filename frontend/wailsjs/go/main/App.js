@@ -406,6 +406,14 @@ export function ScheduleTask(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['ScheduleTask'](arg1, arg2, arg3, arg4);
 }
 
+export function ScheduleTaskWithRepeat(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['ScheduleTaskWithRepeat'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
+export function ListAllScheduledTasks() {
+  return window['go']['main']['App']['ListAllScheduledTasks']();
+}
+
 export function SelectComposeFile() {
   return window['go']['main']['App']['SelectComposeFile']();
 }

@@ -170,6 +170,8 @@ export function ImportConfigTemplate(arg1:string,arg2:string):Promise<void>;
 
 export function ImportTemplates(arg1:string):Promise<Array<string>>;
 
+export function ListAllScheduledTasks():Promise<Array<mod.ScheduledTask>>;
+
 export function ListAllTemplates():Promise<Array<main.TemplateInfo>>;
 
 export function ListCaseScheduledTasks(arg1:string):Promise<Array<mod.ScheduledTask>>;
@@ -263,6 +265,8 @@ export function SaveTemplateFiles(arg1:string,arg2:Record<string, string>):Promi
 export function SaveTerraformMirrorConfig(arg1:boolean,arg2:Array<string>,arg3:string,arg4:boolean):Promise<void>;
 
 export function ScheduleTask(arg1:string,arg2:string,arg3:string,arg4:time.Time):Promise<mod.ScheduledTask>;
+
+export function ScheduleTaskWithRepeat(arg1:string,arg2:string,arg3:string,arg4:time.Time,arg5:string,arg6:number):Promise<mod.ScheduledTask>;
 
 export function SelectComposeFile():Promise<string>;
 

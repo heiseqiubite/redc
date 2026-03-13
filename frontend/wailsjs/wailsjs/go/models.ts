@@ -1181,6 +1181,9 @@ export namespace mod {
 	    createdAt: time.Time;
 	    status: string;
 	    error?: string;
+	    repeatType?: string;
+	    repeatInterval?: number;
+	    completedAt?: time.Time;
 	
 	    static createFrom(source: any = {}) {
 	        return new ScheduledTask(source);
@@ -1196,6 +1199,9 @@ export namespace mod {
 	        this.createdAt = this.convertValues(source["createdAt"], time.Time);
 	        this.status = source["status"];
 	        this.error = source["error"];
+	        this.repeatType = source["repeatType"];
+	        this.repeatInterval = source["repeatInterval"];
+	        this.completedAt = this.convertValues(source["completedAt"], time.Time);
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
