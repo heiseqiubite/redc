@@ -131,12 +131,31 @@ func (a *App) setupPluginHooks(c *redc.Case) {
 			}
 		}
 
+		// Parse case -var parameters into JSON
+		caseVars := ""
+		if len(cc.Parameter) > 0 {
+			varsMap := make(map[string]string)
+			for _, p := range cc.Parameter {
+				if strings.HasPrefix(p, "-var") {
+					continue
+				}
+				if idx := strings.Index(p, "="); idx > 0 {
+					varsMap[p[:idx]] = p[idx+1:]
+				}
+			}
+			if len(varsMap) > 0 {
+				data, _ := json.Marshal(varsMap)
+				caseVars = string(data)
+			}
+		}
+
 		ctx := &plugin.HookContext{
 			CaseName:       cc.Name,
 			CasePath:       cc.Path,
 			CaseTemplate:   cc.Type,
 			CaseState:      cc.State,
 			OutputJSON:     outputJSON,
+			CaseVars:       caseVars,
 			AllowedPlugins: allowed,
 		}
 		return a.pluginMgr.RunHooks(hookPoint, ctx)

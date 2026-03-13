@@ -39,6 +39,7 @@ type HookContext struct {
 	CaseTemplate   string
 	CaseState      string
 	OutputJSON     string // JSON-encoded terraform outputs
+	CaseVars       string // JSON-encoded case parameters (terraform -var values)
 	AllowedPlugins []string // if non-empty, only run hooks from these plugins
 }
 
@@ -142,6 +143,9 @@ func executeHook(hook HookEntry, hookPoint string, hctx *HookContext) (map[strin
 		)
 		if hctx.OutputJSON != "" {
 			env = append(env, "REDC_OUTPUT_JSON="+hctx.OutputJSON)
+		}
+		if hctx.CaseVars != "" {
+			env = append(env, "REDC_CASE_VARS="+hctx.CaseVars)
 		}
 	}
 
