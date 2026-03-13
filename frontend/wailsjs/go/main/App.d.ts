@@ -164,3 +164,12 @@ export function SetHTTPServerConfig(arg1:boolean,arg2:number,arg3:string,arg4:st
 export function StartHTTPServer(arg1:number,arg2:string,arg3:string):Promise<void>;
 export function StopHTTPServer():Promise<void>;
 export function GetHTTPServerStatus():Promise<Record<string, any>>;
+export function ListPlugins():Promise<Array<main.PluginInfo>>;
+export function InstallPlugin(arg1:string):Promise<void>;
+export function UninstallPlugin(arg1:string):Promise<void>;
+export function EnablePlugin(arg1:string):Promise<void>;
+export function DisablePlugin(arg1:string):Promise<void>;
+export function UpdatePlugin(arg1:string):Promise<void>;
+export function GetPluginConfig(arg1:string):Promise<string>;
+export function SavePluginConfig(arg1:string,arg2:string):Promise<void>;
+export function FetchPluginRegistry():Promise<Array<any>>;

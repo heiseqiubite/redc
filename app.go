@@ -14,6 +14,7 @@ import (
 	"red-cloud/mod/cost"
 	"red-cloud/mod/gologger"
 	"red-cloud/mod/mcp"
+	"red-cloud/mod/plugin"
 
 	"github.com/projectdiscovery/gologger/levels"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -35,6 +36,7 @@ type App struct {
 	customDeploymentService *redc.CustomDeploymentService
 	templateManager         *redc.TemplateManager
 	configStore             *redc.ConfigStore
+	pluginMgr               *plugin.PluginManager
 	disableRightClick       bool
 	httpSrv                 *HTTPServer
 	wailsMode               bool // true when running inside Wails desktop
@@ -229,6 +231,14 @@ func (a *App) startup(ctx context.Context) {
 	a.customDeploymentService = redc.NewCustomDeploymentService()
 	a.templateManager = redc.NewTemplateManager()
 	a.configStore = redc.NewConfigStore()
+
+	// Initialize plugin manager
+	a.pluginMgr = plugin.NewPluginManager("")
+	if err := a.pluginMgr.LoadAll(); err != nil {
+		fmt.Printf("[WARN] plugin load: %v\n", err)
+	} else {
+		fmt.Printf("[INFO] plugins loaded: %d\n", len(a.pluginMgr.List()))
+	}
 
 	fmt.Printf("[INFO] %s\n", i18n.T("app_deploy_service_init_success"))
 

@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, GetPredictedMonthlyCost, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
@@ -49,13 +49,13 @@
   let networkChecks = $state([]);
   let networkCheckLoading = $state(false);
   
-  // Real data for runtime and predicted cost
+  // Real data for runtime and scheduled tasks
   let totalRuntime = $state('0h');
-  let predictedMonthlyCost = $state('¥0.00');
+  let scheduledTaskCount = $state(0);
   
   // Quick stats with real data
   let quickStats = $derived([
-    { label: t.predictedMonthlyCost, value: predictedMonthlyCost, change: '0', trend: 'neutral', mock: false },
+    { label: t.scheduledTasks || '定时任务', value: String(scheduledTaskCount), change: '0', trend: 'neutral', mock: false },
     { label: t.runtime, value: totalRuntime, change: '0', trend: 'neutral', mock: false },
     { label: t.templateCount, value: String(templateCount), change: '0', trend: 'neutral', mock: false },
     { label: t.projectCount, value: String(projectCount), change: '0', trend: 'neutral', mock: false }
@@ -165,7 +165,6 @@
   
   async function loadRuntime() {
     try {
-      // Load total runtime
       totalRuntime = await GetTotalRuntime();
     } catch (e) {
       console.error('Failed to load runtime:', e);
@@ -173,11 +172,11 @@
     }
     
     try {
-      // Load predicted monthly cost
-      predictedMonthlyCost = await GetPredictedMonthlyCost();
+      const tasks = await ListScheduledTasks();
+      scheduledTaskCount = tasks ? tasks.length : 0;
     } catch (e) {
-      console.error('Failed to load predicted cost:', e);
-      predictedMonthlyCost = '¥0.00';
+      console.error('Failed to load scheduled tasks:', e);
+      scheduledTaskCount = 0;
     }
   }
 

@@ -30,6 +30,7 @@ type Case struct {
 	Name         string   `json:"name"`
 	Type         string   `json:"type"`
 	Module       string   `json:"module,omitempty"`
+	Plugins      string   `json:"plugins,omitempty"`
 	Operator     string   `json:"operator"`
 	Path         string   `json:"path"`
 	Node         int      `json:"node"`
@@ -42,4 +43,5 @@ type Case struct {
 	output       map[string]tfexec.OutputMeta
 	saveHandler  func() error
 	removeHandle func() error
+	pluginHookRunner func(hookPoint string, c *Case) error
 }

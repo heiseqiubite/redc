@@ -10,6 +10,7 @@ import (
 
 	"red-cloud/i18n"
 	redc "red-cloud/mod"
+	"red-cloud/mod/plugin"
 )
 
 // parseTfvars parses a terraform.tfvars file
@@ -59,6 +60,11 @@ func (a *App) StartCase(caseID string) error {
 
 	if c.Path == "" {
 		return fmt.Errorf("%s", i18n.T("app_case_path_empty"))
+	}
+
+	// Wire plugin hooks
+	if a.pluginMgr != nil {
+		a.setupPluginHooks(c)
 	}
 
 	caseName := c.Name
@@ -111,6 +117,11 @@ func (a *App) StopCase(caseID string) error {
 	c, err := a.project.GetCase(caseID)
 	if err != nil {
 		return err
+	}
+
+	// Wire plugin hooks
+	if a.pluginMgr != nil {
+		a.setupPluginHooks(c)
 	}
 
 	go func() {
@@ -231,6 +242,11 @@ func (a *App) CreateAndRunCase(templateName string, name string, vars map[string
 			return
 		}
 		a.emitLog(i18n.Tf("app_scene_create_success", c.Name, c.GetId()))
+
+		// Wire plugin hooks
+		if a.pluginMgr != nil {
+			a.setupPluginHooks(c)
+		}
 
 		a.emitLog(i18n.Tf("app_scene_starting", c.Name))
 
@@ -720,31 +736,13 @@ func (a *App) GetCaseOutputs(caseID string) (map[string]string, error) {
 		result[name] = value
 	}
 
-	if c.Module != "" && (strings.Contains(c.Module, "gen_clash_config") || strings.Contains(c.Module, "upload_r2")) {
-		tfvarsPath := filepath.Join(c.Path, "terraform.tfvars")
-		if _, err := os.Stat(tfvarsPath); err == nil {
-			if tfvars, err := parseTfvars(tfvarsPath); err == nil {
-				fileName := strings.TrimSpace(tfvars["filename"])
-				if fileName == "" {
-					fileName = "default-config.yaml"
-				}
-				localConfig := filepath.Join(c.Path, "config.yaml")
-				if _, err := os.Stat(localConfig); err == nil {
-					result["clash_config_local"] = localConfig
-				}
-				bucketName := strings.TrimSpace(tfvars["buckets_name"])
-				if bucketName == "" {
-					bucketName = "test"
-				}
-				bucketPath := strings.Trim(tfvars["buckets_path"], "/")
-				r2Path := fmt.Sprintf("r2:%s/%s", bucketName, fileName)
-				if bucketPath != "" {
-					r2Path = fmt.Sprintf("r2:%s/%s/%s", bucketName, bucketPath, fileName)
-				}
-				result["clash_config_r2"] = r2Path
-			}
+	// Merge plugin hook outputs
+	if pluginOutputs := plugin.LoadPluginOutputs(c.Path); pluginOutputs != nil {
+		for k, v := range pluginOutputs {
+			result[k] = v
 		}
 	}
+
 	return result, nil
 }
 

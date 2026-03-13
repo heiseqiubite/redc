@@ -454,6 +454,58 @@ export namespace main {
 	}
 	
 	
+	export class PluginInfo {
+	    name: string;
+	    version: string;
+	    description: string;
+	    description_en: string;
+	    author: string;
+	    homepage: string;
+	    category: string;
+	    tags: string[];
+	    enabled: boolean;
+	    dir: string;
+	    config_schema?: Record<string, plugin.ConfigField>;
+	    config?: Record<string, any>;
+	
+	    static createFrom(source: any = {}) {
+	        return new PluginInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.description = source["description"];
+	        this.description_en = source["description_en"];
+	        this.author = source["author"];
+	        this.homepage = source["homepage"];
+	        this.category = source["category"];
+	        this.tags = source["tags"];
+	        this.enabled = source["enabled"];
+	        this.dir = source["dir"];
+	        this.config_schema = this.convertValues(source["config_schema"], plugin.ConfigField, true);
+	        this.config = source["config"];
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 	export class PortForwardInfo {
 	    id: string;
 	    caseId: string;
@@ -1320,6 +1372,57 @@ export namespace mod {
 		}
 	}
 	
+
+}
+
+export namespace plugin {
+	
+	export class ConfigField {
+	    type: string;
+	    required?: boolean;
+	    description?: string;
+	    default?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new ConfigField(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.type = source["type"];
+	        this.required = source["required"];
+	        this.description = source["description"];
+	        this.default = source["default"];
+	    }
+	}
+	export class RegistryPlugin {
+	    name: string;
+	    version: string;
+	    description: string;
+	    description_en?: string;
+	    author?: string;
+	    category?: string;
+	    tags?: string[];
+	    min_redc_version?: string;
+	    url: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new RegistryPlugin(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.version = source["version"];
+	        this.description = source["description"];
+	        this.description_en = source["description_en"];
+	        this.author = source["author"];
+	        this.category = source["category"];
+	        this.tags = source["tags"];
+	        this.min_redc_version = source["min_redc_version"];
+	        this.url = source["url"];
+	    }
+	}
 
 }
 

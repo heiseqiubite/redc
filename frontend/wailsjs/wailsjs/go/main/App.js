@@ -138,8 +138,16 @@ export function DeployCase(arg1, arg2, arg3) {
   return window['go']['main']['App']['DeployCase'](arg1, arg2, arg3);
 }
 
+export function DisablePlugin(arg1) {
+  return window['go']['main']['App']['DisablePlugin'](arg1);
+}
+
 export function DownloadFile(arg1, arg2, arg3) {
   return window['go']['main']['App']['DownloadFile'](arg1, arg2, arg3);
+}
+
+export function EnablePlugin(arg1) {
+  return window['go']['main']['App']['EnablePlugin'](arg1);
 }
 
 export function EstimateDeploymentCost(arg1) {
@@ -160,6 +168,10 @@ export function ExportConfigTemplate(arg1, arg2) {
 
 export function ExportTemplates(arg1) {
   return window['go']['main']['App']['ExportTemplates'](arg1);
+}
+
+export function FetchPluginRegistry() {
+  return window['go']['main']['App']['FetchPluginRegistry']();
 }
 
 export function FetchRegistryTemplates(arg1) {
@@ -250,6 +262,10 @@ export function GetNotificationEnabled() {
   return window['go']['main']['App']['GetNotificationEnabled']();
 }
 
+export function GetPluginConfig(arg1) {
+  return window['go']['main']['App']['GetPluginConfig'](arg1);
+}
+
 export function GetPredictedMonthlyCost() {
   return window['go']['main']['App']['GetPredictedMonthlyCost']();
 }
@@ -330,6 +346,10 @@ export function ImportTemplates(arg1) {
   return window['go']['main']['App']['ImportTemplates'](arg1);
 }
 
+export function InstallPlugin(arg1) {
+  return window['go']['main']['App']['InstallPlugin'](arg1);
+}
+
 export function ListAllScheduledTasks() {
   return window['go']['main']['App']['ListAllScheduledTasks']();
 }
@@ -356,6 +376,10 @@ export function ListConfigTemplates() {
 
 export function ListCustomDeployments() {
   return window['go']['main']['App']['ListCustomDeployments']();
+}
+
+export function ListPlugins() {
+  return window['go']['main']['App']['ListPlugins']();
 }
 
 export function ListPortForwards() {
@@ -500,6 +524,10 @@ export function ResizeTerminal(arg1, arg2, arg3) {
 
 export function SaveConfigTemplate(arg1, arg2) {
   return window['go']['main']['App']['SaveConfigTemplate'](arg1, arg2);
+}
+
+export function SavePluginConfig(arg1, arg2) {
+  return window['go']['main']['App']['SavePluginConfig'](arg1, arg2);
 }
 
 export function SaveProvidersConfig(arg1, arg2, arg3) {
@@ -656,6 +684,14 @@ export function TestTerraformEndpoints() {
 
 export function TestWebhook(arg1, arg2, arg3) {
   return window['go']['main']['App']['TestWebhook'](arg1, arg2, arg3);
+}
+
+export function UninstallPlugin(arg1) {
+  return window['go']['main']['App']['UninstallPlugin'](arg1);
+}
+
+export function UpdatePlugin(arg1) {
+  return window['go']['main']['App']['UpdatePlugin'](arg1);
 }
 
 export function UpdateProfile(arg1, arg2, arg3, arg4) {

@@ -605,3 +605,39 @@ export function StopHTTPServer() {
 export function GetHTTPServerStatus() {
   return window['go']['main']['App']['GetHTTPServerStatus']();
 }
+
+export function ListPlugins() {
+  return window['go']['main']['App']['ListPlugins']();
+}
+
+export function InstallPlugin(arg1) {
+  return window['go']['main']['App']['InstallPlugin'](arg1);
+}
+
+export function UninstallPlugin(arg1) {
+  return window['go']['main']['App']['UninstallPlugin'](arg1);
+}
+
+export function EnablePlugin(arg1) {
+  return window['go']['main']['App']['EnablePlugin'](arg1);
+}
+
+export function DisablePlugin(arg1) {
+  return window['go']['main']['App']['DisablePlugin'](arg1);
+}
+
+export function UpdatePlugin(arg1) {
+  return window['go']['main']['App']['UpdatePlugin'](arg1);
+}
+
+export function GetPluginConfig(arg1) {
+  return window['go']['main']['App']['GetPluginConfig'](arg1);
+}
+
+export function SavePluginConfig(arg1, arg2) {
+  return window['go']['main']['App']['SavePluginConfig'](arg1, arg2);
+}
+
+export function FetchPluginRegistry() {
+  return window['go']['main']['App']['FetchPluginRegistry']();
+}

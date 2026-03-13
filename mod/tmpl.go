@@ -49,6 +49,7 @@ type RedcTmpl struct {
 	User         string       `json:"user"`
 	Version      string       `json:"version"`
 	RedcModule   string       `json:"redc_module"`
+	RedcPlugins  string       `json:"redc_plugins"`
 	TemplateType TemplateType `json:"template"`
 	Path         string       `json:"-"`
 }
@@ -429,7 +430,10 @@ func ShowLocalTemplates() {
 		if ver == "" {
 			ver = "unknown"
 		}
-		module := tmpl.RedcModule
+		module := tmpl.RedcPlugins
+		if module == "" {
+			module = tmpl.RedcModule // backward compat
+		}
 		if module == "" {
 			module = "-"
 		}

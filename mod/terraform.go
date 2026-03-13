@@ -128,15 +128,7 @@ func NewTerraformExecutor(workingDir string, opts ...TerraformOption) (*Terrafor
 		}
 	}
 
-	// Debug: log proxy settings being passed to terraform
-	if Debug {
-		proxyKeys := []string{"HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY"}
-		for _, key := range proxyKeys {
-			if val, ok := envVars[key]; ok && val != "" {
-				gologger.Debug().Msgf("Terraform env: %s=%s", key, val)
-			}
-		}
-	}
+
 
 	// On macOS, ensure library paths are set for provider plugins
 	if runtime.GOOS == "darwin" {

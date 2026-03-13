@@ -305,11 +305,11 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 	}
 	vars["instance_name"] = Name
 
-	// 读取模板元数据，获取模块名（如果有）
+	// 读取模板元数据
 	meta, _ := readTemplateMeta(tpPath)
-	moduleName := ""
+	pluginsStr := ""
 	if meta != nil {
-		moduleName = meta.RedcModule
+		pluginsStr = meta.RedcPlugins
 	}
 
 	// 初始化实例
@@ -320,7 +320,7 @@ func (p *RedcProject) CaseCreate(CaseName string, User string, Name string, vars
 		Operator:   User,
 		Path:       casePath,
 		Type:       CaseName,
-		Module:     moduleName,
+		Plugins:    pluginsStr,
 		Parameter:  par,
 		ProjectID:  p.ProjectName,
 		State:      StatePending,
@@ -355,6 +355,9 @@ func (c *Case) TfApply() error {
 	// 设置为正在启动状态
 	c.StatusChange(StateStarting)
 	
+	// pre-apply hook
+	c.runPluginHook("pre-apply")
+	
 	// 重新生成 plan 以确保与当前 state 一致
 	gologger.Info().Msg(i18n.T("case_plan_refreshing"))
 	if err = TfPlan(c.Path, c.Parameter...); err != nil {
@@ -378,9 +381,8 @@ func (c *Case) TfApply() error {
 	for s, meta := range output {
 		fmt.Println(s, string(meta.Value))
 	}
-	if err := c.runModuleHook(); err != nil {
-		return err
-	}
+	// post-apply hook
+	c.runPluginHook("post-apply")
 	return nil
 }
 func (c *Case) GetInstanceInfo(id string) (string, error) {
@@ -438,40 +440,19 @@ func (c *Case) GetInstanceInfoList(id string) ([]string, error) {
 	return nil, fmt.Errorf("无法解析 output '%s' 为字符串或字符串数组", id)
 }
 
-// runModuleHook 在场景启动成功后执行模板声明的模块钩子
-func (c *Case) runModuleHook() error {
-	// 如果未记录模块名，尝试从 case.json 读取一次
-	if c.Module == "" {
-		if meta, err := readTemplateMeta(c.Path); err == nil {
-			c.Module = meta.RedcModule
-			if c.saveHandler != nil {
-				_ = c.saveHandler()
-			}
-		}
-	}
-	if c.Module == "" {
-		return nil
-	}
+// SetPluginHookRunner sets the callback for running plugin hooks
+func (c *Case) SetPluginHookRunner(runner func(hookPoint string, c *Case) error) {
+	c.pluginHookRunner = runner
+}
 
-	modules := strings.Split(c.Module, ",")
-	for _, m := range modules {
-		name := strings.TrimSpace(m)
-		if name == "" {
-			continue
-		}
-		handler, ok := moduleRegistry[name]
-		if !ok {
-			gologger.Warning().Msgf("%s", i18n.Tf("case_module_not_found", name))
-			continue
-		}
-
-		gologger.Info().Msgf("%s", i18n.Tf("case_module_executing", name))
-		if err := handler(c); err != nil {
-			gologger.Error().Msgf("%s", i18n.Tf("case_module_failed", name, err))
-			return err
-		}
+// runPluginHook runs plugin hooks for a given hook point
+func (c *Case) runPluginHook(hookPoint string) {
+	if c.pluginHookRunner == nil {
+		return
 	}
-	return nil
+	if err := c.pluginHookRunner(hookPoint, c); err != nil {
+		gologger.Warning().Msgf("plugin hook %s: %v", hookPoint, err)
+	}
 }
 
 func (c *Case) TfOutput() (map[string]tfexec.OutputMeta, error) {
@@ -499,10 +480,12 @@ func (c *Case) bindHandlers() {
 func (c *Case) TfPlan() error {
 	gologger.Info().Msgf("%s", i18n.Tf("case_building", c.Name, c.GetId()))
 	c.Parameter = ensureProviderParams(c.Type, c.Parameter)
+	c.runPluginHook("pre-plan")
 	if err := TfPlan(c.Path, c.Parameter...); err != nil {
 		return err
 	}
 	c.StatusChange(StateCreated)
+	c.runPluginHook("post-plan")
 	return nil
 }
 
@@ -523,6 +506,9 @@ func (c *Case) TfDestroy() error {
 	// 设置为正在停止状态
 	c.StatusChange(StateStopping)
 	
+	// pre-destroy hook
+	c.runPluginHook("pre-destroy")
+	
 	err := TfDestroy(c.Path, c.Parameter)
 	if err != nil {
 		gologger.Error().Msgf("%s", i18n.Tf("case_destroy_failed", err.Error()))
@@ -530,6 +516,8 @@ func (c *Case) TfDestroy() error {
 		return err
 	}
 	c.StatusChange(StateStopped)
+	// post-destroy hook
+	c.runPluginHook("post-destroy")
 	return nil
 }
 func (c *Case) Remove() error {
