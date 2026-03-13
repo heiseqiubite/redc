@@ -4,6 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -66,6 +68,28 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 				messages[lastIdx].Content = userPrompt + "\n\n用户额外说明：" + messages[lastIdx].Content
 			}
 		}
+
+	case "errorAnalysis":
+		// Try to read template content for context
+		templateContext := ""
+		if len(messages) > 0 {
+			// Extract template name from the first user message
+			firstMsg := messages[0].Content
+			if idx := strings.Index(firstMsg, "模板: "); idx >= 0 {
+				end := strings.Index(firstMsg[idx+len("模板: "):], "\n")
+				var tmplName string
+				if end >= 0 {
+					tmplName = firstMsg[idx+len("模板: ") : idx+len("模板: ")+end]
+				} else {
+					tmplName = firstMsg[idx+len("模板: "):]
+				}
+				tmplName = strings.TrimSpace(tmplName)
+				if tmplName != "" {
+					templateContext = a.gatherTemplateContext(tmplName)
+				}
+			}
+		}
+		systemPrompt = fmt.Sprintf(ai.ErrorAnalysisChatSystemPrompt, templateContext, langPrompt)
 
 	case "free":
 		systemPrompt = fmt.Sprintf(ai.FreeChatSystemPrompt, langPrompt)
@@ -386,4 +410,41 @@ func (a *App) gatherRunningCasesInfo() (string, int) {
 	}
 
 	return strings.Join(caseInfoList, "\n\n"), runningCount
+}
+
+// gatherTemplateContext reads template files and returns context for error analysis
+func (a *App) gatherTemplateContext(templateName string) string {
+	tmplPath, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		return ""
+	}
+	entries, err := os.ReadDir(tmplPath)
+	if err != nil {
+		return ""
+	}
+
+	var parts []string
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name == "case.json" || strings.HasSuffix(name, ".tf") || name == "terraform.tfvars" {
+			data, err := os.ReadFile(filepath.Join(tmplPath, name))
+			if err != nil {
+				continue
+			}
+			content := string(data)
+			// Truncate very large files
+			if len(content) > 3000 {
+				content = content[:3000] + "\n... (truncated)"
+			}
+			parts = append(parts, fmt.Sprintf("### %s\n```\n%s\n```", name, content))
+		}
+	}
+
+	if len(parts) == 0 {
+		return ""
+	}
+	return "## 当前模板文件内容（供参考）\n\n" + strings.Join(parts, "\n\n")
 }

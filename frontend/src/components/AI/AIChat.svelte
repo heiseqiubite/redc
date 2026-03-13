@@ -39,13 +39,14 @@
   const modes = [
     { id: 'free', labelKey: 'aiChatFreeChat', icon: 'M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z' },
     { id: 'agent', labelKey: 'aiChatAgent', icon: 'M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l5.3-5.3a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-7.18 7.18a1.5 1.5 0 01-2.12 0zM3.75 21h16.5' },
+    { id: 'errorAnalysis', labelKey: 'aiChatErrorAnalysis', icon: 'M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z' },
     { id: 'generate', labelKey: 'aiChatGenTemplate', icon: 'M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5' },
     { id: 'recommend', labelKey: 'aiChatRecommend', icon: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
     { id: 'cost', labelKey: 'aiChatCostOpt', icon: 'M12 6v12m-3-2.818l.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33M21 12a9 9 0 11-18 0 9 9 0 0118 0z' }
   ];
 
-  const modeLabels = { free: 'aiChatFreeChat', agent: 'aiChatAgent', generate: 'aiChatGenTemplate', recommend: 'aiChatRecommend', cost: 'aiChatCostOpt' };
-  const welcomeMessages = { free: 'aiChatWelcomeFree', agent: 'aiChatWelcomeAgent', generate: 'aiChatWelcomeGenerate', recommend: 'aiChatWelcomeRecommend', cost: 'aiChatWelcomeCost' };
+  const modeLabels = { free: 'aiChatFreeChat', agent: 'aiChatAgent', errorAnalysis: 'aiChatErrorAnalysis', generate: 'aiChatGenTemplate', recommend: 'aiChatRecommend', cost: 'aiChatCostOpt' };
+  const welcomeMessages = { free: 'aiChatWelcomeFree', agent: 'aiChatWelcomeAgent', errorAnalysis: 'aiChatWelcomeErrorAnalysis', generate: 'aiChatWelcomeGenerate', recommend: 'aiChatWelcomeRecommend', cost: 'aiChatWelcomeCost' };
 
   function generateId() {
     return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -185,6 +186,9 @@
     if (e.key === 'ai-chat-pending-terminal' && e.newValue) {
       checkPendingTerminalText();
     }
+    if (e.key === 'ai-chat-pending-error' && e.newValue) {
+      checkPendingErrorAnalysis();
+    }
   }
 
   onMount(() => {
@@ -260,6 +264,7 @@
 
     // Check for pending terminal text on initial mount
     checkPendingTerminalText();
+    checkPendingErrorAnalysis();
 
     // Listen for cross-tab storage events
     window.addEventListener('storage', handleStorage);
@@ -277,6 +282,7 @@
   $effect(() => {
     if (visible) {
       checkPendingTerminalText();
+      checkPendingErrorAnalysis();
     }
   });
 
@@ -326,6 +332,33 @@
         // Pre-fill input with the terminal content wrapped in a prompt
         const prompt = (t.analyzeTerminalPrompt || '请帮我分析以下终端输出内容') + ':\n```\n' + pending + '\n```';
         inputText = prompt;
+      }
+    } catch (_) {}
+  }
+
+  // Check for pending error analysis from Cases/CustomDeployment pages
+  function checkPendingErrorAnalysis() {
+    try {
+      const raw = localStorage.getItem('ai-chat-pending-error');
+      if (raw) {
+        localStorage.removeItem('ai-chat-pending-error');
+        const data = JSON.parse(raw);
+        // Create new conversation in errorAnalysis mode
+        mode = 'errorAnalysis';
+        activeConvId = generateId();
+        messages = [getWelcomeMessage('errorAnalysis')];
+        streamingContent = '';
+        isStreaming = false;
+        error = '';
+        currentConversationId = '';
+
+        let prompt = '';
+        if (data.templateName) prompt += `模板: ${data.templateName}\n`;
+        if (data.provider) prompt += `云厂商: ${data.provider}\n`;
+        prompt += '错误信息:\n```\n' + (data.error || '') + '\n```';
+        inputText = prompt;
+        // Auto-send the error analysis message
+        setTimeout(() => sendMessage(), 100);
       }
     } catch (_) {}
   }

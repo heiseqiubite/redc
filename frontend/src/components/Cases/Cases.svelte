@@ -1,7 +1,7 @@
 <script>
 
   import { onMount, onDestroy } from 'svelte';
-  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, AnalyzeCaseError, GetActiveProfile, GetCasePlanPreview, SetCaseTags, GetAllTagNames, CloneCase } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, GetCasePlanPreview, SetCaseTags, GetAllTagNames, CloneCase } from '../../../wailsjs/go/main/App.js';
   import { EventsOn } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
   import SSHModal from './SSHModal.svelte';
@@ -139,8 +139,7 @@ let { t, onTabChange = () => {} } = $props();
   // Computed: check if we have persistent error
   let hasPersistentError = $derived(!!getPersistentError());
   
-  // Track current AI analysis key (survives error dismissal)
-  let currentAIKey = $state(null);
+  
   
   // Persistent error that survives refreshes - use window object for global access
   // @ts-ignore
@@ -180,10 +179,7 @@ let { t, onTabChange = () => {} } = $props();
   let terraformInitHintDismissed = false;
   let terraformInitHintLastDetail = '';
 
-  // AI Error Analysis state
-  let aiAnalyzing = $state({});
-  let aiAnalysisResult = $state({});
-  let aiAnalysisCompleted = $state({});
+  
   
   // Error display state
   let showErrorDetail = $state(false);
@@ -225,31 +221,6 @@ let { t, onTabChange = () => {} } = $props();
     await refresh();
     tickTimer = setInterval(() => { nowTick = Date.now(); }, 60000);
     
-    // 设置 AI 分析事件监听
-    EventsOn('ai-case-error-chunk', (data) => {
-      console.log('[AI] Received chunk:', data);
-      const { caseId, chunk } = data;
-      if (caseId && chunk) {
-        aiAnalysisResult[caseId] = (aiAnalysisResult[caseId] || '') + chunk;
-        aiAnalysisResult = { ...aiAnalysisResult };
-        console.log('[AI] Updated result for:', caseId);
-      }
-    });
-    
-    EventsOn('ai-case-error-complete', (data) => {
-      console.log('[AI] Received complete:', data);
-      const { caseId, success } = data;
-      if (caseId) {
-        aiAnalyzing[caseId] = false;
-        aiAnalyzing = { ...aiAnalyzing };
-        aiAnalysisCompleted[caseId] = true;
-        aiAnalysisCompleted = { ...aiAnalysisCompleted };
-        if (!success) {
-          console.error('AI analysis failed for case:', caseId);
-        }
-      }
-    });
-
     EventsOn('spot-terminated', (data) => {
       console.log('[SpotMonitor] Instance terminated:', data);
       if (spotTerminatedToast.timer) clearTimeout(spotTerminatedToast.timer);
@@ -379,55 +350,27 @@ let { t, onTabChange = () => {} } = $props();
     return 'unknown';
   }
   
-  // AI 分析错误
-  async function handleAIAnalysis() {
+  // AI 分析错误 - 跳转到 AI 对话页面
+  function handleAIAnalysis() {
     const errorMessage = getPersistentError()?.detail || createStatusDetail;
     if (!errorMessage) {
       toast.warning(t.noErrorToAnalyze || '没有错误信息可以分析');
       return;
     }
     
-    // 尝试从错误信息中提取模板名称
-    let templateName = selectedTemplate || newCaseName;
+    let templateName = selectedTemplate || newCaseName || '';
     if (!templateName) {
-      // 从错误详情中提取模板名称
       const match = errorMessage.match(/模板:\s*(\S+)/);
-      if (match) {
-        templateName = match[1];
-      }
+      if (match) templateName = match[1];
     }
     
-    // 先检查 AI 配置
-    try {
-      const profile = await GetActiveProfile();
-      if (!profile || !profile.aiConfig || !profile.aiConfig.apiKey) {
-        toast.warning(t.configureAIServiceFirst || '请先在设置中配置 AI 服务');
-        return;
-      }
-    } catch (err) {
-      toast.error(`检查 AI 配置失败: ${err.message || err}`);
-      return;
-    }
-    
-    // 使用场景名称作为标识
-    const caseId = newCaseName || templateName || 'unknown';
-    
-    // 保存当前 AI key，这样关闭错误后仍能看到分析结果
-    currentAIKey = caseId;
-    
-    // 开始 AI 分析
-    aiAnalyzing[caseId] = true;
-    aiAnalyzing = { ...aiAnalyzing };
-    aiAnalysisResult[caseId] = '';
-    aiAnalysisResult = { ...aiAnalysisResult };
-    
-    try {
-      await AnalyzeCaseError(caseId, errorMessage, getProviderFromTemplate(templateName), templateName);
-    } catch (err) {
-      toast.error(`AI 分析失败: ${err.message || err}`);
-      aiAnalyzing[caseId] = false;
-      aiAnalyzing = { ...aiAnalyzing };
-    }
+    localStorage.setItem('ai-chat-pending-error', JSON.stringify({
+      error: errorMessage,
+      templateName,
+      provider: getProviderFromTemplate(templateName),
+      source: 'cases'
+    }));
+    onTabChange('aiChat');
   }
   
   export async function refresh() {
@@ -1249,33 +1192,16 @@ let { t, onTabChange = () => {} } = $props();
               {#if (getPersistentError()?.detail || createStatusDetail)}
                 <pre class="mt-2 p-3 bg-white rounded border border-red-200 text-[11px] text-red-800 overflow-x-auto whitespace-pre-wrap max-h-48">{getPersistentError()?.detail || createStatusDetail}</pre>
               {/if}
-              <!-- AI Analysis -->
-              {#if currentAIKey && (aiAnalyzing[currentAIKey] || aiAnalysisCompleted[currentAIKey])}
-                <div class="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
-                  {#if aiAnalyzing[currentAIKey]}
-                    <div class="flex items-center gap-2">
-                      <svg class="animate-spin h-4 w-4 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      <span class="text-[12px] text-blue-700">{t.aiAnalyzingTip || 'AI 正在分析错误...'}</span>
-                    </div>
-                  {/if}
-                  {#if aiAnalysisResult[currentAIKey]}
-                    <pre class="text-[11px] text-blue-800 whitespace-pre-wrap">{aiAnalysisResult[currentAIKey]}</pre>
-                  {/if}
-                </div>
-              {:else}
-                <button 
-                  class="mt-3 px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1.5 cursor-pointer"
-                  onclick={handleAIAnalysis}
-                >
-                  <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                  AI 分析错误原因
-                </button>
-              {/if}
+              <!-- AI Analysis - 跳转到 AI 对话 -->
+              <button 
+                class="mt-3 px-3 py-1.5 text-[12px] font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded-md hover:bg-blue-100 transition-colors flex items-center gap-1.5 cursor-pointer"
+                onclick={handleAIAnalysis}
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                {t.aiAnalyzeError || 'AI 分析错误原因'}
+              </button>
             </div>
             <!-- 关闭按钮 -->
             <button 

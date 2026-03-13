@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -518,6 +519,20 @@ func (s *MCPServer) getTools() []Tool {
 			},
 		},
 		{
+			Name:        "get_template_files",
+			Description: "Read the actual source files of a locally installed template (main.tf, variables.tf, outputs.tf, case.json, terraform.tfvars, etc.). Use this to understand the template's Terraform configuration, resource definitions, and variable settings.",
+			InputSchema: ToolSchema{
+				Type: "object",
+				Properties: map[string]Property{
+					"template_name": {
+						Type:        "string",
+						Description: "Template name (e.g., aliyun/ecs)",
+					},
+				},
+				Required: []string{"template_name"},
+			},
+		},
+		{
 			Name:        "get_case_outputs",
 			Description: "Get terraform outputs for a case (IP addresses, instance IDs, etc.)",
 			InputSchema: ToolSchema{
@@ -793,6 +808,13 @@ func (s *MCPServer) executeTool(name string, args map[string]interface{}) (ToolR
 			return ToolResult{}, fmt.Errorf("missing or invalid 'template_name' parameter")
 		}
 		return s.toolDeleteTemplate(templateName)
+
+	case "get_template_files":
+		templateName, ok := args["template_name"].(string)
+		if !ok {
+			return ToolResult{}, fmt.Errorf("missing or invalid 'template_name' parameter")
+		}
+		return s.toolGetTemplateFiles(templateName)
 
 	case "get_case_outputs":
 		caseID, ok := args["case_id"].(string)
@@ -1385,6 +1407,58 @@ func (s *MCPServer) toolDeleteTemplate(templateName string) (ToolResult, error) 
 	}
 
 	output := fmt.Sprintf("Template '%s' deleted successfully!\n", templateName)
+
+	return ToolResult{
+		Content: []ContentItem{{
+			Type: "text",
+			Text: output,
+		}},
+	}, nil
+}
+
+func (s *MCPServer) toolGetTemplateFiles(templateName string) (ToolResult, error) {
+	tmplPath, err := redc.GetTemplatePath(templateName)
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("template not found: %v", err)
+	}
+
+	entries, err := os.ReadDir(tmplPath)
+	if err != nil {
+		return ToolResult{}, fmt.Errorf("failed to read template directory: %v", err)
+	}
+
+	output := fmt.Sprintf("# Template Files: %s\n\n", templateName)
+	fileCount := 0
+
+	for _, entry := range entries {
+		if entry.IsDir() {
+			continue
+		}
+		name := entry.Name()
+		if name == "case.json" || name == "terraform.tfvars" ||
+			strings.HasSuffix(name, ".tf") ||
+			strings.HasSuffix(name, ".yaml") || strings.HasSuffix(name, ".yml") ||
+			strings.HasSuffix(name, ".sh") || strings.HasSuffix(name, ".userdata") ||
+			strings.HasSuffix(name, ".md") ||
+			name == "userdata" || name == "script.sh" {
+			data, err := os.ReadFile(filepath.Join(tmplPath, name))
+			if err != nil {
+				continue
+			}
+			content := string(data)
+			if len(content) > 5000 {
+				content = content[:5000] + "\n... (truncated, file too large)"
+			}
+			output += fmt.Sprintf("## %s\n```\n%s\n```\n\n", name, content)
+			fileCount++
+		}
+	}
+
+	if fileCount == 0 {
+		output += "No template files found.\n"
+	} else {
+		output += fmt.Sprintf("---\nTotal: %d files\n", fileCount)
+	}
 
 	return ToolResult{
 		Content: []ContentItem{{
