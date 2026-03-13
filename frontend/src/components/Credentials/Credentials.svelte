@@ -17,6 +17,7 @@ let { t } = $props();
   let profileForm = $state({ name: '', configPath: '', templateDir: '' });
   let profileLoading = $state(false);
   let profileSaving = $state(false);
+  let profileSaved = $state('');
   let profileError = $state('');
   let error = $state('');
   let saveConfirm = $state({ show: false, providerName: '' });
@@ -134,6 +135,8 @@ let { t } = $props();
       const created = await CreateProfile(profileForm.name, profileForm.configPath, profileForm.templateDir);
       profiles = await ListProfiles();
       await handleProfileChange(created.id);
+      profileSaved = 'create';
+      setTimeout(() => { profileSaved = ''; }, 1500);
     } catch (e) {
       profileError = e.message || String(e);
     } finally {
@@ -161,6 +164,8 @@ let { t } = $props();
       customConfigPath = profileForm.configPath;
       await SetActiveProfile(activeProfileId);
       await loadProvidersConfig();
+      profileSaved = 'save';
+      setTimeout(() => { profileSaved = ''; }, 1500);
     } catch (e) {
       profileError = e.message || String(e);
     } finally {
@@ -178,6 +183,8 @@ let { t } = $props();
       if (activeProfileId) {
         await handleProfileChange(activeProfileId);
       }
+      profileSaved = 'delete';
+      setTimeout(() => { profileSaved = ''; }, 1500);
     } catch (e) {
       profileError = e.message || String(e);
     } finally {
@@ -408,31 +415,47 @@ let { t } = $props();
 
     <div class="mt-4 flex flex-wrap gap-2">
       <button
-        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={handleCreateProfile}
         disabled={profileSaving}
       >
+        {#if profileSaving}
+          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        {:else if profileSaved === 'create'}
+          <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+        {/if}
         {t.createProfile}
       </button>
       <button
-        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50"
+        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={handleSaveProfile}
         disabled={profileSaving || !activeProfileId}
       >
-        {t.saveProfile}
+        {#if profileSaving}
+          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        {:else if profileSaved === 'save'}
+          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+        {/if}
+        {profileSaved === 'save' ? (t.saved || '已保存') : t.saveProfile}
       </button>
       <button
-        class="h-9 px-4 bg-red-50 text-red-600 text-[12px] font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50"
+        class="h-9 px-4 bg-red-50 text-red-600 text-[12px] font-medium rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={handleDeleteProfile}
         disabled={profileSaving || !activeProfileId}
       >
+        {#if profileSaved === 'delete'}
+          <svg class="h-3.5 w-3.5 text-emerald-500" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+        {/if}
         {t.deleteProfile}
       </button>
       <button
-        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={loadProvidersConfig}
         disabled={credentialsLoading}
       >
+        {#if credentialsLoading}
+          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        {/if}
         {credentialsLoading ? t.loading : t.loadConfig}
       </button>
     </div>
@@ -482,11 +505,16 @@ let { t } = $props();
           </span>
         {/if}
         <button 
-          class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
+          class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
           onclick={handleSaveAIConfig}
           disabled={aiConfigSaving || !activeProfileId}
         >
-          {aiConfigSaving ? (t.saving || 'Saving...') : (t.save || 'Save')}
+          {#if aiConfigSaving}
+            <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            {t.saving || 'Saving...'}
+          {:else}
+            {t.save || 'Save'}
+          {/if}
         </button>
       </div>
     </div>
@@ -584,11 +612,16 @@ let { t } = $props();
                   onclick={cancelEditProvider}
                 >{t.cancel}</button>
                 <button 
-                  class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50"
+                  class="px-3 py-1 text-[12px] font-medium text-white bg-emerald-500 rounded-md hover:bg-emerald-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
                   onclick={() => showSaveConfirm(provider.name)}
                   disabled={credentialsSaving[provider.name]}
                 >
-                  {credentialsSaving[provider.name] ? t.saving : t.save}
+                  {#if credentialsSaving[provider.name]}
+                    <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+                    {t.saving}
+                  {:else}
+                    {t.save}
+                  {/if}
                 </button>
               </div>
             {:else}

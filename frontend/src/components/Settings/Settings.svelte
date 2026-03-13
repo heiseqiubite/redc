@@ -4,8 +4,10 @@
 let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), terraformMirror = $bindable({ enabled: false, configPath: '', managed: false, fromEnv: false, providers: [] }), debugEnabled = $bindable(false), notificationEnabled = $bindable(false), spotMonitorEnabled = $bindable(false), spotAutoRecoverEnabled = $bindable(false), rightClickDisabled = $bindable(false) } = $props();
   let proxyForm = $state({ httpProxy: '', httpsProxy: '', socks5Proxy: '', noProxy: '' });
   let proxySaving = $state(false);
+  let proxySaved = $state(false);
   let terraformMirrorForm = $state({ enabled: false, configPath: '', setEnv: false, providers: { aliyun: true, tencent: false, volc: false } });
   let terraformMirrorSaving = $state(false);
+  let terraformMirrorSaved = $state(false);
   let terraformMirrorError = $state('');
   let networkChecks = $state([]);
   let networkCheckLoading = $state(false);
@@ -136,6 +138,8 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       config.httpsProxy = proxyForm.httpsProxy;
       config.socks5Proxy = proxyForm.socks5Proxy;
       config.noProxy = proxyForm.noProxy;
+      proxySaved = true;
+      setTimeout(() => { proxySaved = false; }, 1500);
     } catch (e) {
       console.error('Failed to save proxy:', e);
     } finally {
@@ -164,6 +168,8 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       terraformMirrorForm.providers.tencent = terraformMirror.providers?.includes('tencent');
       terraformMirrorForm.providers.volc = terraformMirror.providers?.includes('volc');
       terraformMirrorForm.providers.wgpsec = terraformMirror.providers?.includes('wgpsec');
+      terraformMirrorSaved = true;
+      setTimeout(() => { terraformMirrorSaved = false; }, 1500);
     } catch (e) {
       terraformMirrorError = e.message || String(e);
     } finally {
@@ -443,11 +449,19 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
     </div>
     <div class="mt-4 flex items-center gap-3">
       <button 
-        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        class="h-9 px-4 bg-emerald-500 text-white text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer inline-flex items-center gap-1.5"
         onclick={handleSaveProxy}
-        disabled={proxySaving}
+        disabled={proxySaving || proxySaved}
       >
-        {proxySaving ? t.saving : t.saveProxy}
+        {#if proxySaving}
+          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+          {t.saving}
+        {:else if proxySaved}
+          <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+          {t.saved || '已保存'}
+        {:else}
+          {t.saveProxy}
+        {/if}
       </button>
       <span class="text-[11px] sm:text-[12px] text-gray-500">{t.proxyHint}</span>
     </div>
@@ -521,11 +535,19 @@ let { t, config = $bindable({ redcPath: '', projectPath: '', logPath: '' }), ter
       </div>
       <div class="pt-1 flex flex-wrap gap-2 items-center">
         <button
-          class="h-8 sm:h-9 px-3 sm:px-4 bg-emerald-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 cursor-pointer"
+          class="h-8 sm:h-9 px-3 sm:px-4 bg-emerald-500 text-white text-[11px] sm:text-[12px] font-medium rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
           onclick={handleSaveTerraformMirror}
-          disabled={terraformMirrorSaving}
+          disabled={terraformMirrorSaving || terraformMirrorSaved}
         >
-          {terraformMirrorSaving ? t.saving : t.mirrorSave}
+          {#if terraformMirrorSaving}
+            <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+            {t.saving}
+          {:else if terraformMirrorSaved}
+            <svg class="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+            {t.saved || '已保存'}
+          {:else}
+            {t.mirrorSave}
+          {/if}
         </button>
         <button
           class="h-8 sm:h-9 px-3 sm:px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[11px] sm:text-[12px] font-medium rounded-lg transition-colors cursor-pointer"

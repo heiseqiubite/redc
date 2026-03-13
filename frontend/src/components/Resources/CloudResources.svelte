@@ -76,10 +76,13 @@ let { t } = $props();
         <p class="text-[12px] text-gray-500"></p>
       </div>
       <button
-        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-4 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[12px] font-medium rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={loadResourceSummary}
         disabled={resourcesLoading}
       >
+        {#if resourcesLoading}
+          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        {/if}
         {resourcesLoading ? t.loading : t.refresh}
       </button>
     </div>
@@ -123,10 +126,13 @@ let { t } = $props();
         <p class="text-[12px] text-gray-500">{t.profileSwitchHint}</p>
       </div>
       <button
-        class="h-9 px-4 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+        class="h-9 px-4 bg-blue-600 text-white text-[12px] font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 inline-flex items-center gap-1.5"
         onclick={queryBalances}
         disabled={balanceLoading || balanceCooldown > 0}
       >
+        {#if balanceLoading}
+          <svg class="animate-spin h-3.5 w-3.5" viewBox="0 0 24 24" fill="none"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg>
+        {/if}
         {balanceLoading ? t.loading : balanceCooldown > 0 ? `${t.balanceCooldown} ${balanceCooldown}s` : t.balanceQuery}
       </button>
     </div>
