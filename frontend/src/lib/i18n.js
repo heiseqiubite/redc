@@ -10,7 +10,8 @@ export const i18n = {
     sceneManage: '预定义场景', templateRepo: '模板仓库', aiIntegration: 'AI 集成', localTmplManage: '本地模板',
     // Dashboard specific
     totalScenes: '总场景数', runningScenes: '运行中', stoppedScenes: '已停止', errorScenes: '异常',
-    recentScenes: '最近场景', recentActivity: '最近活动', viewAll: '查看全部',
+    recentScenes: '最近场景', recentActivity: '最近活动', viewAll: '查看全部', quickCreate: '快速创建', createFirstScene: '创建第一个场景',
+    caseStarted: '场景已启动', caseStopped: '场景已停止', startFailed: '启动失败', stopFailed: '停止失败',
     resourceSummary: '资源概览', accountBalance: '账户余额', queryBalance: '查询', clickToQueryBalance: '点击上方按钮查询账户余额', currentMonthBill: '当月账单', queryBill: '查询', clickToQueryBill: '点击上方按钮查询当月账单', billCostWarning: 'AWS Cost Explorer USE1-APIRequest 调用每次约 $0.01', systemHealth: '系统健康',
     memory: '内存', disk: '磁盘', noRecentScenes: '暂无场景', noResources: '暂无资源',
     noBalanceData: '暂无余额数据', loadFailed: '加载失败',
@@ -349,7 +350,8 @@ export const i18n = {
     sceneManage: 'Preset Scenarios', templateRepo: 'Template Registry', aiIntegration: 'AI Integration', localTmplManage: 'Local Templates',
     // Dashboard specific
     totalScenes: 'Total Scenes', runningScenes: 'Running', stoppedScenes: 'Stopped', errorScenes: 'Error',
-    recentScenes: 'Recent Scenes', recentActivity: 'Recent Activity', viewAll: 'View All',
+    recentScenes: 'Recent Scenes', recentActivity: 'Recent Activity', viewAll: 'View All', quickCreate: 'Quick Create', createFirstScene: 'Create your first scene',
+    caseStarted: 'Scene started', caseStopped: 'Scene stopped', startFailed: 'Start failed', stopFailed: 'Stop failed',
     resourceSummary: 'Resource Summary', accountBalance: 'Account Balance', queryBalance: 'Query', clickToQueryBalance: 'Click button above to query balance', currentMonthBill: 'Current Month Bill', queryBill: 'Query', clickToQueryBill: 'Click button above to query bill', billCostWarning: 'AWS Cost Explorer USE1-APIRequest ~$0.01 per request', systemHealth: 'System Health',
     memory: 'Memory', disk: 'Disk', noRecentScenes: 'No scenes', noResources: 'No resources',
     noBalanceData: 'No balance data', loadFailed: 'Load failed',

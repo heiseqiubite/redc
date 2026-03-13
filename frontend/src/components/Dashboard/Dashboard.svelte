@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
-  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, GetPredictedMonthlyCost } from '../../../wailsjs/go/main/App.js';
+  import { ListCases, GetResourceSummary, GetBalances, GetBills, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, GetPredictedMonthlyCost, StartCase, StopCase } from '../../../wailsjs/go/main/App.js';
+  import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {} } = $props();
 
@@ -179,6 +180,54 @@
       predictedMonthlyCost = '¥0.00';
     }
   }
+
+  // Case action loading states
+  let actionLoading = $state({});
+
+  async function handleStartCase(e, caseId) {
+    e.stopPropagation();
+    actionLoading[caseId] = 'start';
+    actionLoading = actionLoading;
+    try {
+      await StartCase(caseId);
+      toast.success(t.caseStarted || '场景已启动');
+      await loadDashboardData();
+    } catch (err) {
+      toast.error(`${t.startFailed || '启动失败'}: ${err.message || err}`);
+    } finally {
+      delete actionLoading[caseId];
+      actionLoading = actionLoading;
+    }
+  }
+
+  async function handleStopCase(e, caseId) {
+    e.stopPropagation();
+    actionLoading[caseId] = 'stop';
+    actionLoading = actionLoading;
+    try {
+      await StopCase(caseId);
+      toast.success(t.caseStopped || '场景已停止');
+      await loadDashboardData();
+    } catch (err) {
+      toast.error(`${t.stopFailed || '停止失败'}: ${err.message || err}`);
+    } finally {
+      delete actionLoading[caseId];
+      actionLoading = actionLoading;
+    }
+  }
+
+  function handleSSH(e, c) {
+    e.stopPropagation();
+    onTabChange('cases');
+  }
+
+  function navigateToCreate() {
+    onTabChange('customDeployment');
+  }
+
+  function navigateToCredentials() {
+    onTabChange('credentials');
+  }
 </script>
 
 <div class="space-y-3">
@@ -256,12 +305,21 @@
     <div class="col-span-2 bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[15px] font-semibold text-gray-900">{t.recentScenes || '最近场景'}</h3>
-        <button 
-          class="text-[12px] text-blue-600 hover:text-blue-700 font-medium"
-          onclick={navigateToCases}
-        >
-          {t.viewAll || '查看全部'} →
-        </button>
+        <div class="flex items-center gap-2">
+          <button
+            class="inline-flex items-center gap-1 h-7 px-2.5 text-white bg-blue-600 hover:bg-blue-700 text-[11px] font-medium rounded-lg transition-colors"
+            onclick={navigateToCreate}
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+            {t.quickCreate || '快速创建'}
+          </button>
+          <button 
+            class="text-[12px] text-blue-600 hover:text-blue-700 font-medium"
+            onclick={navigateToCases}
+          >
+            {t.viewAll || '查看全部'} →
+          </button>
+        </div>
       </div>
       <div class="divide-y divide-gray-50">
         {#if loading}
@@ -269,22 +327,60 @@
             {t.loading || '加载中...'}
           </div>
         {:else if recentCases.length === 0}
-          <div class="px-5 py-8 text-center text-[13px] text-gray-400">
-            {t.noRecentScenes || '暂无场景'}
+          <div class="px-5 py-12 text-center">
+            <div class="text-[13px] text-gray-400 mb-3">{t.noRecentScenes || '暂无场景'}</div>
+            <button
+              class="inline-flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors font-medium"
+              onclick={navigateToCreate}
+            >
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+              {t.createFirstScene || '创建第一个场景'}
+            </button>
           </div>
         {:else}
           {#each recentCases as c}
             <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-            <div class="px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer" onclick={navigateToCases}>
+            <div class="px-5 py-3 hover:bg-gray-50 transition-colors cursor-pointer group" onclick={navigateToCases}>
               <div class="flex items-center justify-between">
-                <div class="flex-1">
-                  <div class="text-[13px] font-medium text-gray-900">{c.name}</div>
+                <div class="flex-1 min-w-0">
+                  <div class="text-[13px] font-medium text-gray-900 truncate">{c.name}</div>
                   <div class="text-[11px] text-gray-500 mt-0.5">{c.type} · {c.stateTime}</div>
                 </div>
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full {getStateColor(c.state)}">
-                  <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
-                  {c.state}
-                </span>
+                <div class="flex items-center gap-2">
+                  <!-- Quick action buttons (visible on hover) -->
+                  <div class="hidden group-hover:flex items-center gap-1">
+                    {#if c.state === 'running'}
+                      <button
+                        class="h-6 px-2 text-[10px] font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded transition-colors disabled:opacity-50"
+                        onclick={(e) => handleStopCase(e, c.id)}
+                        disabled={actionLoading[c.id]}
+                        title={t.stop || '停止'}
+                      >
+                        {actionLoading[c.id] === 'stop' ? '...' : (t.stop || '停止')}
+                      </button>
+                      <button
+                        class="h-6 px-2 text-[10px] font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded transition-colors"
+                        onclick={(e) => handleSSH(e, c)}
+                        title="SSH"
+                      >
+                        SSH
+                      </button>
+                    {:else if c.state === 'stopped' || c.state === 'created'}
+                      <button
+                        class="h-6 px-2 text-[10px] font-medium text-emerald-600 bg-emerald-50 hover:bg-emerald-100 rounded transition-colors disabled:opacity-50"
+                        onclick={(e) => handleStartCase(e, c.id)}
+                        disabled={actionLoading[c.id]}
+                        title={t.start || '启动'}
+                      >
+                        {actionLoading[c.id] === 'start' ? '...' : (t.start || '启动')}
+                      </button>
+                    {/if}
+                  </div>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium rounded-full {getStateColor(c.state)}">
+                    <span class="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    {c.state}
+                  </span>
+                </div>
               </div>
             </div>
           {/each}
@@ -330,6 +426,16 @@
               </div>
             {/each}
           </div>
+          {#if networkChecks.some(item => !item.ok)}
+            <div class="mt-3 pt-3 border-t border-gray-100">
+              <button
+                class="text-[11px] text-blue-600 hover:text-blue-700 font-medium"
+                onclick={navigateToCredentials}
+              >
+                {t.goToCredentials || '前往凭据管理'} →
+              </button>
+            </div>
+          {/if}
         {/if}
       </div>
     </div>
