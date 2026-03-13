@@ -310,6 +310,8 @@ export function StartSSHTerminalDirect(arg1:string,arg2:number,arg3:string,arg4:
 
 export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg4:number):Promise<string>;
 
+export function StopAgentStream(arg1:string):Promise<void>;
+
 export function StopCase(arg1:string):Promise<void>;
 
 export function StopCustomDeployment(arg1:string):Promise<void>;

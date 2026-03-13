@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/crypto/ssh"
+
 	redc "red-cloud/mod"
 	"red-cloud/mod/gologger"
 	"red-cloud/utils/sshutil"
@@ -1266,8 +1268,21 @@ func (s *MCPServer) toolExecCommand(caseID string, command string) (ToolResult, 
 	session.Stdout = &outputBuf
 	session.Stderr = &outputBuf
 
-	if err := session.Run(command); err != nil {
-		return ToolResult{}, fmt.Errorf("failed to execute command: %v\nOutput: %s", err, outputBuf.String())
+	// Run with timeout to prevent hanging on blocking commands
+	const execTimeout = 120 * time.Second
+	done := make(chan error, 1)
+	go func() {
+		done <- session.Run(command)
+	}()
+
+	select {
+	case err := <-done:
+		if err != nil {
+			return ToolResult{}, fmt.Errorf("command failed: %v\nOutput: %s", err, outputBuf.String())
+		}
+	case <-time.After(execTimeout):
+		session.Signal(ssh.SIGKILL)
+		return ToolResult{}, fmt.Errorf("command timed out after %v\nPartial output: %s", execTimeout, outputBuf.String())
 	}
 
 	output := fmt.Sprintf("Command executed on case '%s' (%s):\n", c.Name, c.GetId())

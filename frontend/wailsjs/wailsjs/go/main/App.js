@@ -610,6 +610,10 @@ export function StartSSHTerminalInstance(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['StartSSHTerminalInstance'](arg1, arg2, arg3, arg4);
 }
 
+export function StopAgentStream(arg1) {
+  return window['go']['main']['App']['StopAgentStream'](arg1);
+}
+
 export function StopCase(arg1) {
   return window['go']['main']['App']['StopCase'](arg1);
 }

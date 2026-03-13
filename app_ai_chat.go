@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"red-cloud/i18n"
@@ -14,6 +15,12 @@ import (
 	"red-cloud/mod/ai"
 	"red-cloud/mod/mcp"
 )
+
+// agentCancelMap stores cancel functions for active agent conversations
+var agentCancelMap = struct {
+	sync.Mutex
+	m map[string]context.CancelFunc
+}{m: make(map[string]context.CancelFunc)}
 
 // AIChatMessage represents a single message in the AI chat conversation
 type AIChatMessage struct {
@@ -143,6 +150,16 @@ func (a *App) DeployAgentChatStream(conversationId string, messages []AIChatMess
 	return a.runAgentLoop(conversationId, messages, ai.DeployAgentSystemPrompt, 30, 10*time.Minute)
 }
 
+// StopAgentStream cancels a running agent conversation
+func (a *App) StopAgentStream(conversationId string) {
+	agentCancelMap.Lock()
+	if cancel, ok := agentCancelMap.m[conversationId]; ok {
+		cancel()
+		delete(agentCancelMap.m, conversationId)
+	}
+	agentCancelMap.Unlock()
+}
+
 // runAgentLoop is the shared agentic loop used by AgentChatStream and DeployAgentChatStream
 func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, promptTemplate string, defaultMaxRounds int, timeout time.Duration) error {
 	profile, err := redc.GetActiveProfile()
@@ -207,10 +224,45 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
+	// Register cancel function so frontend can stop this conversation
+	agentCancelMap.Lock()
+	agentCancelMap.m[conversationId] = cancel
+	agentCancelMap.Unlock()
+	defer func() {
+		agentCancelMap.Lock()
+		delete(agentCancelMap.m, conversationId)
+		agentCancelMap.Unlock()
+	}()
+
 	// Agentic loop
 	for round := 0; round < maxRounds; round++ {
+		// Check if cancelled before each round
+		if ctx.Err() != nil {
+			a.emitEvent("ai-chat-chunk", map[string]string{
+				"conversationId": conversationId,
+				"chunk":          "\n\n⏹️ 操作已被用户停止。",
+			})
+			a.emitEvent("ai-chat-complete", map[string]interface{}{
+				"conversationId": conversationId,
+				"success":        true,
+			})
+			return nil
+		}
+
 		resp, err := client.ChatWithTools(ctx, aiMessages, toolDefs)
 		if err != nil {
+			if ctx.Err() != nil {
+				// Cancelled by user or timeout
+				a.emitEvent("ai-chat-chunk", map[string]string{
+					"conversationId": conversationId,
+					"chunk":          "\n\n⏹️ 操作已被用户停止。",
+				})
+				a.emitEvent("ai-chat-complete", map[string]interface{}{
+					"conversationId": conversationId,
+					"success":        true,
+				})
+				return nil
+			}
 			a.emitEvent( "ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        false,
@@ -275,6 +327,12 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 					parts = append(parts, item.Text)
 				}
 				resultContent = strings.Join(parts, "\n")
+			}
+
+			// Truncate large tool results to prevent context window overflow
+			const maxToolResultLen = 8000
+			if len(resultContent) > maxToolResultLen {
+				resultContent = resultContent[:maxToolResultLen] + "\n\n... (output truncated, total " + fmt.Sprintf("%d", len(resultContent)) + " bytes)"
 			}
 
 			a.emitEvent( "ai-agent-tool-result", map[string]interface{}{

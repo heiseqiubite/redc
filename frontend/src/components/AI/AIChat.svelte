@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, SaveTemplateFiles } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
 
   let { t, onTabChange = () => {}, visible = true } = $props();
@@ -362,6 +362,16 @@
         setTimeout(() => sendMessage(), 100);
       }
     } catch (_) {}
+  }
+
+  // Stop a running agent
+  async function stopAgent() {
+    if (!isStreaming || !currentConversationId) return;
+    try {
+      await StopAgentStream(currentConversationId);
+    } catch (e) {
+      console.error('Failed to stop agent:', e);
+    }
   }
 
   // Send message
@@ -786,6 +796,17 @@
             {/if}
             {t.aiChatSend || '发送'}
           </button>
+          {#if isStreaming && (mode === 'agent' || mode === 'deploy' || mode === 'error')}
+            <button
+              class="px-3 h-10 bg-red-600 text-white text-[12px] font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
+              onclick={stopAgent}
+            >
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="6" width="12" height="12" rx="1" />
+              </svg>
+              {t.aiChatStop || '停止'}
+            </button>
+          {/if}
         </div>
       </div>
     </div>

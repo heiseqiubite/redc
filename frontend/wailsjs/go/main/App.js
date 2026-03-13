@@ -522,6 +522,10 @@ export function StopCustomDeployment(arg1) {
   return window['go']['main']['App']['StopCustomDeployment'](arg1);
 }
 
+export function StopAgentStream(arg1) {
+  return window['go']['main']['App']['StopAgentStream'](arg1);
+}
+
 export function StopMCPServer() {
   return window['go']['main']['App']['StopMCPServer']();
 }
