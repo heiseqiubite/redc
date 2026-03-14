@@ -330,6 +330,12 @@
 
   let hasSelection = $derived(selectedTemplates.size > 0);
 
+  // Type counts for tabs
+  let presetCount = $derived(localTemplates.filter(t => getTemplateType(t) === 'preset').length);
+  let customCount = $derived(localTemplates.filter(t => getTemplateType(t) === 'custom').length);
+  let userdataCount = $derived(localTemplates.filter(t => getTemplateType(t) === 'userdata').length);
+  let composeCount = $derived(localTemplates.filter(t => getTemplateType(t) === 'compose').length);
+
   // Export/Import state
   let exporting = $state(false);
   let importing = $state(false);
@@ -544,90 +550,104 @@
 
 </script>
 
-<div class="space-y-5">
-  <!-- Search and Actions -->
-  <div class="bg-white rounded-xl border border-gray-100 p-5">
-    <div class="flex items-center gap-4">
-      <div class="flex-1 relative">
-        <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-        </svg>
-        <input 
-          type="text" 
-          placeholder={t.search}
-          class="w-full h-10 pl-10 pr-4 text-[13px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-          bind:value={localTemplatesSearch} 
-        />
-      </div>
+<div class="space-y-4">
+  <!-- Toolbar: search + actions -->
+  <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+    <div class="flex-1 relative w-full sm:w-auto">
+      <svg class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+      </svg>
+      <input 
+        type="text" 
+        placeholder={t.search}
+        class="w-full h-9 pl-10 pr-4 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+        bind:value={localTemplatesSearch} 
+      />
+    </div>
+    <div class="flex items-center gap-2">
       <button 
-        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-3.5 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
         onclick={loadLocalTemplates}
         disabled={localTemplatesLoading}
       >
+        <svg class="w-3.5 h-3.5 {localTemplatesLoading ? 'animate-spin' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182" /></svg>
         {localTemplatesLoading ? t.loading : t.refresh}
       </button>
       <button 
-        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-3.5 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
         onclick={handleImportTemplates}
         disabled={importing}
       >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
         {importing ? t.loading : (t.importTemplates || '导入')}
       </button>
       <button 
-        class="h-10 px-5 text-gray-700 bg-white border border-gray-300 hover:bg-gray-50 text-[13px] font-medium rounded-lg transition-colors disabled:opacity-50"
+        class="h-9 px-3.5 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
         onclick={handleExportTemplates}
         disabled={exporting || !hasSelection}
       >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
         {exporting ? t.loading : (t.exportTemplates || '导出')}
       </button>
       <button 
-        class="h-10 px-5 text-white bg-emerald-600 hover:bg-emerald-700 text-[13px] font-medium rounded-lg transition-colors"
+        class="h-9 px-3.5 text-white bg-gray-900 hover:bg-gray-800 text-[12px] font-medium rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1.5"
         onclick={showCreateTemplateDialog}
       >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
         {t.createTemplate || '新建模板'}
       </button>
     </div>
   </div>
 
   {#if exportMessage}
-    <div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-[13px] text-blue-700">
-      {exportMessage}
+    <div class="flex items-center gap-2 px-3 py-2 bg-blue-50 border border-blue-100 rounded-lg text-[12px] text-blue-700">
+      <span class="flex-1">{exportMessage}</span>
+      <button class="text-blue-400 hover:text-blue-600 cursor-pointer" onclick={() => exportMessage = ''} aria-label="close">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
     </div>
   {/if}
 
-  <!-- Tabs -->
-  <div class="flex gap-2 border-b border-gray-100 mb-4">
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'all' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => templateTab = 'all'}
-    >
-      {t.allTemplates || '全部'}
-    </button>
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'preset' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => templateTab = 'preset'}
-    >
-      {t.presetTemplates || '预定义模板'}
-    </button>
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'custom' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => templateTab = 'custom'}
-    >
-      {t.customTemplates || '自定义模板'}
-    </button>
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'userdata' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => templateTab = 'userdata'}
-    >
-      {t.userdataTemplates || 'Userdata模板'}
-    </button>
-    <button
-      class="px-4 py-2 text-[13px] font-medium transition-colors {templateTab === 'compose' ? 'text-blue-600 border-b-2 border-blue-600' : 'text-gray-600 hover:text-gray-900'}"
-      onclick={() => templateTab = 'compose'}
-    >
-      {t.composeTemplates || 'Compose模板'}
-    </button>
+  <!-- Filter tabs + stats -->
+  <div class="flex items-center justify-between gap-4">
+    <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
+      <button
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { templateTab = 'all'; selectedTemplates = new Set(); }}
+      >{t.allTemplates || '全部'} ({localTemplates.length})</button>
+      <button
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'preset' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { templateTab = 'preset'; selectedTemplates = new Set(); }}
+      >{t.presetTemplates || '预定义'} ({presetCount})</button>
+      <button
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'custom' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { templateTab = 'custom'; selectedTemplates = new Set(); }}
+      >{t.customTemplates || '自定义'} ({customCount})</button>
+      <button
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'userdata' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { templateTab = 'userdata'; selectedTemplates = new Set(); }}
+      >{t.userdataTemplates || 'Userdata'} ({userdataCount})</button>
+      <button
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {templateTab === 'compose' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+        onclick={() => { templateTab = 'compose'; selectedTemplates = new Set(); }}
+      >{t.composeTemplates || 'Compose'} ({composeCount})</button>
+    </div>
+    <div class="text-[11px] text-gray-400 flex-shrink-0">
+      {localTemplates.length} {t.templates || '模板'}
+    </div>
   </div>
+
+  {#if error}
+    <div class="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
+      <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
+      </svg>
+      <span class="text-[13px] text-red-700 flex-1">{error}</span>
+      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="close">
+        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+      </button>
+    </div>
+  {/if}
 
   {#if localTemplatesLoading}
     <div class="flex items-center justify-center h-64">
@@ -638,26 +658,22 @@
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <!-- Batch Operations Bar -->
       {#if hasSelection}
-        <div class="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+        <div class="px-4 py-2.5 bg-gray-50 border-b border-gray-100 flex items-center justify-between">
           <div class="flex items-center gap-3">
-            <span class="text-[13px] font-medium text-blue-900">
+            <span class="text-[12px] font-medium text-gray-700">
               {t.selected} {selectedTemplates.size} {t.items}
             </span>
             <button
-              class="text-[12px] text-blue-600 hover:text-blue-800 underline"
+              class="text-[11px] text-gray-500 hover:text-gray-700 underline cursor-pointer"
               onclick={() => { selectedTemplates = new Set(); }}
-            >
-              {t.clearSelection}
-            </button>
+            >{t.clearSelection}</button>
           </div>
           <div class="flex items-center gap-2">
             <button
-              class="px-3 py-1.5 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+              class="px-3 h-7 text-[11px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50 cursor-pointer"
               onclick={showBatchDeleteConfirm}
               disabled={batchOperating}
-            >
-              {t.batchDelete}
-            </button>
+            >{t.batchDelete}</button>
           </div>
         </div>
       {/if}
@@ -665,7 +681,7 @@
       <table class="w-full table-auto">
         <thead>
           <tr class="border-b border-gray-100">
-            <th class="text-left pl-4 pr-1 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-6">
+            <th class="text-left pl-4 pr-1 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-8">
               <input
                 type="checkbox"
                 class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
@@ -674,18 +690,21 @@
                 onchange={toggleSelectAll}
               />
             </th>
-            <th class="text-left px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.name}</th>
-            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[60px]">{t.version}</th>
-            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[140px]">{t.author}</th>
-            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[180px]">{t.module}</th>
-            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[320px]">{t.description}</th>
-            <th class="text-right pl-4 pr-6 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-[220px]">{t.actions}</th>
+            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.name}</th>
+            {#if templateTab === 'all'}
+              <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-20">{t.templateType || '类型'}</th>
+            {/if}
+            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-16">{t.version}</th>
+            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden lg:table-cell">{t.module}</th>
+            <th class="text-left px-3 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide hidden xl:table-cell">{t.description}</th>
+            <th class="text-right px-4 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-36">{t.actions}</th>
           </tr>
         </thead>
         <tbody>
           {#each filteredLocalTemplates as tmpl}
+            {@const tmplType = getTemplateType(tmpl)}
             <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-              <td class="pl-4 pr-1 py-3.5" onclick={(e) => e.stopPropagation()}>
+              <td class="pl-4 pr-1 py-3" onclick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
@@ -693,107 +712,114 @@
                   onchange={() => toggleSelectTemplate(tmpl.name)}
                 />
               </td>
-              <td class="px-4 py-3.5">
-                <span class="text-[13px] font-medium text-gray-900 break-all">{tmpl.name}</span>
+              <td class="px-3 py-3">
+                <span class="text-[12px] font-medium text-gray-900 break-all">{tmpl.name}</span>
               </td>
-              <td class="px-3 py-3.5">
-                <span class="text-[13px] text-gray-600">{tmpl.version || '-'}</span>
+              {#if templateTab === 'all'}
+                <td class="px-3 py-3">
+                  <span class="px-1.5 py-0.5 text-[10px] font-medium rounded {
+                    tmplType === 'preset' ? 'bg-blue-50 text-blue-600' :
+                    tmplType === 'custom' ? 'bg-amber-50 text-amber-600' :
+                    tmplType === 'userdata' ? 'bg-purple-50 text-purple-600' :
+                    'bg-teal-50 text-teal-600'
+                  }">{
+                    tmplType === 'preset' ? (t.presetTag || '预定义') :
+                    tmplType === 'custom' ? (t.customTag || '自定义') :
+                    tmplType === 'userdata' ? 'Userdata' : 'Compose'
+                  }</span>
+                </td>
+              {/if}
+              <td class="px-3 py-3">
+                <span class="text-[12px] text-gray-500">{tmpl.version || '-'}</span>
               </td>
-              <td class="px-3 py-3.5">
-                <span class="text-[13px] text-gray-600 break-words whitespace-normal block" title={tmpl.user || '-'}>{tmpl.user || '-'}</span>
-              </td>
-              <td class="px-3 py-3.5">
+              <td class="px-3 py-3 hidden lg:table-cell">
                 {#if tmpl.module}
-                  <span class="px-2 py-0.5 bg-blue-50 text-blue-600 text-[11px] font-medium rounded-full inline-block break-words whitespace-normal max-w-full" title={tmpl.module}>{tmpl.module}</span>
+                  <span class="px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[10px] font-medium rounded truncate max-w-[160px] inline-block" title={tmpl.module}>{tmpl.module}</span>
                 {:else}
-                  <span class="text-[13px] text-gray-400">-</span>
+                  <span class="text-[12px] text-gray-400">-</span>
                 {/if}
               </td>
-              <td class="px-3 py-3.5 w-[320px]">
-                <span class="text-[12px] text-gray-500 break-words whitespace-normal" title={tmpl.description}>{tmpl.description || '-'}</span>
+              <td class="px-3 py-3 hidden xl:table-cell">
+                <span class="text-[11px] text-gray-500 truncate max-w-[280px] inline-block" title={tmpl.description}>{tmpl.description || '-'}</span>
               </td>
-              <td class="pl-4 pr-6 py-3.5 text-right w-[220px]">
-                <div class="flex flex-col gap-1.5 items-end">
-                  <div class="flex items-center gap-1.5">
-                    <!-- Icon buttons: clone, validate, delete -->
+              <td class="px-4 py-3 text-right">
+                <div class="flex items-center justify-end gap-1">
+                  <button 
+                    class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+                    onclick={() => showTemplateDetail(tmpl)}
+                    title={t.viewParams}
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" /></svg>
+                  </button>
+                  <button 
+                    class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+                    onclick={() => openTemplateEditor(tmpl)}
+                    title={t.editTemplate}
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487l1.687-1.688a1.875 1.875 0 112.652 2.652L10.582 16.07a4.5 4.5 0 01-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 011.13-1.897l8.932-8.931z" /></svg>
+                  </button>
+                  <button 
+                    class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 rounded-md transition-colors cursor-pointer"
+                    onclick={() => handleCloneTemplate(tmpl)}
+                    title={t.cloneTemplate}
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.5a1.125 1.125 0 01-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 011.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 00-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 01-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 00-3.375-3.375h-1.5a1.125 1.125 0 01-1.125-1.125v-1.5a3.375 3.375 0 00-3.375-3.375H9.75" /></svg>
+                  </button>
+                  <button 
+                    class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                    onclick={() => handleValidateTemplate(tmpl)}
+                    title={t.validateTemplate || '语法检查'}
+                  >
+                    <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                  </button>
+                  {#if deletingTemplate[tmpl.name]}
+                    <span class="w-7 h-7 flex items-center justify-center">
+                      <div class="w-3.5 h-3.5 border-2 border-gray-200 border-t-amber-500 rounded-full animate-spin"></div>
+                    </span>
+                  {:else}
                     <button 
-                      class="w-7 h-7 flex items-center justify-center text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 hover:text-gray-700 transition-colors"
-                      onclick={() => handleCloneTemplate(tmpl)}
-                      title={t.cloneTemplate}
+                      class="w-7 h-7 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors cursor-pointer"
+                      onclick={() => showDeleteTemplateConfirm(tmpl.name)}
+                      title={t.delete}
                     >
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 16h8M8 12h8m-6 8h6a2 2 0 002-2V8l-6-6H8a2 2 0 00-2 2v16a2 2 0 002 2z" />
-                      </svg>
+                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
                     </button>
-                    <button 
-                      class="w-7 h-7 flex items-center justify-center text-emerald-600 bg-emerald-50 rounded-md hover:bg-emerald-100 hover:text-emerald-700 transition-colors"
-                      onclick={() => handleValidateTemplate(tmpl)}
-                      title={t.validateTemplate || '语法检查'}
-                    >
-                      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
-                    {#if deletingTemplate[tmpl.name]}
-                      <span class="w-7 h-7 flex items-center justify-center">
-                        <div class="w-3.5 h-3.5 border-2 border-gray-200 border-t-amber-500 rounded-full animate-spin"></div>
-                      </span>
-                    {:else}
-                      <button 
-                        class="w-7 h-7 flex items-center justify-center text-red-500 bg-red-50 rounded-md hover:bg-red-100 hover:text-red-700 transition-colors"
-                        onclick={() => showDeleteTemplateConfirm(tmpl.name)}
-                        title={t.delete}
-                      >
-                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    {/if}
-                    <!-- Text buttons: view params, edit -->
-                    <button 
-                      class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
-                      onclick={() => showTemplateDetail(tmpl)}
-                    >{t.viewParams}</button>
-                    <button 
-                      class="px-2.5 py-1 text-[12px] font-medium text-blue-700 bg-blue-50 rounded-md hover:bg-blue-100 transition-colors whitespace-nowrap"
-                      onclick={() => openTemplateEditor(tmpl)}
-                    >{t.editTemplate}</button>
-                  </div>
+                  {/if}
                 </div>
               </td>
             </tr>
           {:else}
             <tr>
-              <td colspan="7" class="py-16">
+              <td colspan="{templateTab === 'all' ? 7 : 6}" class="py-16">
                 <div class="flex flex-col items-center justify-center text-gray-400">
                   <svg class="w-10 h-10 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
                   </svg>
-                  <p class="text-[13px]">{t.noLocalTemplates}</p>
-                  <button 
-                    class="mt-2 text-[12px] text-blue-600 hover:underline"
-                    onclick={() => { window.dispatchEvent(new CustomEvent('switchTab', { detail: 'registry' })); }}
-                  >{t.goToRegistry}</button>
+                  {#if localTemplatesSearch}
+                    <p class="text-[13px] mb-2">{t.noMatch || '没有匹配的模板'}</p>
+                    <button class="text-[12px] text-gray-500 hover:text-gray-700 underline cursor-pointer" onclick={() => localTemplatesSearch = ''}>{t.clearSearch || '清除搜索'}</button>
+                  {:else if templateTab !== 'all'}
+                    <p class="text-[13px] mb-2">{t.noMatchFilter || '当前分类无模板'}</p>
+                    <button class="text-[12px] text-gray-500 hover:text-gray-700 underline cursor-pointer" onclick={() => templateTab = 'all'}>{t.showAll || '显示全部'}</button>
+                  {:else}
+                    <p class="text-[13px] mb-3">{t.noLocalTemplates}</p>
+                    <div class="flex items-center gap-2">
+                      <button 
+                        class="h-8 px-3 text-[12px] font-medium text-gray-700 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
+                        onclick={() => { window.dispatchEvent(new CustomEvent('switchTab', { detail: 'registry' })); }}
+                      >{t.goToRegistry}</button>
+                      <button 
+                        class="h-8 px-3 text-[12px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+                        onclick={showCreateTemplateDialog}
+                      >{t.createTemplate || '新建模板'}</button>
+                    </div>
+                  {/if}
                 </div>
               </td>
             </tr>
           {/each}
         </tbody>
       </table>
-    </div>
-  {/if}
-
-  {#if error}
-    <div class="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
-      <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" />
-      </svg>
-      <span class="text-[13px] text-red-700 flex-1">{error}</span>
-      <button class="text-red-400 hover:text-red-600 cursor-pointer" onclick={() => error = ''} aria-label="关闭错误">
-        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
-        </svg>
-      </button>
     </div>
   {/if}
 </div>
