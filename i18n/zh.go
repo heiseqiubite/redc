@@ -112,6 +112,10 @@ var zhMessages = map[string]string{
 	"notify_spot_recovered_msg":     "场景「%s」的抢占式实例已自动恢复",
 	"notify_spot_recover_failed":     "抢占式实例恢复失败",
 	"notify_spot_recover_failed_msg": "场景「%s」的抢占式实例自动恢复失败，可能暂无库存",
+	"notify_agent_complete":          "AI 对话完成",
+	"notify_agent_complete_msg":      "Agent 已完成任务（共 %d 轮工具调用）",
+	"notify_agent_max_rounds":        "AI 对话已结束",
+	"notify_agent_max_rounds_msg":    "Agent 已达到最大工具调用轮次（%d 轮）",
 
 	// ============ app.go (GUI backend) ============
 	"config_load_success":        "配置加载成功",

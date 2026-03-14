@@ -388,6 +388,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 			if enableMemory && a.memoryStore != nil {
 				go a.extractMemories(aiConfig, aiMessages, project.ProjectName)
 			}
+			a.notifyAgentComplete(i18n.T("notify_agent_complete"), i18n.Tf("notify_agent_complete_msg", round))
 			a.emitEvent("ai-chat-complete", map[string]interface{}{
 				"conversationId": conversationId,
 				"success":        true,
@@ -520,6 +521,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	if enableMemory && a.memoryStore != nil {
 		go a.extractMemories(aiConfig, aiMessages, project.ProjectName)
 	}
+	a.notifyAgentComplete(i18n.T("notify_agent_max_rounds"), i18n.Tf("notify_agent_max_rounds_msg", maxRounds))
 	a.emitEvent( "ai-chat-chunk", map[string]string{
 		"conversationId": conversationId,
 		"chunk":          fmt.Sprintf("\n\n⚠️ 已达到最大工具调用轮次（%d轮），操作结束。", maxRounds),
@@ -529,6 +531,12 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 		"success":        true,
 	})
 	return nil
+}
+
+func (a *App) notifyAgentComplete(title, message string) {
+	if a.notificationMgr != nil {
+		a.notificationMgr.Send(title, message)
+	}
 }
 
 // compressOldToolResults shortens tool result messages beyond the most recent round

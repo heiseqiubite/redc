@@ -112,6 +112,10 @@ var enMessages = map[string]string{
 	"notify_spot_recovered_msg":     "Spot instance in scene \"%s\" has been auto-recovered",
 	"notify_spot_recover_failed":     "Spot Recovery Failed",
 	"notify_spot_recover_failed_msg": "Auto-recovery failed for scene \"%s\", no available inventory",
+	"notify_agent_complete":          "AI Chat Complete",
+	"notify_agent_complete_msg":      "Agent finished task (%d tool call rounds)",
+	"notify_agent_max_rounds":        "AI Chat Ended",
+	"notify_agent_max_rounds_msg":    "Agent reached max tool call rounds (%d)",
 
 	// ============ app.go (GUI backend) ============
 	"config_load_success":        "Configuration loaded successfully",

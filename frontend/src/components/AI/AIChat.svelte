@@ -3,6 +3,7 @@
   import { marked } from 'marked';
   import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
+  import { toast } from '../../lib/toast.js';
 
   let { t, onTabChange = () => {}, visible = true } = $props();
 
@@ -232,6 +233,12 @@
           }];
         } else if (!data.success) {
           error = t.aiChatStreamError || 'AI 响应失败，请重试';
+        }
+        // Notify user if they may not be watching
+        if (!visible) {
+          toast.info(data.success
+            ? (t.aiChatCompleteNotify || 'AI 对话已完成')
+            : (t.aiChatFailedNotify || 'AI 对话执行失败'));
         }
         streamingContent = '';
         isStreaming = false;
