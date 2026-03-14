@@ -674,8 +674,13 @@
           {#if msg.role === 'user'}
             <!-- User message -->
             <div class="flex justify-end">
-              <div class="max-w-[75%] px-4 py-2.5 rounded-2xl rounded-br-md bg-gray-900 text-white">
-                <p class="text-[13px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+              <div class="max-w-[75%]">
+                <div class="px-4 py-2.5 rounded-2xl rounded-br-md bg-gray-900 text-white">
+                  <p class="text-[13px] whitespace-pre-wrap leading-relaxed">{msg.content}</p>
+                </div>
+                {#if msg.timestamp}
+                  <div class="text-[10px] text-gray-300 mt-1 text-right pr-1">{formatTime(msg.timestamp)}</div>
+                {/if}
               </div>
             </div>
           {:else}
@@ -742,6 +747,9 @@
                           </button>
                         {/if}
                       </div>
+                    {/if}
+                    {#if msg.timestamp}
+                      <div class="text-[10px] text-gray-300 mt-1 ml-1">{formatTime(msg.timestamp)}</div>
                     {/if}
                   </div>
                 </div>
