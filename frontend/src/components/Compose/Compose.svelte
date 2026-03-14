@@ -434,7 +434,13 @@
       </div>
 
       {#if composeError}
-        <div class="bg-red-50 border border-red-100 rounded-xl px-4 py-3 text-[12px] text-red-600">{composeError}</div>
+        <div class="flex items-center gap-2 px-4 py-2.5 bg-red-50 border border-red-100 rounded-xl text-[12px] text-red-700">
+          <svg class="w-3.5 h-3.5 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>
+          <span class="flex-1">{composeError}</span>
+          <button class="p-0.5 text-red-400 hover:text-red-600 cursor-pointer" onclick={() => composeError = ''}>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        </div>
       {/if}
     </div>
 
@@ -472,12 +478,12 @@
             <table class="w-full text-[12px]">
               <thead>
                 <tr class="bg-gray-50 border-b border-gray-100">
-                  <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceName}</th>
-                  <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceTemplate}</th>
-                  <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceProvider}</th>
-                  <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceStatus || '状态'}</th>
-                  <th class="text-left px-4 py-2.5 font-semibold text-gray-600">{t.serviceDepends}</th>
-                  <th class="text-right px-4 py-2.5 font-semibold text-gray-600">{t.serviceReplicas}</th>
+                  <th class="text-left px-4 py-2.5 font-medium text-gray-500">{t.serviceName}</th>
+                  <th class="text-left px-4 py-2.5 font-medium text-gray-500">{t.serviceTemplate}</th>
+                  <th class="text-left px-4 py-2.5 font-medium text-gray-500">{t.serviceProvider}</th>
+                  <th class="text-left px-4 py-2.5 font-medium text-gray-500">{t.serviceStatus || '状态'}</th>
+                  <th class="text-left px-4 py-2.5 font-medium text-gray-500">{t.serviceDepends}</th>
+                  <th class="text-right px-4 py-2.5 font-medium text-gray-500">{t.serviceReplicas}</th>
                 </tr>
               </thead>
               <tbody>
@@ -687,7 +693,7 @@
                 </defs>
 
                 {#each elkEdges as edge}
-                  <path d={edgePath(edge)} fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#compose-arrowhead)" class="transition-colors hover:stroke-blue-400" />
+                  <path d={edgePath(edge)} fill="none" stroke="#cbd5e1" stroke-width="1.5" marker-end="url(#compose-arrowhead)" class="transition-colors hover:stroke-red-400" />
                 {/each}
 
                 {#each elkNodes as node}
