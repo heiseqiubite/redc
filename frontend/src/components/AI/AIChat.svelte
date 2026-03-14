@@ -585,55 +585,108 @@
     if (!args || typeof args !== 'object') return '';
     return Object.entries(args).map(([k, v]) => `${k}: ${typeof v === 'string' ? v : JSON.stringify(v)}`).join(', ');
   }
+
+  // Quick prompt suggestions per mode
+  function getQuickPrompts(m) {
+    const prompts = {
+      free: [
+        { label: '红队基础设施规划', text: '帮我规划一个完整的红队基础设施方案，包括 C2、重定向器和钓鱼平台' },
+        { label: '云服务商对比', text: '对比各个云服务商在红队基础设施方面的优缺点' },
+        { label: '安全加固建议', text: '如何对部署的红队基础设施进行安全加固？' },
+      ],
+      agent: [
+        { label: '部署 C2 服务器', text: '帮我搜索并部署一个 C2 服务器' },
+        { label: '查看当前场景', text: '列出所有当前运行中的场景和状态' },
+        { label: '批量管理场景', text: '帮我检查所有场景的运行状态，停止不需要的场景' },
+      ],
+      deploy: [
+        { label: '部署 Clash 代理', text: '帮我部署一个 Clash 代理服务' },
+        { label: '部署 Nginx 反代', text: '帮我部署一个 Nginx 反向代理服务器' },
+        { label: '部署自定义脚本', text: '帮我部署一个带有自定义初始化脚本的服务器' },
+      ],
+      errorAnalysis: [
+        { label: '分析 Terraform 错误', text: '请帮我分析这个 Terraform 部署错误' },
+        { label: '网络连接问题', text: '场景部署后无法通过 SSH 连接，请帮我排查原因' },
+      ],
+      generate: [
+        { label: '生成 AWS EC2 模板', text: '帮我生成一个 AWS EC2 实例的 Terraform 模板' },
+        { label: '生成阿里云 ECS 模板', text: '帮我生成一个阿里云 ECS 实例模板，带安全组配置' },
+        { label: '生成多云编排模板', text: '帮我生成一个同时在 AWS 和阿里云部署的多云编排模板' },
+      ],
+      recommend: [
+        { label: '推荐 C2 场景', text: '推荐适合长期渗透的 C2 基础设施部署方案' },
+        { label: '推荐低成本方案', text: '推荐成本最低的红队基础设施部署方案' },
+      ],
+      cost: [
+        { label: '分析当前成本', text: '分析我当前所有运行中场景的成本' },
+        { label: '成本优化建议', text: '如何优化我的云资源使用以降低成本？' },
+      ],
+    };
+    return prompts[m] || prompts.free;
+  }
+
+  // Add copy buttons to rendered code blocks
+  function addCodeCopyButtons(container) {
+    if (!container) return;
+    container.querySelectorAll('pre').forEach(pre => {
+      if (pre.querySelector('.code-copy-btn')) return;
+      const btn = document.createElement('button');
+      btn.className = 'code-copy-btn';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>';
+      btn.onclick = async () => {
+        const code = pre.querySelector('code')?.textContent || pre.textContent;
+        try {
+          await navigator.clipboard.writeText(code);
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>';
+          setTimeout(() => { btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9.75a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184"/></svg>'; }, 1500);
+        } catch {}
+      };
+      pre.style.position = 'relative';
+      pre.appendChild(btn);
+    });
+  }
+
+  // Effect to add copy buttons after render
+  $effect(() => {
+    if (messages.length || streamingContent) {
+      requestAnimationFrame(() => addCodeCopyButtons(messagesContainer));
+    }
+  });
 </script>
 
 <div class="flex flex-col h-full px-6 pt-6 pb-4">
-  <!-- Mode selector + history toggle -->
-  <div class="flex items-center gap-2 mb-4 flex-shrink-0">
-    {#each modes as m}
-      <button
-        class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer
-          {mode === m.id ? 'bg-gray-900 text-white' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}"
-        onclick={() => switchMode(m.id)}
-      >
-        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d={m.icon} />
-        </svg>
-        {t[m.labelKey] || m.id}
-      </button>
-    {/each}
+  <!-- Toolbar: mode tabs + actions -->
+  <div class="flex items-center gap-3 mb-3 flex-shrink-0">
+    <div class="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 overflow-x-auto">
+      {#each modes as m}
+        <button
+          class="px-2.5 py-1 text-[11px] rounded-md transition-colors cursor-pointer whitespace-nowrap {mode === m.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+          onclick={() => switchMode(m.id)}
+        >{t[m.labelKey] || m.id}</button>
+      {/each}
+    </div>
     <div class="flex-1"></div>
-    <!-- History toggle -->
     <button
-      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium transition-all cursor-pointer
-        {showHistory ? 'bg-gray-900 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'}"
+      class="p-1.5 rounded-lg transition-colors cursor-pointer {showHistory ? 'bg-gray-900 text-white' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'}"
       onclick={() => showHistory = !showHistory}
       title={t.aiChatHistory || '对话历史'}
     >
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-      </svg>
-      {t.aiChatHistory || '历史'}
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
     </button>
     <button
-      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all cursor-pointer"
+      class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer"
       onclick={createNewConversation}
+      title={t.aiChatNewConversation || '新对话'}
     >
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
-      </svg>
-      {t.aiChatNewConversation || '新对话'}
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
     </button>
     <button
-      class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-medium text-gray-500 hover:text-gray-700 hover:bg-gray-50 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+      class="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
       onclick={exportChatLog}
       disabled={messages.length <= 1}
       title={t.aiChatExport || '导出对话日志'}
     >
-      <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
-      </svg>
-      {t.aiChatExport || '导出'}
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg>
     </button>
   </div>
 
@@ -686,7 +739,7 @@
               >
                 <div class="flex items-start justify-between gap-1">
                   <div class="min-w-0 flex-1">
-                    <p class="text-[12px] font-medium text-gray-800 truncate {conv.id === activeConvId ? 'text-rose-600' : ''}">{conv.title}</p>
+                    <p class="text-[12px] font-medium text-gray-800 truncate {conv.id === activeConvId ? 'text-gray-900 font-semibold' : ''}">{conv.title}</p>
                     <div class="flex items-center gap-1.5 mt-0.5">
                       <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{t[modeLabels[conv.mode]] || conv.mode}</span>
                       <span class="text-[10px] text-gray-400">{formatTime(conv.updatedAt)}</span>
@@ -742,25 +795,35 @@
                       <div class="mb-2 space-y-1.5">
                         {#each msg.toolCalls as tc}
                           {#if tc.toolName === 'ask_user'}
-                            <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-blue-50/60 border-blue-200' : 'bg-blue-50 border-blue-300'}">
-                              <span class="text-[11px] mt-0.5">💬</span>
+                            <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-300'}">
+                              <span class="mt-0.5">
+                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              </span>
                               <div class="flex-1 min-w-0">
-                                <div class="text-[12px] font-medium text-blue-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
+                                <div class="text-[12px] font-medium text-gray-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
                                 {#if tc.toolArgs?.question}
-                                  <div class="text-[12px] text-gray-700 mt-0.5">{tc.toolArgs.question}</div>
+                                  <div class="text-[12px] text-gray-600 mt-0.5">{tc.toolArgs.question}</div>
                                 {/if}
                                 {#if tc.content}
-                                  <div class="mt-1 text-[12px] font-medium text-blue-800 bg-white rounded px-2 py-1 border border-blue-100">↩ {tc.content}</div>
+                                  <div class="mt-1 text-[12px] font-medium text-gray-800 bg-white rounded px-2 py-1 border border-gray-200">↩ {tc.content}</div>
                                 {/if}
                               </div>
                             </div>
                           {:else}
                           <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}">
-                            <span class="text-[11px] mt-0.5">
-                              {#if tc.status === 'success'}✅{:else if tc.status === 'error'}❌{:else}⏳{/if}
+                            <span class="mt-0.5">
+                              {#if tc.status === 'success'}
+                                <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {:else if tc.status === 'error'}
+                                <svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {:else}
+                                <svg class="w-3.5 h-3.5 animate-spin text-gray-400" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
+                              {/if}
                             </span>
                             <div class="flex-1 min-w-0">
-                              <div class="text-[12px] font-medium text-gray-700">🔧 {getToolDisplayName(tc.toolName)}</div>
+                              <div class="text-[12px] font-medium text-gray-700">
+                                <svg class="w-3 h-3 inline -mt-0.5 mr-0.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l2.88-2.88a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-5.1 5.1a1.5 1.5 0 01-2.12 0z" /></svg>
+                                {getToolDisplayName(tc.toolName)}</div>
                               {#if tc.toolArgs && Object.keys(tc.toolArgs).length > 0}
                                 <div class="text-[11px] text-gray-500 font-mono truncate">{formatToolArgs(tc.toolArgs)}</div>
                               {/if}
@@ -816,6 +879,22 @@
           {/if}
         {/each}
 
+        <!-- Quick prompt suggestions for empty conversations -->
+        {#if messages.length === 1 && !isStreaming}
+          <div class="max-w-lg mx-auto mt-2">
+            <div class="grid grid-cols-2 gap-2">
+              {#each getQuickPrompts(mode) as prompt}
+                <button
+                  class="text-left px-3 py-2.5 text-[12px] text-gray-600 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer leading-relaxed"
+                  onclick={() => { inputText = prompt.text; sendMessage(); }}
+                >
+                  <span class="text-gray-400 mr-1">→</span> {prompt.label}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
+
         <!-- Streaming indicator -->
         {#if isStreaming}
           <div class="flex justify-start">
@@ -832,32 +911,39 @@
                     <div class="mb-2 space-y-1.5">
                       {#each agentToolCalls as tc (tc.id)}
                         {#if tc.toolName === 'ask_user'}
-                          <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-blue-50/60 border-blue-200' : 'bg-blue-50 border-blue-300'}">
-                            <span class="text-[11px] mt-0.5">
+                          <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-gray-50 border-gray-200' : 'bg-gray-50 border-gray-300'}">
+                            <span class="mt-0.5">
                               {#if tc.status === 'calling'}
-                                <svg class="w-3.5 h-3.5 animate-pulse text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                              {:else}💬{/if}
+                                <svg class="w-3.5 h-3.5 animate-pulse text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {:else}
+                                <svg class="w-3.5 h-3.5 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {/if}
                             </span>
                             <div class="flex-1 min-w-0">
-                              <div class="text-[12px] font-medium text-blue-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
+                              <div class="text-[12px] font-medium text-gray-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
                               {#if tc.toolArgs?.question}
-                                <div class="text-[12px] text-gray-700 mt-0.5">{tc.toolArgs.question}</div>
+                                <div class="text-[12px] text-gray-600 mt-0.5">{tc.toolArgs.question}</div>
                               {/if}
                               {#if tc.content}
-                                <div class="mt-1 text-[12px] font-medium text-blue-800 bg-white rounded px-2 py-1 border border-blue-100">↩ {tc.content}</div>
+                                <div class="mt-1 text-[12px] font-medium text-gray-800 bg-white rounded px-2 py-1 border border-gray-200">↩ {tc.content}</div>
                               {/if}
                             </div>
                           </div>
                         {:else}
                         <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}">
-                          <span class="text-[11px] mt-0.5">
+                          <span class="mt-0.5">
                             {#if tc.status === 'calling'}
                               <svg class="w-3.5 h-3.5 animate-spin text-amber-500" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/></svg>
-                            {:else if tc.status === 'success'}✅
-                            {:else}❌{/if}
+                            {:else if tc.status === 'success'}
+                              <svg class="w-3.5 h-3.5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {:else}
+                              <svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            {/if}
                           </span>
                           <div class="flex-1 min-w-0">
-                            <div class="text-[12px] font-medium text-gray-700">🔧 {getToolDisplayName(tc.toolName)}</div>
+                            <div class="text-[12px] font-medium text-gray-700">
+                              <svg class="w-3 h-3 inline -mt-0.5 mr-0.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.42 15.17l-5.1-5.1a1.5 1.5 0 010-2.12l.88-.88a1.5 1.5 0 012.12 0L12 9.75l2.88-2.88a1.5 1.5 0 012.12 0l.88.88a1.5 1.5 0 010 2.12l-5.1 5.1a1.5 1.5 0 01-2.12 0z" /></svg>
+                              {getToolDisplayName(tc.toolName)}</div>
                             {#if tc.toolArgs && Object.keys(tc.toolArgs).length > 0}
                               <div class="text-[11px] text-gray-500 font-mono truncate">{formatToolArgs(tc.toolArgs)}</div>
                             {/if}
@@ -875,22 +961,22 @@
                   {/if}
                   <!-- ask_user interactive card -->
                   {#if askUserPending}
-                    <div class="mb-2 px-4 py-3 rounded-xl border-2 border-blue-300 bg-blue-50/80">
+                    <div class="mb-2 px-4 py-3 rounded-xl border-2 border-gray-300 bg-gray-50/80">
                       <div class="flex items-center gap-2 mb-2">
-                        <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <svg class="w-4 h-4 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                           <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
-                        <span class="text-[13px] font-semibold text-blue-900">{t.askUserTitle || 'AI 需要你的决策'}</span>
+                        <span class="text-[13px] font-semibold text-gray-900">{t.askUserTitle || 'AI 需要你的决策'}</span>
                       </div>
-                      <p class="text-[13px] text-gray-800 mb-3 leading-relaxed">{askUserPending.question}</p>
+                      <p class="text-[13px] text-gray-700 mb-3 leading-relaxed">{askUserPending.question}</p>
                       {#if askUserPending.choices.length > 0}
                         <div class="flex flex-col gap-1.5 mb-3">
                           {#each askUserPending.choices as choice, i}
                             <button
-                              class="w-full text-left px-3 py-2 text-[13px] bg-white border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 transition-colors cursor-pointer"
+                              class="w-full text-left px-3 py-2 text-[13px] bg-white border border-gray-200 rounded-lg hover:bg-gray-100 hover:border-gray-400 transition-colors cursor-pointer"
                               onclick={() => submitAskUserAnswer(choice)}
                             >
-                              <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold text-blue-600 bg-blue-100 rounded-full mr-2">{i + 1}</span>
+                              <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold text-gray-600 bg-gray-100 rounded-full mr-2">{i + 1}</span>
                               {choice}
                             </button>
                           {/each}
@@ -900,13 +986,13 @@
                         <div class="flex items-center gap-2">
                           <input
                             type="text"
-                            class="flex-1 px-3 py-2 text-[13px] bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder-gray-400"
+                            class="flex-1 px-3 py-2 text-[13px] bg-white border border-gray-200 rounded-lg focus:ring-1 focus:ring-gray-900 focus:border-gray-900 transition-shadow placeholder-gray-400"
                             placeholder={t.askUserInputPlaceholder || '或输入你的想法...'}
                             bind:value={askUserInput}
                             onkeydown={(e) => { if (e.key === 'Enter' && askUserInput.trim()) { submitAskUserAnswer(askUserInput.trim()); } }}
                           />
                           <button
-                            class="px-3 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 cursor-pointer"
+                            class="px-3 py-2 text-[13px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors disabled:opacity-50 cursor-pointer"
                             disabled={!askUserInput.trim()}
                             onclick={() => submitAskUserAnswer(askUserInput.trim())}
                           >
@@ -980,7 +1066,7 @@
             {/if}
             {t.aiChatSend || '发送'}
           </button>
-          {#if isStreaming && (mode === 'agent' || mode === 'deploy' || mode === 'error')}
+          {#if isStreaming && (mode === 'agent' || mode === 'deploy' || mode === 'errorAnalysis')}
             <button
               class="px-3 h-10 bg-red-600 text-white text-[12px] font-medium rounded-xl hover:bg-red-700 transition-colors flex items-center gap-1.5 cursor-pointer flex-shrink-0"
               onclick={stopAgent}
@@ -1028,4 +1114,29 @@
   .md-content :global(strong) { font-weight: 600; }
   .md-content :global(> *:first-child) { margin-top: 0; }
   .md-content :global(> *:last-child) { margin-bottom: 0; }
+
+  /* Code block copy button */
+  :global(.code-copy-btn) {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    padding: 4px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #9ca3af;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  :global(pre:hover .code-copy-btn) {
+    opacity: 1;
+  }
+  :global(.code-copy-btn:hover) {
+    background: rgba(255, 255, 255, 0.2);
+    color: #e5e7eb;
+  }
 </style>
