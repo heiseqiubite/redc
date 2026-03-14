@@ -431,7 +431,11 @@ let { t, onTabChange = () => {} } = $props();
       templateVariables = vars || [];
       variableValues = {};
       for (const v of templateVariables) {
-        variableValues[v.name] = v.defaultValue || '';
+        if (v.type === 'bool') {
+          variableValues[v.name] = v.defaultValue === 'true' ? 'true' : 'false';
+        } else {
+          variableValues[v.name] = v.defaultValue || '';
+        }
       }
     } catch (e) {
       console.error('Failed to load template variables:', e);
@@ -1282,14 +1286,38 @@ let { t, onTabChange = () => {} } = $props();
                 {#if variable.description}
                   <span class="text-gray-500 ml-1">({variable.description})</span>
                 {/if}
+                {#if variable.type && variable.type !== 'string'}
+                  <span class="text-gray-300 ml-1 text-[10px]">{variable.type}</span>
+                {/if}
               </label>
-              <input 
-                id="var-{variable.name}"
-                type="text"
-                class="h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-                placeholder={variable.defaultValue || ''}
-                bind:value={variableValues[variable.name]}
-              />
+              {#if variable.type === 'bool'}
+                <button
+                  type="button"
+                  class="h-9 flex items-center gap-2 px-3 rounded-lg bg-gray-50 cursor-pointer"
+                  onclick={() => variableValues[variable.name] = variableValues[variable.name] === 'true' ? 'false' : 'true'}
+                >
+                  <div class="relative w-8 h-[18px] rounded-full transition-colors {variableValues[variable.name] === 'true' ? 'bg-gray-900' : 'bg-gray-300'}">
+                    <div class="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform {variableValues[variable.name] === 'true' ? 'translate-x-[16px]' : 'translate-x-[2px]'}"></div>
+                  </div>
+                  <span class="text-[12px] text-gray-600">{variableValues[variable.name] === 'true' ? 'true' : 'false'}</span>
+                </button>
+              {:else if variable.type === 'number'}
+                <input
+                  id="var-{variable.name}"
+                  type="number"
+                  class="h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                  placeholder={variable.defaultValue || '0'}
+                  bind:value={variableValues[variable.name]}
+                />
+              {:else}
+                <input 
+                  id="var-{variable.name}"
+                  type={variable.sensitive ? 'password' : 'text'}
+                  class="h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                  placeholder={variable.defaultValue || ''}
+                  bind:value={variableValues[variable.name]}
+                />
+              {/if}
             </div>
           {/each}
         </div>

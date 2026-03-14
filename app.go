@@ -443,6 +443,7 @@ type TemplateVariable struct {
 	Description  string `json:"description"`
 	DefaultValue string `json:"defaultValue"`
 	Required     bool   `json:"required"`
+	Sensitive    bool   `json:"sensitive"`
 }
 
 type RegistryTemplate struct {

@@ -744,6 +744,7 @@ export namespace main {
 	    description: string;
 	    defaultValue: string;
 	    required: boolean;
+	    sensitive: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TemplateVariable(source);
@@ -756,6 +757,7 @@ export namespace main {
 	        this.description = source["description"];
 	        this.defaultValue = source["defaultValue"];
 	        this.required = source["required"];
+	        this.sensitive = source["sensitive"];
 	    }
 	}
 	export class TerraformMirrorConfig {

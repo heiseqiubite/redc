@@ -58,7 +58,11 @@
     if (template && template.variables) {
       const vars = {};
       template.variables.forEach(v => {
-        vars[v.name] = formData.variables[v.name] || v.defaultValue || '';
+        if (v.type === 'bool') {
+          vars[v.name] = formData.variables[v.name] || (v.defaultValue === 'true' ? 'true' : 'false');
+        } else {
+          vars[v.name] = formData.variables[v.name] || v.defaultValue || '';
+        }
       });
       formData.variables = vars;
       updateConfig();
@@ -369,15 +373,40 @@
                     {#if variable.description}
                       <span class="text-gray-400 ml-1">({variable.description})</span>
                     {/if}
+                    {#if variable.type && variable.type !== 'string'}
+                      <span class="text-gray-300 ml-1 text-[10px]">{variable.type}</span>
+                    {/if}
                   </label>
-                  <input
-                    id="required-var-{index}"
-                    type="text"
-                    placeholder={variable.defaultValue || ''}
-                    class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-                    value={formData.variables[variable.name] || ''}
-                    oninput={(e) => handleVariableChange(variable.name, e.currentTarget.value)}
-                  />
+                  {#if variable.type === 'bool'}
+                    <button
+                      type="button"
+                      class="h-9 flex items-center gap-2 px-3 rounded-lg bg-gray-50 cursor-pointer"
+                      onclick={() => handleVariableChange(variable.name, (formData.variables[variable.name] || 'false') === 'true' ? 'false' : 'true')}
+                    >
+                      <div class="relative w-8 h-[18px] rounded-full transition-colors {(formData.variables[variable.name] || 'false') === 'true' ? 'bg-gray-900' : 'bg-gray-300'}">
+                        <div class="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform {(formData.variables[variable.name] || 'false') === 'true' ? 'translate-x-[16px]' : 'translate-x-[2px]'}"></div>
+                      </div>
+                      <span class="text-[12px] text-gray-600">{(formData.variables[variable.name] || 'false') === 'true' ? 'true' : 'false'}</span>
+                    </button>
+                  {:else if variable.type === 'number'}
+                    <input
+                      id="required-var-{index}"
+                      type="number"
+                      placeholder={variable.defaultValue || '0'}
+                      class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                      value={formData.variables[variable.name] || ''}
+                      oninput={(e) => handleVariableChange(variable.name, e.currentTarget.value)}
+                    />
+                  {:else}
+                    <input
+                      id="required-var-{index}"
+                      type={variable.sensitive ? 'password' : 'text'}
+                      placeholder={variable.defaultValue || ''}
+                      class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                      value={formData.variables[variable.name] || ''}
+                      oninput={(e) => handleVariableChange(variable.name, e.currentTarget.value)}
+                    />
+                  {/if}
                 </div>
               {/each}
             </div>
@@ -398,15 +427,40 @@
                     {#if variable.description}
                       <span class="text-gray-400 ml-1">({variable.description})</span>
                     {/if}
+                    {#if variable.type && variable.type !== 'string'}
+                      <span class="text-gray-300 ml-1 text-[10px]">{variable.type}</span>
+                    {/if}
                   </label>
-                  <input
-                    id="optional-var-{index}"
-                    type="text"
-                    placeholder={variable.defaultValue || ''}
-                    class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
-                    value={formData.variables[variable.name] || ''}
-                    oninput={(e) => handleVariableChange(variable.name, e.currentTarget.value)}
-                  />
+                  {#if variable.type === 'bool'}
+                    <button
+                      type="button"
+                      class="h-9 flex items-center gap-2 px-3 rounded-lg bg-gray-50 cursor-pointer"
+                      onclick={() => handleVariableChange(variable.name, (formData.variables[variable.name] || 'false') === 'true' ? 'false' : 'true')}
+                    >
+                      <div class="relative w-8 h-[18px] rounded-full transition-colors {(formData.variables[variable.name] || 'false') === 'true' ? 'bg-gray-900' : 'bg-gray-300'}">
+                        <div class="absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow transition-transform {(formData.variables[variable.name] || 'false') === 'true' ? 'translate-x-[16px]' : 'translate-x-[2px]'}"></div>
+                      </div>
+                      <span class="text-[12px] text-gray-600">{(formData.variables[variable.name] || 'false') === 'true' ? 'true' : 'false'}</span>
+                    </button>
+                  {:else if variable.type === 'number'}
+                    <input
+                      id="optional-var-{index}"
+                      type="number"
+                      placeholder={variable.defaultValue || '0'}
+                      class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                      value={formData.variables[variable.name] || ''}
+                      oninput={(e) => handleVariableChange(variable.name, e.currentTarget.value)}
+                    />
+                  {:else}
+                    <input
+                      id="optional-var-{index}"
+                      type={variable.sensitive ? 'password' : 'text'}
+                      placeholder={variable.defaultValue || ''}
+                      class="w-full h-9 px-3 text-[12px] bg-gray-50 border-0 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 transition-shadow"
+                      value={formData.variables[variable.name] || ''}
+                      oninput={(e) => handleVariableChange(variable.name, e.currentTarget.value)}
+                    />
+                  {/if}
                 </div>
               {/each}
             </div>

@@ -109,6 +109,7 @@ func parseVariablesTf(filePath string) ([]*TemplateVariable, error) {
 	typeRegex := regexp.MustCompile(`^\s*type\s*=\s*(.+)`)
 	descRegex := regexp.MustCompile(`^\s*description\s*=\s*"([^"]*)"`)
 	defaultRegex := regexp.MustCompile(`^\s*default\s*=\s*(.+)`)
+	sensitiveRegex := regexp.MustCompile(`^\s*sensitive\s*=\s*true`)
 
 	var currentVar *TemplateVariable
 	braceCount := 0
@@ -151,6 +152,11 @@ func parseVariablesTf(filePath string) ([]*TemplateVariable, error) {
 		if matches := defaultRegex.FindStringSubmatch(line); len(matches) > 1 {
 			defaultRaw := strings.TrimSpace(matches[1])
 			currentVar.DefaultValue = strings.Trim(defaultRaw, `"`)
+		}
+
+		// Parse sensitive
+		if sensitiveRegex.MatchString(line) {
+			currentVar.Sensitive = true
 		}
 
 		// End of variable block

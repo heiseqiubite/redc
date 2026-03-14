@@ -987,10 +987,17 @@
                       </td>
                       <td class="px-4 py-3">
                         <code class="px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-[11px]">{v.type}</code>
+                        {#if v.sensitive}
+                          <span class="ml-1 px-1 py-0.5 bg-amber-50 text-amber-600 rounded text-[10px]">sensitive</span>
+                        {/if}
                       </td>
                       <td class="px-4 py-3">
                         {#if v.defaultValue}
-                          <code class="text-gray-600">{v.defaultValue}</code>
+                          {#if v.sensitive}
+                            <code class="text-gray-400">••••••</code>
+                          {:else}
+                            <code class="text-gray-600">{v.defaultValue}</code>
+                          {/if}
                         {:else}
                           <span class="text-gray-400">-</span>
                         {/if}
