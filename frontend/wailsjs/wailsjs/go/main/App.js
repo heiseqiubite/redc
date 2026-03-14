@@ -18,6 +18,10 @@ export function AIRecommendTemplates(arg1) {
   return window['go']['main']['App']['AIRecommendTemplates'](arg1);
 }
 
+export function AddHTTPServerUser(arg1, arg2) {
+  return window['go']['main']['App']['AddHTTPServerUser'](arg1, arg2);
+}
+
 export function AgentChatStream(arg1, arg2) {
   return window['go']['main']['App']['AgentChatStream'](arg1, arg2);
 }
@@ -260,6 +264,10 @@ export function GetHTTPServerConfig() {
 
 export function GetHTTPServerStatus() {
   return window['go']['main']['App']['GetHTTPServerStatus']();
+}
+
+export function GetHTTPServerUsers() {
+  return window['go']['main']['App']['GetHTTPServerUsers']();
 }
 
 export function GetInstanceTypes(arg1, arg2) {
@@ -534,6 +542,10 @@ export function RemoveCase(arg1) {
   return window['go']['main']['App']['RemoveCase'](arg1);
 }
 
+export function RemoveHTTPServerUser(arg1) {
+  return window['go']['main']['App']['RemoveHTTPServerUser'](arg1);
+}
+
 export function RemoveTemplate(arg1) {
   return window['go']['main']['App']['RemoveTemplate'](arg1);
 }
@@ -716,6 +728,10 @@ export function TestWebhook(arg1, arg2, arg3) {
 
 export function UninstallPlugin(arg1) {
   return window['go']['main']['App']['UninstallPlugin'](arg1);
+}
+
+export function UpdateHTTPServerUser(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateHTTPServerUser'](arg1, arg2, arg3);
 }
 
 export function UpdatePlugin(arg1) {

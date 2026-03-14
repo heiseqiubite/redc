@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"os/signal"
+	redc "red-cloud/mod"
 	"runtime"
 	"strings"
 	"syscall"
@@ -97,7 +98,13 @@ func runServerMode() {
 	app := NewApp()
 	app.startupHeadless()
 
-	httpSrv := NewHTTPServer(app, host, port, token)
+	// Load users from config
+	var users []redc.HTTPUser
+	if settings, err := redc.LoadGUISettings(); err == nil && settings != nil {
+		users = settings.HTTPServerUsers
+	}
+
+	httpSrv := NewHTTPServer(app, host, port, token, users)
 	app.httpSrv = httpSrv
 
 	if err := httpSrv.Start(assets); err != nil {

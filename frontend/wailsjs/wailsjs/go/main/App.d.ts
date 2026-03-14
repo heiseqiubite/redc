@@ -15,6 +15,8 @@ export function AIGenerateTemplate(arg1:string):Promise<void>;
 
 export function AIRecommendTemplates(arg1:string):Promise<void>;
 
+export function AddHTTPServerUser(arg1:string,arg2:string):Promise<mod.HTTPUser>;
+
 export function AgentChatStream(arg1:string,arg2:Array<main.AIChatMessage>):Promise<void>;
 
 export function AnalyzeCaseError(arg1:string,arg2:string,arg3:string,arg4:string):Promise<void>;
@@ -136,6 +138,8 @@ export function GetDisableRightClick():Promise<boolean>;
 export function GetHTTPServerConfig():Promise<Record<string, any>>;
 
 export function GetHTTPServerStatus():Promise<Record<string, any>>;
+
+export function GetHTTPServerUsers():Promise<Array<mod.HTTPUser>>;
 
 export function GetInstanceTypes(arg1:string,arg2:string):Promise<Array<mod.InstanceType>>;
 
@@ -273,6 +277,8 @@ export function RecommendTemplates(arg1:string):Promise<Array<main.TemplateRecom
 
 export function RemoveCase(arg1:string):Promise<void>;
 
+export function RemoveHTTPServerUser(arg1:string):Promise<void>;
+
 export function RemoveTemplate(arg1:string):Promise<void>;
 
 export function RenameRemoteFile(arg1:string,arg2:string,arg3:string):Promise<void>;
@@ -364,6 +370,8 @@ export function TestTerraformEndpoints():Promise<Array<main.EndpointCheck>>;
 export function TestWebhook(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function UninstallPlugin(arg1:string):Promise<void>;
+
+export function UpdateHTTPServerUser(arg1:string,arg2:string,arg3:boolean):Promise<mod.HTTPUser>;
 
 export function UpdatePlugin(arg1:string):Promise<void>;
 

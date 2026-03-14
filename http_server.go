@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"net/http"
 	"os"
+	redc "red-cloud/mod"
 	"reflect"
 	"strings"
 	"sync"
@@ -85,16 +86,149 @@ type HTTPServer struct {
 	token string
 	host  string
 	port  int
+	users []redc.HTTPUser
+}
+
+// RoleLevel returns the numeric level for a role (higher = more permissions)
+func RoleLevel(role string) int {
+	switch role {
+	case "admin":
+		return 3
+	case "operator":
+		return 2
+	case "viewer":
+		return 1
+	default:
+		return 0
+	}
+}
+
+// methodMinRole defines the minimum role required for each method.
+// Methods not listed default to "admin" for safety.
+var methodMinRole = map[string]string{
+	// === Viewer: read-only ===
+	"GetConfig": "viewer", "GetVersion": "viewer", "CheckForUpdates": "viewer",
+	"GetLanguage": "viewer", "GetShowWelcomeDialog": "viewer",
+	"GetNotificationEnabled": "viewer", "GetDisableRightClick": "viewer",
+	"GetSpotMonitorEnabled": "viewer", "GetSpotAutoRecoverEnabled": "viewer",
+	"GetWebhookConfig": "viewer", "GetAllCaseTags": "viewer", "GetAllTagNames": "viewer",
+	"GetHTTPServerStatus": "viewer",
+	"ListCases": "viewer", "GetCaseOutputs": "viewer", "GetCasePlanPreview": "viewer",
+	"GetResourceSummary": "viewer", "GetBalances": "viewer", "GetBills": "viewer",
+	"GetTotalRuntime": "viewer", "GetPredictedMonthlyCost": "viewer",
+	"ListProfiles": "viewer", "GetActiveProfile": "viewer",
+	"GetProvidersConfig": "viewer", "GetCurrentProject": "viewer", "ListProjects": "viewer",
+	"ListTemplates": "viewer", "ListAllTemplates": "viewer", "GetTemplateVariables": "viewer",
+	"FetchRegistryTemplates": "viewer", "FetchTemplateReadme": "viewer",
+	"GetTemplateFiles": "viewer", "GetTemplateMetadata": "viewer", "GetBaseTemplates": "viewer",
+	"ListUserdataTemplates": "viewer", "ListComposeTemplates": "viewer",
+	"ListCustomDeployments": "viewer", "GetDeploymentHistory": "viewer",
+	"GetDeploymentPlanPreview": "viewer",
+	"GetCostEstimate": "viewer",
+	"ListPlugins": "viewer", "GetPluginConfig": "viewer", "FetchPluginRegistry": "viewer",
+	"GetMCPStatus": "viewer",
+	"ListScheduledTasks": "viewer", "ListCaseScheduledTasks": "viewer",
+	"ListAllScheduledTasks": "viewer", "GetScheduledTask": "viewer",
+	"GetAgentMemories": "viewer",
+	"GetSSHInfoForCase": "viewer", "GetSSHInfosForCase": "viewer",
+	"ListPortForwards": "viewer", "ListRemoteFiles": "viewer",
+	"GetRemoteFileContent": "viewer",
+	"HasActiveOperations": "viewer",
+	"ValidateTemplate": "viewer", "ValidateDeploymentConfig": "viewer",
+	"EstimateDeploymentCost": "viewer",
+	"GetProviderRegions": "viewer", "GetInstanceTypes": "viewer",
+	"GetHTTPServerUsers": "viewer",
+	// MCP read
+	"MCPGetCostEstimate": "viewer", "MCPGetBalances": "viewer",
+	"MCPGetResourceSummary": "viewer", "MCPGetPredictedMonthlyCost": "viewer",
+	"MCPGetBills": "viewer", "MCPGetTotalRuntime": "viewer",
+	"MCPListCustomDeployments": "viewer", "MCPListProjects": "viewer",
+	"MCPListProfiles": "viewer", "MCPGetActiveProfile": "viewer",
+	"MCPListScheduledTasks": "viewer",
+
+	// === Operator: create + operate ===
+	"StartCase": "operator", "StopCase": "operator",
+	"CreateCase": "operator", "CreateAndRunCase": "operator",
+	"DeployCase": "operator", "CloneCase": "operator",
+	"CreateCustomDeployment": "operator", "StartCustomDeployment": "operator",
+	"StopCustomDeployment": "operator", "CloneCustomDeployment": "operator",
+	"BatchStartCustomDeployments": "operator", "BatchStopCustomDeployments": "operator",
+	"ComposePreview": "operator", "ComposeUp": "operator", "ComposeDown": "operator",
+	"SelectComposeFile": "operator",
+	"ExecCommand": "operator", "ExecUserdata": "operator",
+	"UploadUserdataScript": "operator", "UploadFile": "operator", "DownloadFile": "operator",
+	"StartSSHTerminal": "operator", "StartSSHTerminalInstance": "operator",
+	"StartSSHTerminalDirect": "operator",
+	"WriteToTerminal": "operator", "ResizeTerminal": "operator", "CloseTerminal": "operator",
+	"CreateRemoteDirectory": "operator", "WriteRemoteFileContent": "operator",
+	"RenameRemoteFile": "operator",
+	"StartPortForward": "operator", "StopPortForward": "operator",
+	"AIChatStream": "operator", "AgentChatStream": "operator",
+	"DeployAgentChatStream": "operator", "StopAgentStream": "operator",
+	"SubmitAskUserResponse": "operator", "ExportChatLog": "operator",
+	"AIRecommendTemplates": "operator", "AIGenerateTemplate": "operator",
+	"AICostOptimization": "operator", "RecommendTemplates": "operator",
+	"AnalyzeDeploymentError": "operator", "AnalyzeCaseError": "operator",
+	"PullTemplate": "operator", "CreateLocalTemplate": "operator",
+	"SaveTemplateFiles": "operator", "CopyTemplate": "operator",
+	"ExportTemplates": "operator", "ImportTemplates": "operator",
+	"CopyFileTo": "operator",
+	"SaveConfigTemplate": "operator", "LoadConfigTemplate": "operator",
+	"ListConfigTemplates": "operator",
+	"ScheduleTask": "operator", "ScheduleTaskWithRepeat": "operator",
+	"ScheduleTaskFull": "operator", "CancelScheduledTask": "operator",
+	"SetCaseTags": "operator",
+	"SetActiveProfile": "operator", "SwitchProject": "operator",
+	"InstallPlugin": "operator", "EnablePlugin": "operator",
+	"DisablePlugin": "operator", "UpdatePlugin": "operator",
+	"SavePluginConfig": "operator",
+	// MCP write
+	"MCPComposePreview": "operator", "MCPComposeUp": "operator", "MCPComposeDown": "operator",
+	"MCPStartCustomDeployment": "operator", "MCPStopCustomDeployment": "operator",
+	"MCPSwitchProject": "operator", "MCPSetActiveProfile": "operator",
+	"MCPScheduleTask": "operator", "MCPCancelScheduledTask": "operator",
+	"MCPSaveTemplateFiles": "operator", "MCPSaveComposeFile": "operator",
+
+	// === Admin: destructive + system config ===
+	// RemoveCase, Delete*, Clear*, Batch*Delete*, system config, user management
+	// Not listed here → defaults to "admin"
+}
+
+// resolveUser finds the user by token and returns their role.
+// Returns ("admin", true) for the master token, ("", false) if not found.
+func (s *HTTPServer) resolveUser(r *http.Request) (string, string, bool) {
+	token := ""
+	auth := r.Header.Get("Authorization")
+	if strings.HasPrefix(auth, "Bearer ") {
+		token = strings.TrimPrefix(auth, "Bearer ")
+	} else {
+		token = r.URL.Query().Get("token")
+	}
+	if token == "" {
+		return "", "", false
+	}
+	// Master token = admin
+	if s.token != "" && token == s.token {
+		return "admin", "admin", true
+	}
+	// Check user tokens
+	for _, u := range s.users {
+		if u.Token == token {
+			return u.Username, u.Role, true
+		}
+	}
+	return "", "", false
 }
 
 // NewHTTPServer creates a new HTTP server instance
-func NewHTTPServer(app *App, host string, port int, token string) *HTTPServer {
+func NewHTTPServer(app *App, host string, port int, token string, users []redc.HTTPUser) *HTTPServer {
 	return &HTTPServer{
 		app:   app,
 		hub:   newSSEHub(),
 		token: token,
 		host:  host,
 		port:  port,
+		users: users,
 	}
 }
 
@@ -114,21 +248,18 @@ func GenerateToken() string {
 func (s *HTTPServer) Start(staticFS fs.FS) error {
 	mux := http.NewServeMux()
 
-	// Auth middleware helper
-	checkAuth := func(r *http.Request) bool {
-		if s.token == "" {
-			return true
+	// Auth middleware helper — returns (username, role, ok)
+	checkAuth := func(r *http.Request) (string, string, bool) {
+		if s.token == "" && len(s.users) == 0 {
+			return "anonymous", "admin", true
 		}
-		auth := r.Header.Get("Authorization")
-		if strings.HasPrefix(auth, "Bearer ") && strings.TrimPrefix(auth, "Bearer ") == s.token {
-			return true
-		}
-		return r.URL.Query().Get("token") == s.token
+		return s.resolveUser(r)
 	}
 
 	// POST /api/call — dispatch to App methods
 	mux.HandleFunc("/api/call", func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r) {
+		username, role, ok := checkAuth(r)
+		if !ok {
 			http.Error(w, "Unauthorized", 401)
 			return
 		}
@@ -146,6 +277,20 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 			return
 		}
 
+		// Permission check
+		requiredRole := "admin" // default: admin for unlisted methods
+		if r, ok := methodMinRole[req.Method]; ok {
+			requiredRole = r
+		}
+		if RoleLevel(role) < RoleLevel(requiredRole) {
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(403)
+			json.NewEncoder(w).Encode(map[string]interface{}{
+				"error": fmt.Sprintf("权限不足: 用户 %s (%s) 无权执行 %s，需要 %s 权限", username, role, req.Method, requiredRole),
+			})
+			return
+		}
+
 		result, err := s.dispatch(req.Method, req.Args)
 		w.Header().Set("Content-Type", "application/json")
 		if err != nil {
@@ -157,7 +302,8 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 
 	// GET /api/events — SSE stream
 	mux.HandleFunc("/api/events", func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r) {
+		_, _, ok := checkAuth(r)
+		if !ok {
 			http.Error(w, "Unauthorized", 401)
 			return
 		}
@@ -191,21 +337,27 @@ func (s *HTTPServer) Start(staticFS fs.FS) error {
 		}
 	})
 
-	// Login check endpoint
+	// Login check endpoint — returns role info
 	mux.HandleFunc("/api/auth", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if checkAuth(r) {
-			json.NewEncoder(w).Encode(map[string]bool{"ok": true})
+		username, role, ok := checkAuth(r)
+		if ok {
+			json.NewEncoder(w).Encode(map[string]interface{}{"ok": true, "username": username, "role": role})
 		} else {
 			w.WriteHeader(401)
-			json.NewEncoder(w).Encode(map[string]bool{"ok": false})
+			json.NewEncoder(w).Encode(map[string]interface{}{"ok": false})
 		}
 	})
 
 	// File upload endpoint for browser mode
 	mux.HandleFunc("/api/upload", func(w http.ResponseWriter, r *http.Request) {
-		if !checkAuth(r) {
+		_, role, ok := checkAuth(r)
+		if !ok {
 			http.Error(w, "Unauthorized", 401)
+			return
+		}
+		if RoleLevel(role) < RoleLevel("operator") {
+			http.Error(w, "Forbidden: requires operator role", 403)
 			return
 		}
 		if r.Method != "POST" {

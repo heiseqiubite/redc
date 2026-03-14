@@ -137,6 +137,14 @@ export function GetHTTPServerConfig():Promise<Record<string, any>>;
 
 export function GetHTTPServerStatus():Promise<Record<string, any>>;
 
+export function GetHTTPServerUsers():Promise<Array<mod.HTTPUser>>;
+
+export function AddHTTPServerUser(arg1:string,arg2:string):Promise<mod.HTTPUser>;
+
+export function RemoveHTTPServerUser(arg1:string):Promise<void>;
+
+export function UpdateHTTPServerUser(arg1:string,arg2:string,arg3:boolean):Promise<mod.HTTPUser>;
+
 export function GetInstanceTypes(arg1:string,arg2:string):Promise<Array<mod.InstanceType>>;
 
 export function GetLanguage():Promise<string>;

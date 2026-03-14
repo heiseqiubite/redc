@@ -262,6 +262,22 @@ export function GetHTTPServerStatus() {
   return window['go']['main']['App']['GetHTTPServerStatus']();
 }
 
+export function GetHTTPServerUsers() {
+  return window['go']['main']['App']['GetHTTPServerUsers']();
+}
+
+export function AddHTTPServerUser(arg1, arg2) {
+  return window['go']['main']['App']['AddHTTPServerUser'](arg1, arg2);
+}
+
+export function RemoveHTTPServerUser(arg1) {
+  return window['go']['main']['App']['RemoveHTTPServerUser'](arg1);
+}
+
+export function UpdateHTTPServerUser(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UpdateHTTPServerUser'](arg1, arg2, arg3);
+}
+
 export function GetInstanceTypes(arg1, arg2) {
   return window['go']['main']['App']['GetInstanceTypes'](arg1, arg2);
 }

@@ -820,50 +820,159 @@ return redc.SaveGUISettings(settings)
 
 // StartHTTPServer starts the embedded HTTP server
 func (a *App) StartHTTPServer(port int, host string, token string) error {
-if a.httpSrv != nil {
-return fmt.Errorf("HTTP Server is already running")
-}
-if token == "" {
-token = GenerateToken()
-if settings, err := redc.LoadGUISettings(); err == nil {
-settings.HTTPServerToken = token
-settings.HTTPServerPort = port
-settings.HTTPServerHost = host
-redc.SaveGUISettings(settings)
-}
-}
-srv := NewHTTPServer(a, host, port, token)
-if err := srv.Start(assets); err != nil {
-return err
-}
-a.httpSrv = srv
-a.emitLog(fmt.Sprintf("HTTP Server 已启动: http://%s:%d (token: %s)", host, port, token))
-return nil
+	if a.httpSrv != nil {
+		return fmt.Errorf("HTTP Server is already running")
+	}
+	if token == "" {
+		token = GenerateToken()
+	}
+	// Save and load users
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		settings = &redc.GUISettings{}
+	}
+	settings.HTTPServerToken = token
+	settings.HTTPServerPort = port
+	settings.HTTPServerHost = host
+	redc.SaveGUISettings(settings)
+
+	srv := NewHTTPServer(a, host, port, token, settings.HTTPServerUsers)
+	if err := srv.Start(assets); err != nil {
+		return err
+	}
+	a.httpSrv = srv
+	a.emitLog(fmt.Sprintf("HTTP Server 已启动: http://%s:%d (token: %s)", host, port, token))
+	return nil
 }
 
 // StopHTTPServer stops the embedded HTTP server
 func (a *App) StopHTTPServer() error {
-if a.httpSrv == nil {
-return nil
-}
-err := a.httpSrv.Stop()
-a.httpSrv = nil
-a.emitLog("HTTP Server 已停止")
-return err
+	if a.httpSrv == nil {
+		return nil
+	}
+	err := a.httpSrv.Stop()
+	a.httpSrv = nil
+	a.emitLog("HTTP Server 已停止")
+	return err
 }
 
 // GetHTTPServerStatus returns whether HTTP server is running and the access URL
 func (a *App) GetHTTPServerStatus() map[string]interface{} {
-if a.httpSrv == nil {
-return map[string]interface{}{
-"running": false,
-"url":     "",
-"token":   "",
+	if a.httpSrv == nil {
+		return map[string]interface{}{
+			"running": false,
+			"url":     "",
+			"token":   "",
+		}
+	}
+	return map[string]interface{}{
+		"running": true,
+		"url":     fmt.Sprintf("http://%s:%d", a.httpSrv.host, a.httpSrv.port),
+		"token":   a.httpSrv.token,
+	}
 }
+
+// GetHTTPServerUsers returns all configured users
+func (a *App) GetHTTPServerUsers() []redc.HTTPUser {
+	settings, err := redc.LoadGUISettings()
+	if err != nil || settings == nil {
+		return []redc.HTTPUser{}
+	}
+	return settings.HTTPServerUsers
 }
-return map[string]interface{}{
-"running": true,
-"url":     fmt.Sprintf("http://%s:%d", a.httpSrv.host, a.httpSrv.port),
-"token":   a.httpSrv.token,
+
+// AddHTTPServerUser adds a new user with auto-generated token
+func (a *App) AddHTTPServerUser(username string, role string) (redc.HTTPUser, error) {
+	if username == "" {
+		return redc.HTTPUser{}, fmt.Errorf("用户名不能为空")
+	}
+	if role != "admin" && role != "operator" && role != "viewer" {
+		return redc.HTTPUser{}, fmt.Errorf("无效的角色: %s (可选: admin/operator/viewer)", role)
+	}
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return redc.HTTPUser{}, err
+	}
+	// Check duplicate username
+	for _, u := range settings.HTTPServerUsers {
+		if u.Username == username {
+			return redc.HTTPUser{}, fmt.Errorf("用户 %s 已存在", username)
+		}
+	}
+	user := redc.HTTPUser{
+		Username: username,
+		Token:    GenerateToken(),
+		Role:     role,
+	}
+	settings.HTTPServerUsers = append(settings.HTTPServerUsers, user)
+	if err := redc.SaveGUISettings(settings); err != nil {
+		return redc.HTTPUser{}, err
+	}
+	// Hot-reload users if server is running
+	if a.httpSrv != nil {
+		a.httpSrv.users = settings.HTTPServerUsers
+	}
+	return user, nil
 }
+
+// RemoveHTTPServerUser removes a user by username
+func (a *App) RemoveHTTPServerUser(username string) error {
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return err
+	}
+	found := false
+	filtered := make([]redc.HTTPUser, 0, len(settings.HTTPServerUsers))
+	for _, u := range settings.HTTPServerUsers {
+		if u.Username == username {
+			found = true
+			continue
+		}
+		filtered = append(filtered, u)
+	}
+	if !found {
+		return fmt.Errorf("用户 %s 不存在", username)
+	}
+	settings.HTTPServerUsers = filtered
+	if err := redc.SaveGUISettings(settings); err != nil {
+		return err
+	}
+	if a.httpSrv != nil {
+		a.httpSrv.users = settings.HTTPServerUsers
+	}
+	return nil
+}
+
+// UpdateHTTPServerUser updates a user's role (regenerates token if requested)
+func (a *App) UpdateHTTPServerUser(username string, role string, regenerateToken bool) (redc.HTTPUser, error) {
+	if role != "admin" && role != "operator" && role != "viewer" {
+		return redc.HTTPUser{}, fmt.Errorf("无效的角色: %s", role)
+	}
+	settings, err := redc.LoadGUISettings()
+	if err != nil {
+		return redc.HTTPUser{}, err
+	}
+	var updated redc.HTTPUser
+	found := false
+	for i, u := range settings.HTTPServerUsers {
+		if u.Username == username {
+			settings.HTTPServerUsers[i].Role = role
+			if regenerateToken {
+				settings.HTTPServerUsers[i].Token = GenerateToken()
+			}
+			updated = settings.HTTPServerUsers[i]
+			found = true
+			break
+		}
+	}
+	if !found {
+		return redc.HTTPUser{}, fmt.Errorf("用户 %s 不存在", username)
+	}
+	if err := redc.SaveGUISettings(settings); err != nil {
+		return redc.HTTPUser{}, err
+	}
+	if a.httpSrv != nil {
+		a.httpSrv.users = settings.HTTPServerUsers
+	}
+	return updated, nil
 }

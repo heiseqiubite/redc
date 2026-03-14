@@ -549,6 +549,22 @@ export namespace main {
 
 export namespace mod {
 	
+	export class HTTPUser {
+	    username: string;
+	    token: string;
+	    role: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new HTTPUser(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.username = source["username"];
+	        this.token = source["token"];
+	        this.role = source["role"];
+	    }
+	}
 	export class AIConfig {
 	    provider: string;
 	    apiKey?: string;
