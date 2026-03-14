@@ -59,7 +59,11 @@ export function CreateProfile(arg1:string,arg2:string,arg3:string):Promise<mod.P
 
 export function CreateProject(arg1:string):Promise<void>;
 
+export function ClearAgentMemories():Promise<void>;
+
 export function CreateRemoteDirectory(arg1:string,arg2:string):Promise<void>;
+
+export function DeleteAgentMemory(arg1:number):Promise<void>;
 
 export function DeleteConfigTemplate(arg1:string):Promise<void>;
 
@@ -100,6 +104,8 @@ export function FetchRegistryTemplates(arg1:string):Promise<Array<main.RegistryT
 export function FetchTemplateReadme(arg1:string,arg2:string):Promise<string>;
 
 export function GetActiveProfile():Promise<mod.ProfileInfo>;
+
+export function GetAgentMemories():Promise<Array<any>>;
 
 export function GetAllCaseTags():Promise<Record<string, Array<string>>>;
 
@@ -361,7 +367,7 @@ export function UpdatePlugin(arg1:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 
-export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean):Promise<void>;
+export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean,arg8:boolean):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 

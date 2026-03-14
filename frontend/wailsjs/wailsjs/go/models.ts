@@ -838,6 +838,7 @@ export namespace mod {
 	    model: string;
 	    maxToolRounds?: number;
 	    enableAskUser?: boolean;
+	    enableMemory?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AIConfig(source);
@@ -851,6 +852,7 @@ export namespace mod {
 	        this.model = source["model"];
 	        this.maxToolRounds = source["maxToolRounds"];
 	        this.enableAskUser = source["enableAskUser"];
+	        this.enableMemory = source["enableMemory"];
 	    }
 	}
 	export class VariableValidation {
@@ -1174,6 +1176,28 @@ export namespace mod {
 	        this.memory = source["memory"];
 	        this.description = source["description"];
 	        this.price = source["price"];
+	    }
+	}
+	export class MemoryItem {
+	    id: number;
+	    project: string;
+	    category: string;
+	    content: string;
+	    source: string;
+	    createdAt: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new MemoryItem(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.project = source["project"];
+	        this.category = source["category"];
+	        this.content = source["content"];
+	        this.source = source["source"];
+	        this.createdAt = source["createdAt"];
 	    }
 	}
 	export class ProfileInfo {

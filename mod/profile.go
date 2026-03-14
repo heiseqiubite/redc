@@ -30,6 +30,7 @@ type AIConfig struct {
 	Model         string `json:"model"`
 	MaxToolRounds int    `json:"maxToolRounds,omitempty"`
 	EnableAskUser *bool  `json:"enableAskUser,omitempty"`
+	EnableMemory  *bool  `json:"enableMemory,omitempty"`
 }
 
 type profilePayload struct {

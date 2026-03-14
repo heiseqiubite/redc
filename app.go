@@ -38,6 +38,7 @@ type App struct {
 	templateManager         *redc.TemplateManager
 	configStore             *redc.ConfigStore
 	pluginMgr               *plugin.PluginManager
+	memoryStore             *redc.MemoryStore
 	disableRightClick       bool
 	httpSrv                 *HTTPServer
 	wailsMode               bool // true when running inside Wails desktop
@@ -266,6 +267,14 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	fmt.Printf("[INFO] %s\n", i18n.T("app_deploy_service_init_success"))
+
+	// Initialize agent memory store
+	if ms, err := redc.NewMemoryStore(); err == nil {
+		a.memoryStore = ms
+		fmt.Println("[INFO] Agent memory store initialized")
+	} else {
+		fmt.Printf("[WARN] Agent memory store init failed: %v\n", err)
+	}
 
 	// Start spot instance termination monitor (if enabled in settings)
 	if settings, err := redc.LoadGUISettings(); err == nil && settings.SpotMonitorEnabled {

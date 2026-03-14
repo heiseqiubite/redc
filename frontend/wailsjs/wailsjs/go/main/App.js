@@ -50,6 +50,10 @@ export function CheckForUpdates() {
   return window['go']['main']['App']['CheckForUpdates']();
 }
 
+export function ClearAgentMemories() {
+  return window['go']['main']['App']['ClearAgentMemories']();
+}
+
 export function CloneCase(arg1, arg2) {
   return window['go']['main']['App']['CloneCase'](arg1, arg2);
 }
@@ -108,6 +112,10 @@ export function CreateProject(arg1) {
 
 export function CreateRemoteDirectory(arg1, arg2) {
   return window['go']['main']['App']['CreateRemoteDirectory'](arg1, arg2);
+}
+
+export function DeleteAgentMemory(arg1) {
+  return window['go']['main']['App']['DeleteAgentMemory'](arg1);
 }
 
 export function DeleteConfigTemplate(arg1) {
@@ -188,6 +196,10 @@ export function FetchTemplateReadme(arg1, arg2) {
 
 export function GetActiveProfile() {
   return window['go']['main']['App']['GetActiveProfile']();
+}
+
+export function GetAgentMemories() {
+  return window['go']['main']['App']['GetAgentMemories']();
 }
 
 export function GetAllCaseTags() {
@@ -714,8 +726,8 @@ export function UpdateProfile(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateProfile'](arg1, arg2, arg3, arg4);
 }
 
-export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
-  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
+export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8) {
+  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8);
 }
 
 export function UploadFile(arg1, arg2, arg3) {
