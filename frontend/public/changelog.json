@@ -4,7 +4,8 @@
       "version": "3.1.4",
       "date": "2026-03-15",
       "changes": [
-        "新增：Shadowsocks-libev Userdata 模板 — 从 proxy 预定义模板中提取独立 userdata 模板，参数化 SS_PORT/SS_PASSWORD/SS_METHOD 环境变量，修复重复 apt install、添加 apt lock 等待",
+        "新增：Agent ask_user 人机协作工具 — AI Agent 遇到需要用户决策的问题时（如网络故障多种解决方案、费用确认、多方案选择），自动弹出交互卡片展示 AI 生成的选项建议，用户可点选或自由输入，回答后 Agent 继续执行",
+        "新增：ask_user 功能开关 — 凭据管理页 AI 配置区新增「Agent 人机协作决策」开关，默认开启，关闭后 Agent 不再向用户询问，适合全自动执行场景",
         "新增：AI 对话消息时间戳 — 用户消息右下角、助手消息左下角显示发送时间，当天显示 HH:MM，跨天显示日期+时间",
         "优化：MCP 工具安全增强 — stop_case 要求目标状态为 running，kill_case 拒绝已 stopped 的场景；工具描述增加状态前置条件说明",
         "优化：AI Agent 作用域限制 — 系统提示词新增「仅操作当前对话创建的场景」和「状态感知」规则，防止误操作未关联的场景",

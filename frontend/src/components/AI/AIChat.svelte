@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { marked } from 'marked';
-  import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog } from '../../../wailsjs/go/main/App.js';
+  import { AIChatStream, AgentChatStream, DeployAgentChatStream, StopAgentStream, SaveTemplateFiles, ExportChatLog, SubmitAskUserResponse } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
 
   let { t, onTabChange = () => {}, visible = true } = $props();
@@ -27,6 +27,8 @@
   let successMessage = $state('');
   let messagesContainer = $state(null);
   let agentToolCalls = $state([]);  // { id, toolName, toolArgs, status: 'calling'|'success'|'error', content }
+  let askUserPending = $state(null); // { conversationId, toolCallId, question, choices, allowFreeform }
+  let askUserInput = $state('');
 
   // Conversation history state
   let conversations = $state([]);   // Array of { id, title, mode, messages, updatedAt }
@@ -235,6 +237,7 @@
         isStreaming = false;
         currentConversationId = '';
         agentToolCalls = [];
+        askUserPending = null;
         syncCurrentConversation();
       }
     });
@@ -263,6 +266,20 @@
       }
     });
 
+    EventsOn('ai-agent-ask-user', (data) => {
+      if (data.conversationId === currentConversationId) {
+        askUserPending = {
+          conversationId: data.conversationId,
+          toolCallId: data.toolCallId,
+          question: data.question,
+          choices: data.choices || [],
+          allowFreeform: data.allowFreeform !== false,
+        };
+        askUserInput = '';
+        scrollToBottom();
+      }
+    });
+
     // Check for pending terminal text on initial mount
     checkPendingTerminalText();
     checkPendingErrorAnalysis();
@@ -276,6 +293,7 @@
     EventsOff('ai-chat-complete');
     EventsOff('ai-agent-tool-call');
     EventsOff('ai-agent-tool-result');
+    EventsOff('ai-agent-ask-user');
     window.removeEventListener('storage', handleStorage);
   });
 
@@ -374,6 +392,22 @@
     }
   }
 
+  // Submit answer for ask_user tool
+  function submitAskUserAnswer(answer) {
+    if (!askUserPending) return;
+    const { conversationId, toolCallId } = askUserPending;
+    // Update the tool call card to show user's answer
+    agentToolCalls = agentToolCalls.map(tc =>
+      tc.id === toolCallId
+        ? { ...tc, status: 'success', content: answer }
+        : tc
+    );
+    askUserPending = null;
+    askUserInput = '';
+    SubmitAskUserResponse(conversationId, answer);
+    scrollToBottom();
+  }
+
   // Send message
   async function sendMessage() {
     const text = inputText.trim();
@@ -410,6 +444,7 @@
       streamingContent = '';
       currentConversationId = '';
       agentToolCalls = [];
+      askUserPending = null;
     }
 
     syncCurrentConversation();
@@ -531,7 +566,8 @@
     get_case_outputs: '获取输出', get_config: '获取配置', validate_config: '验证配置',
     list_userdata_templates: '列出部署脚本', exec_userdata: '执行部署脚本',
     save_compose_file: '保存编排文件', compose_preview: '预览编排', compose_up: '启动编排', compose_down: '销毁编排',
-    save_template_files: '保存模板文件'
+    save_template_files: '保存模板文件',
+    ask_user: '用户决策',
   };
 
   function getToolDisplayName(name) {
@@ -698,6 +734,20 @@
                     {#if msg.toolCalls && msg.toolCalls.length > 0}
                       <div class="mb-2 space-y-1.5">
                         {#each msg.toolCalls as tc}
+                          {#if tc.toolName === 'ask_user'}
+                            <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-blue-50/60 border-blue-200' : 'bg-blue-50 border-blue-300'}">
+                              <span class="text-[11px] mt-0.5">💬</span>
+                              <div class="flex-1 min-w-0">
+                                <div class="text-[12px] font-medium text-blue-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
+                                {#if tc.toolArgs?.question}
+                                  <div class="text-[12px] text-gray-700 mt-0.5">{tc.toolArgs.question}</div>
+                                {/if}
+                                {#if tc.content}
+                                  <div class="mt-1 text-[12px] font-medium text-blue-800 bg-white rounded px-2 py-1 border border-blue-100">↩ {tc.content}</div>
+                                {/if}
+                              </div>
+                            </div>
+                          {:else}
                           <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-gray-50 border-gray-200'}">
                             <span class="text-[11px] mt-0.5">
                               {#if tc.status === 'success'}✅{:else if tc.status === 'error'}❌{:else}⏳{/if}
@@ -715,6 +765,7 @@
                               {/if}
                             </div>
                           </div>
+                          {/if}
                         {/each}
                       </div>
                     {/if}
@@ -773,6 +824,24 @@
                   {#if agentToolCalls.length > 0}
                     <div class="mb-2 space-y-1.5">
                       {#each agentToolCalls as tc (tc.id)}
+                        {#if tc.toolName === 'ask_user'}
+                          <div class="flex items-start gap-2 px-3 py-2 rounded-lg border-2 {tc.status === 'success' ? 'bg-blue-50/60 border-blue-200' : 'bg-blue-50 border-blue-300'}">
+                            <span class="text-[11px] mt-0.5">
+                              {#if tc.status === 'calling'}
+                                <svg class="w-3.5 h-3.5 animate-pulse text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                              {:else}💬{/if}
+                            </span>
+                            <div class="flex-1 min-w-0">
+                              <div class="text-[12px] font-medium text-blue-700">{t.askUserTitle || 'AI 需要你的决策'}</div>
+                              {#if tc.toolArgs?.question}
+                                <div class="text-[12px] text-gray-700 mt-0.5">{tc.toolArgs.question}</div>
+                              {/if}
+                              {#if tc.content}
+                                <div class="mt-1 text-[12px] font-medium text-blue-800 bg-white rounded px-2 py-1 border border-blue-100">↩ {tc.content}</div>
+                              {/if}
+                            </div>
+                          </div>
+                        {:else}
                         <div class="flex items-start gap-2 px-3 py-2 rounded-lg border {tc.status === 'success' ? 'bg-emerald-50 border-emerald-200' : tc.status === 'error' ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}">
                           <span class="text-[11px] mt-0.5">
                             {#if tc.status === 'calling'}
@@ -793,7 +862,51 @@
                             {/if}
                           </div>
                         </div>
+                        {/if}
                       {/each}
+                    </div>
+                  {/if}
+                  <!-- ask_user interactive card -->
+                  {#if askUserPending}
+                    <div class="mb-2 px-4 py-3 rounded-xl border-2 border-blue-300 bg-blue-50/80">
+                      <div class="flex items-center gap-2 mb-2">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-[13px] font-semibold text-blue-900">{t.askUserTitle || 'AI 需要你的决策'}</span>
+                      </div>
+                      <p class="text-[13px] text-gray-800 mb-3 leading-relaxed">{askUserPending.question}</p>
+                      {#if askUserPending.choices.length > 0}
+                        <div class="flex flex-col gap-1.5 mb-3">
+                          {#each askUserPending.choices as choice, i}
+                            <button
+                              class="w-full text-left px-3 py-2 text-[13px] bg-white border border-blue-200 rounded-lg hover:bg-blue-100 hover:border-blue-400 transition-colors cursor-pointer"
+                              onclick={() => submitAskUserAnswer(choice)}
+                            >
+                              <span class="inline-flex items-center justify-center w-5 h-5 text-[11px] font-semibold text-blue-600 bg-blue-100 rounded-full mr-2">{i + 1}</span>
+                              {choice}
+                            </button>
+                          {/each}
+                        </div>
+                      {/if}
+                      {#if askUserPending.allowFreeform}
+                        <div class="flex items-center gap-2">
+                          <input
+                            type="text"
+                            class="flex-1 px-3 py-2 text-[13px] bg-white border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow placeholder-gray-400"
+                            placeholder={t.askUserInputPlaceholder || '或输入你的想法...'}
+                            bind:value={askUserInput}
+                            onkeydown={(e) => { if (e.key === 'Enter' && askUserInput.trim()) { submitAskUserAnswer(askUserInput.trim()); } }}
+                          />
+                          <button
+                            class="px-3 py-2 text-[13px] font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 cursor-pointer"
+                            disabled={!askUserInput.trim()}
+                            onclick={() => submitAskUserAnswer(askUserInput.trim())}
+                          >
+                            {t.send || '发送'}
+                          </button>
+                        </div>
+                      {/if}
                     </div>
                   {/if}
                   <div class="px-4 py-2.5 rounded-2xl rounded-tl-md bg-white border border-gray-100">

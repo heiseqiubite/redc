@@ -337,6 +337,8 @@ export function StartSSHTerminalInstance(arg1:string,arg2:number,arg3:number,arg
 
 export function StopAgentStream(arg1:string):Promise<void>;
 
+export function SubmitAskUserResponse(arg1:string,arg2:string):Promise<void>;
+
 export function StopCase(arg1:string):Promise<void>;
 
 export function StopCustomDeployment(arg1:string):Promise<void>;
@@ -359,7 +361,7 @@ export function UpdatePlugin(arg1:string):Promise<void>;
 
 export function UpdateProfile(arg1:string,arg2:string,arg3:string,arg4:string):Promise<mod.ProfileInfo>;
 
-export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number):Promise<void>;
+export function UpdateProfileAIConfig(arg1:string,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:boolean):Promise<void>;
 
 export function UploadFile(arg1:string,arg2:string,arg3:string):Promise<main.FileTransferResult>;
 

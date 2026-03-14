@@ -28,7 +28,8 @@ let { t } = $props();
     apiKey: '',
     baseUrl: '',
     model: '',
-    maxToolRounds: 0
+    maxToolRounds: 0,
+    enableAskUser: true
   });
   let aiConfigSaving = $state(false);
   let aiConfigSaved = $state(false);
@@ -85,7 +86,8 @@ let { t } = $props();
             apiKey: active.aiConfig.apiKey || '',
             baseUrl: active.aiConfig.baseUrl || aiProviderPresets[active.aiConfig.provider || 'openai'].baseUrl,
             model: active.aiConfig.model || aiProviderPresets[active.aiConfig.provider || 'openai'].defaultModel,
-            maxToolRounds: active.aiConfig.maxToolRounds || 0
+            maxToolRounds: active.aiConfig.maxToolRounds || 0,
+            enableAskUser: active.aiConfig.enableAskUser !== false
           };
         } else {
           const preset = aiProviderPresets['openai'];
@@ -94,7 +96,8 @@ let { t } = $props();
             apiKey: '',
             baseUrl: preset.baseUrl,
             model: preset.defaultModel,
-            maxToolRounds: 0
+            maxToolRounds: 0,
+            enableAskUser: true
           };
         }
         customConfigPath = profileForm.configPath;
@@ -200,7 +203,7 @@ let { t } = $props();
     aiConfigSaving = true;
     aiConfigSaved = false;
     try {
-      await UpdateProfileAIConfig(activeProfileId, aiConfig.provider, aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, aiConfig.maxToolRounds || 0);
+      await UpdateProfileAIConfig(activeProfileId, aiConfig.provider, aiConfig.apiKey, aiConfig.baseUrl, aiConfig.model, aiConfig.maxToolRounds || 0, aiConfig.enableAskUser !== false);
       aiConfigSaved = true;
       setTimeout(() => { aiConfigSaved = false; }, 2000);
     } catch (e) {
@@ -606,6 +609,23 @@ let { t } = $props();
             <span class="text-[12px] font-mono text-gray-700 w-8 text-center">{aiConfig.maxToolRounds || 50}</span>
           </div>
           <p class="text-[10px] text-gray-500 mt-1">{t.aiMaxToolRoundsHint || 'Agent/开源部署模式下的最大工具调用轮次，0 为使用默认值'}</p>
+        </div>
+        <div class="flex items-center justify-between">
+          <div>
+            <label class="block text-[11px] font-medium text-gray-500">{t.enableAskUser || 'Agent 人机协作决策'}</label>
+            <p class="text-[10px] text-gray-500 mt-0.5">{t.enableAskUserHint || 'Agent 遇到需要决策的问题时暂停并向用户询问'}</p>
+          </div>
+          <button
+            type="button"
+            class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"
+            class:bg-emerald-500={aiConfig.enableAskUser}
+            class:bg-gray-300={!aiConfig.enableAskUser}
+            onclick={() => { aiConfig.enableAskUser = !aiConfig.enableAskUser; }}
+          >
+            <span class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform"
+              class:translate-x-5={aiConfig.enableAskUser}
+              class:translate-x-1={!aiConfig.enableAskUser}></span>
+          </button>
         </div>
       </div>
       {#if !activeProfileId}

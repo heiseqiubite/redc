@@ -29,6 +29,7 @@ type AIConfig struct {
 	BaseURL       string `json:"baseUrl"`
 	Model         string `json:"model"`
 	MaxToolRounds int    `json:"maxToolRounds,omitempty"`
+	EnableAskUser *bool  `json:"enableAskUser,omitempty"`
 }
 
 type profilePayload struct {

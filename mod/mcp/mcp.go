@@ -92,9 +92,10 @@ type ToolSchema struct {
 }
 
 type Property struct {
-	Type        string   `json:"type"`
-	Description string   `json:"description"`
-	Enum        []string `json:"enum,omitempty"`
+	Type        string    `json:"type"`
+	Description string    `json:"description"`
+	Enum        []string  `json:"enum,omitempty"`
+	Items       *Property `json:"items,omitempty"`
 }
 
 // Tool call parameters
@@ -642,6 +643,31 @@ func (s *MCPServer) getTools() []Tool {
 		})
 	}
 
+	// --- Human-in-the-loop tool ---
+	tools = append(tools, Tool{
+		Name:        "ask_user",
+		Description: "Ask the user a question and wait for their response. Use this when you encounter a decision point that requires user input: network issues with multiple solutions, multiple valid deployment approaches, cost/risk confirmations, or when a previous command failed and you need user guidance. Provide clear choices when possible. Do NOT use this for routine confirmations — only for genuine decision points.",
+		InputSchema: ToolSchema{
+			Type: "object",
+			Properties: map[string]Property{
+				"question": {
+					Type:        "string",
+					Description: "The question to ask the user. Be specific and provide context about the situation.",
+				},
+				"choices": {
+					Type:        "array",
+					Description: "List of suggested choices for the user. Each choice should be a clear, actionable option. Optional but recommended.",
+					Items:       &Property{Type: "string"},
+				},
+				"allow_freeform": {
+					Type:        "boolean",
+					Description: "Whether to allow freeform text input in addition to choices. Defaults to true.",
+				},
+			},
+			Required: []string{"question"},
+		},
+	})
+
 	return tools
 }
 
@@ -1071,7 +1097,22 @@ func (s *MCPServer) toolListTemplates() (ToolResult, error) {
 
 	output := "Available templates:\n"
 	for _, dir := range dirs {
-		output += fmt.Sprintf("- %s\n", dir)
+		desc := ""
+		caseFile := filepath.Join(dir, "case.json")
+		if data, err := os.ReadFile(caseFile); err == nil {
+			var meta struct {
+				Description string `json:"description"`
+				Arch        string `json:"arch"`
+			}
+			if json.Unmarshal(data, &meta) == nil && meta.Description != "" {
+				desc = meta.Description
+			}
+		}
+		if desc != "" {
+			output += fmt.Sprintf("- %s — %s\n", dir, desc)
+		} else {
+			output += fmt.Sprintf("- %s\n", dir)
+		}
 	}
 
 	return ToolResult{

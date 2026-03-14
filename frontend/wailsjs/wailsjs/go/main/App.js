@@ -686,6 +686,10 @@ export function StopPortForward(arg1) {
   return window['go']['main']['App']['StopPortForward'](arg1);
 }
 
+export function SubmitAskUserResponse(arg1, arg2) {
+  return window['go']['main']['App']['SubmitAskUserResponse'](arg1, arg2);
+}
+
 export function SwitchProject(arg1) {
   return window['go']['main']['App']['SwitchProject'](arg1);
 }
@@ -710,8 +714,8 @@ export function UpdateProfile(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['UpdateProfile'](arg1, arg2, arg3, arg4);
 }
 
-export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6) {
-  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6);
+export function UpdateProfileAIConfig(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {
+  return window['go']['main']['App']['UpdateProfileAIConfig'](arg1, arg2, arg3, arg4, arg5, arg6, arg7);
 }
 
 export function UploadFile(arg1, arg2, arg3) {

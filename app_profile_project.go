@@ -336,13 +336,14 @@ func (a *App) DeleteProfile(profileID string) error {
 	return redc.DeleteProfile(profileID)
 }
 
-func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int) error {
+func (a *App) UpdateProfileAIConfig(profileID string, provider string, apiKey string, baseUrl string, model string, maxToolRounds int, enableAskUser bool) error {
 	aiConfig := &redc.AIConfig{
 		Provider:      provider,
 		APIKey:        apiKey,
 		BaseURL:       baseUrl,
 		Model:         model,
 		MaxToolRounds: maxToolRounds,
+		EnableAskUser: &enableAskUser,
 	}
 	return redc.UpdateProfileAIConfig(profileID, aiConfig)
 }

@@ -837,6 +837,7 @@ export namespace mod {
 	    baseUrl: string;
 	    model: string;
 	    maxToolRounds?: number;
+	    enableAskUser?: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AIConfig(source);
@@ -849,6 +850,7 @@ export namespace mod {
 	        this.baseUrl = source["baseUrl"];
 	        this.model = source["model"];
 	        this.maxToolRounds = source["maxToolRounds"];
+	        this.enableAskUser = source["enableAskUser"];
 	    }
 	}
 	export class VariableValidation {

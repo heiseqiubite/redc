@@ -24,6 +24,12 @@ var agentCancelMap = struct {
 	m map[string]context.CancelFunc
 }{m: make(map[string]context.CancelFunc)}
 
+// askUserChannels stores channels for ask_user tool responses, keyed by conversationId
+var askUserChannels = struct {
+	sync.Mutex
+	m map[string]chan string
+}{m: make(map[string]chan string)}
+
 // AIChatMessage represents a single message in the AI chat conversation
 type AIChatMessage struct {
 	Role    string `json:"role"`
@@ -162,6 +168,19 @@ func (a *App) StopAgentStream(conversationId string) {
 	agentCancelMap.Unlock()
 }
 
+// SubmitAskUserResponse sends user's answer back to a waiting ask_user tool call
+func (a *App) SubmitAskUserResponse(conversationId string, answer string) {
+	askUserChannels.Lock()
+	ch, ok := askUserChannels.m[conversationId]
+	askUserChannels.Unlock()
+	if ok {
+		select {
+		case ch <- answer:
+		default:
+		}
+	}
+}
+
 // ExportChatLog saves chat log content to a user-selected file
 func (a *App) ExportChatLog(content string) error {
 	filename := fmt.Sprintf("redc-chat-%s.md", time.Now().Format("20060102-150405"))
@@ -219,8 +238,12 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 	// Build tool definitions from MCP server
 	mcpServer := mcp.NewMCPServer(project, a)
 	mcpTools := mcpServer.GetTools()
+	enableAskUser := aiConfig.EnableAskUser == nil || *aiConfig.EnableAskUser // default true
 	toolDefs := make([]ai.ToolDefinition, 0, len(mcpTools))
 	for _, t := range mcpTools {
+		if t.Name == "ask_user" && !enableAskUser {
+			continue
+		}
 		params := map[string]interface{}{
 			"type":       t.InputSchema.Type,
 			"properties": t.InputSchema.Properties,
@@ -356,6 +379,51 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				// Report JSON parse failure as tool result so AI knows the root cause
 				resultContent = fmt.Sprintf("工具参数 JSON 解析失败: %v\n原始参数: %s", jsonParseErr, tc.Function.Arguments)
 				success = false
+			} else if tc.Function.Name == "ask_user" {
+				// Special handling: pause loop, emit event, wait for user response
+				question, _ := args["question"].(string)
+				var choices []string
+				if rawChoices, ok := args["choices"].([]interface{}); ok {
+					for _, c := range rawChoices {
+						if s, ok := c.(string); ok {
+							choices = append(choices, s)
+						}
+					}
+				}
+				allowFreeform := true
+				if af, ok := args["allow_freeform"].(bool); ok {
+					allowFreeform = af
+				}
+
+				// Create response channel
+				ch := make(chan string, 1)
+				askUserChannels.Lock()
+				askUserChannels.m[conversationId] = ch
+				askUserChannels.Unlock()
+				defer func() {
+					askUserChannels.Lock()
+					delete(askUserChannels.m, conversationId)
+					askUserChannels.Unlock()
+				}()
+
+				// Emit ask_user event to frontend
+				a.emitEvent("ai-agent-ask-user", map[string]interface{}{
+					"conversationId": conversationId,
+					"toolCallId":     tc.ID,
+					"question":       question,
+					"choices":        choices,
+					"allowFreeform":  allowFreeform,
+				})
+
+				// Wait for user response or cancellation
+				select {
+				case answer := <-ch:
+					resultContent = answer
+					success = true
+				case <-ctx.Done():
+					resultContent = "用户未回答，操作已取消"
+					success = false
+				}
 			} else {
 				result, execErr := mcpServer.ExecuteTool(tc.Function.Name, args)
 				success = execErr == nil
