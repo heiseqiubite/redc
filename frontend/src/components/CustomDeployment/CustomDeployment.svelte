@@ -271,21 +271,6 @@
 </script>
 
 <div class="space-y-5">
-  <!-- Experimental Feature Notice -->
-  <div class="bg-amber-50 border border-amber-200 rounded-lg p-4">
-    <div class="flex items-start gap-3">
-      <svg class="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
-      </svg>
-      <div class="flex-1">
-        <h3 class="text-[13px] font-semibold text-amber-900">{t.experimentalFeature || '实验性功能'}</h3>
-        <p class="text-[12px] text-amber-700 mt-1">
-          {t.experimentalFeatureDesc || '自定义部署功能目前处于实验阶段，可能存在不稳定情况。请谨慎使用于生产环境。'}
-        </p>
-      </div>
-    </div>
-  </div>
-
   <!-- Tabs -->
   <div class="flex gap-2 border-b border-gray-100">
     <button

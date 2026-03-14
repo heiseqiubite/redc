@@ -290,6 +290,7 @@ export const i18n = {
     allRightsReserved: '版权所有',
     // Custom Deployment
     customDeployment: '自定义部署', experimentalFeature: '实验性功能', createDeployment: '创建部署',
+    searchDeployments: '搜索部署...', noDeployments: '暂无自定义部署', noDeploymentsHint: '切换到「创建部署」标签页开始你的第一个自定义部署',
     deploymentManagement: '部署管理', importTemplate: '导入模板', exportTemplate: '导出模板',
     customDeploymentList: '自定义部署列表', batchOperation: '批量操作', exitBatch: '退出批量',
     retry: '重试',
@@ -677,6 +678,7 @@ export const i18n = {
     allRightsReserved: 'All rights reserved',
     // Custom Deployment
     customDeployment: 'Custom Deployment', experimentalFeature: 'Experimental Feature', createDeployment: 'Create Deployment',
+    searchDeployments: 'Search deployments...', noDeployments: 'No custom deployments', noDeploymentsHint: 'Switch to the "Create Deployment" tab to start your first custom deployment',
     deploymentManagement: 'Deployment Management', importTemplate: 'Import Template', exportTemplate: 'Export Template',
     customDeploymentList: 'Custom Deployment List', batchOperation: 'Batch Operation', exitBatch: 'Exit Batch',
     retry: 'Retry',

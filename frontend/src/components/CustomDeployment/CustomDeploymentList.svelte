@@ -29,7 +29,6 @@
   let expandedDeploymentId = $state('');
   let deploymentOutputs = $state<Record<string, any>>({});
   let selectedDeploymentIds = $state<Set<string>>(new Set());
-  let batchMode = $state(false);
   let batchOperating = $state(false);
   let batchDeleteConfirm = $state({ show: false, count: 0 });
   let batchStopConfirm = $state({ show: false, count: 0 });
@@ -66,6 +65,21 @@
   let tagEditId = $state<string | null>(null);
   let tagInput = $state('');
   let filteredDeployments = $derived(selectedTag ? deployments.filter(d => (caseTags[d.id] || []).includes(selectedTag)) : deployments);
+  let deploymentSearch = $state('');
+  let deploymentStatusFilter = $state('all');
+  let deploymentStatusCounts = $derived({
+    all: filteredDeployments.length,
+    running: filteredDeployments.filter(d => d.state === 'running').length,
+    stopped: filteredDeployments.filter(d => d.state === 'stopped' || d.state === 'pending').length,
+    error: filteredDeployments.filter(d => d.state === 'error').length,
+  });
+  let visibleDeployments = $derived(
+    filteredDeployments.filter(d => {
+      const matchSearch = !deploymentSearch || d.name.toLowerCase().includes(deploymentSearch.toLowerCase()) || d.id.toLowerCase().includes(deploymentSearch.toLowerCase()) || (d.template_name || '').toLowerCase().includes(deploymentSearch.toLowerCase());
+      const matchStatus = deploymentStatusFilter === 'all' || (deploymentStatusFilter === 'running' && d.state === 'running') || (deploymentStatusFilter === 'stopped' && (d.state === 'stopped' || d.state === 'pending')) || (deploymentStatusFilter === 'error' && d.state === 'error');
+      return matchSearch && matchStatus;
+    })
+  );
 
   // Clone dialog state
   let cloneDialog = $state({ show: false, deploymentId: '', cloneName: '', sourceName: '' });
@@ -217,11 +231,7 @@
   }
 
   function handleSelectDeployment(deployment: CustomDeployment) {
-    if (batchMode) {
-      toggleDeploymentSelection(deployment.id);
-    } else {
-      toggleDeploymentExpand(deployment.id);
-    }
+    toggleDeploymentExpand(deployment.id);
   }
 
   async function toggleDeploymentExpand(deploymentId: string) {
@@ -550,21 +560,6 @@
     }
   }
 
-  function toggleBatchMode() {
-    batchMode = !batchMode;
-    if (!batchMode) {
-      selectedDeploymentIds = new Set();
-    }
-  }
-
-  function selectAll() {
-    selectedDeploymentIds = new Set(deployments.map(d => d.id));
-  }
-
-  function deselectAll() {
-    selectedDeploymentIds = new Set();
-  }
-
   function getSelectedDeployments(): CustomDeployment[] {
     return deployments.filter(d => selectedDeploymentIds.has(d.id));
   }
@@ -632,7 +627,7 @@
   // Export batch selection info for parent component
   export function getBatchSelection() {
     return {
-      mode: batchMode,
+      mode: selectedDeploymentIds.size > 0,
       selectedIds: Array.from(selectedDeploymentIds),
       selectedDeployments: getSelectedDeployments()
     };
@@ -679,154 +674,200 @@
   }
 </script>
 
-<div class="deployment-list">
-  <div class="list-header">
-    <div class="header-left">
-      <h3>{t.customDeploymentList || '自定义部署列表'}</h3>
-      {#if batchMode && selectedDeploymentIds.size > 0}
-        <span class="selection-count">已选择 {selectedDeploymentIds.size} 项</span>
-      {/if}
-    </div>
-    <div class="header-actions">
-      <button 
-        class="btn-batch-mode" 
-        class:active={batchMode}
-        onclick={toggleBatchMode}
-      >
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+<div class="bg-white rounded-xl border border-gray-100 overflow-hidden flex flex-col h-full">
+  <!-- Search + Status Tabs -->
+  <div class="px-5 py-3 border-b border-gray-100">
+    <div class="flex items-center gap-3">
+      <div class="relative flex-1 max-w-xs">
+        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
         </svg>
-        {batchMode ? (t.exitBatch || '退出批量') : (t.batchOperation || '批量操作')}
-      </button>
-      {#if batchMode}
-        <button class="btn-select-all" onclick={selectAll}>{t.selectAll || '全选'}</button>
-        <button class="btn-deselect-all" onclick={deselectAll}>{t.deselectAll || '取消全选'}</button>
+        <input
+          type="text"
+          placeholder={t.searchDeployments || '搜索部署...'}
+          class="w-full h-8 pl-9 pr-3 text-[12px] bg-gray-50 border border-gray-200 rounded-lg text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow"
+          bind:value={deploymentSearch}
+        />
+        {#if deploymentSearch}
+          <button class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 cursor-pointer" onclick={() => deploymentSearch = ''}>
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
+        {/if}
+      </div>
+      <div class="flex items-center gap-1 bg-gray-50 rounded-lg p-0.5">
+        {#each [
+          { key: 'all', label: t.tagFilterAll || '全部' },
+          { key: 'running', label: t.running || '运行中' },
+          { key: 'stopped', label: t.stopped || '已停止' },
+          { key: 'error', label: t.error || '错误' },
+        ] as tab}
+          <button
+            class="px-2.5 py-1 text-[11px] font-medium rounded-md transition-colors cursor-pointer
+              {deploymentStatusFilter === tab.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+            onclick={() => { deploymentStatusFilter = tab.key; selectedDeploymentIds = new Set(); }}
+          >
+            {tab.label}
+            <span class="ml-1 text-[10px] {deploymentStatusFilter === tab.key ? 'text-gray-500' : 'text-gray-400'}">{deploymentStatusCounts[tab.key]}</span>
+          </button>
+        {/each}
+      </div>
+      <div class="ml-auto">
         <button
-          class="px-4 py-2 text-[13px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md hover:bg-emerald-100 transition-colors disabled:opacity-50"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-[12px] text-gray-600 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors disabled:opacity-50 cursor-pointer"
+          onclick={handleRefresh}
+          disabled={loading}
+        >
+          <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          {t.refresh || '刷新'}
+        </button>
+      </div>
+    </div>
+  </div>
+  <!-- Tag Filter Bar -->
+  {#if allTagNames.length > 0}
+    <div class="px-5 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
+      <span class="text-[11px] text-gray-400 mr-1">{t.tags || '标签'}:</span>
+      <button
+        class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === '' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+        onclick={() => { selectedTag = ''; }}
+      >{t.tagFilterAll || '全部'}</button>
+      {#each allTagNames as tag}
+        <button
+          class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === tag ? 'bg-gray-900 text-white' : getTagColor(tag)}"
+          onclick={() => { selectedTag = selectedTag === tag ? '' : tag; }}
+        >{tag}</button>
+      {/each}
+    </div>
+  {/if}
+  <!-- Batch Operations Bar -->
+  {#if selectedDeploymentIds.size > 0}
+    <div class="px-5 py-3 bg-blue-50 border-b border-blue-100 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-[13px] font-medium text-blue-900">
+          {t.selected || '已选择'} {selectedDeploymentIds.size} {t.items || '项'}
+        </span>
+        <button
+          class="text-[12px] text-blue-600 hover:text-blue-800 underline cursor-pointer"
+          onclick={() => { selectedDeploymentIds = new Set(); }}
+        >
+          {t.clearSelection || '清除选择'}
+        </button>
+      </div>
+      <div class="flex items-center gap-2">
+        <button
+          class="px-3 py-1.5 text-[12px] font-medium text-emerald-700 bg-emerald-50 rounded-md hover:bg-emerald-100 transition-colors disabled:opacity-50 cursor-pointer"
           onclick={handleBatchStart}
-          disabled={batchOperating || selectedDeploymentIds.size === 0}
+          disabled={batchOperating}
         >
           {t.batchStart || '批量启动'}
         </button>
         <button
-          class="px-4 py-2 text-[13px] font-medium text-amber-700 bg-amber-50 border border-amber-200 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50"
+          class="px-3 py-1.5 text-[12px] font-medium text-amber-700 bg-amber-50 rounded-md hover:bg-amber-100 transition-colors disabled:opacity-50 cursor-pointer"
           onclick={showBatchStopConfirm}
-          disabled={batchOperating || selectedDeploymentIds.size === 0}
+          disabled={batchOperating}
         >
           {t.batchStop || '批量停止'}
         </button>
         <button
-          class="px-4 py-2 text-[13px] font-medium text-red-700 bg-red-50 border border-red-200 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50"
+          class="px-3 py-1.5 text-[12px] font-medium text-red-700 bg-red-50 rounded-md hover:bg-red-100 transition-colors disabled:opacity-50 cursor-pointer"
           onclick={showBatchDeleteConfirm}
-          disabled={batchOperating || selectedDeploymentIds.size === 0}
+          disabled={batchOperating}
         >
           {t.batchDelete || '批量删除'}
         </button>
-      {/if}
-      <button class="btn-refresh" onclick={handleRefresh} disabled={loading}>
-        <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        {t.refresh || '刷新'}
-      </button>
+      </div>
     </div>
-  </div>
+  {/if}
 
   {#if loading}
-    <div class="loading">
-      <div class="spinner"></div>
-      <p>加载中...</p>
+    <div class="flex flex-col items-center justify-center py-16 text-gray-500">
+      <svg class="w-8 h-8 animate-spin text-blue-500 mb-4" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+      </svg>
+      <p class="text-[13px]">{t.loading || '加载中...'}</p>
     </div>
   {:else if error}
-    <div class="error-message">
-      <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    <div class="flex flex-col items-center justify-center py-16 text-red-600">
+      <svg class="w-10 h-10 mb-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
       </svg>
-      <p>{error}</p>
-      <button class="btn-retry" onclick={loadDeployments}>{t.retry || '重试'}</button>
+      <p class="text-[13px] mb-3">{error}</p>
+      <button class="px-4 py-2 text-[13px] font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors cursor-pointer" onclick={loadDeployments}>{t.retry || '重试'}</button>
     </div>
   {:else if deployments.length === 0}
-    <div class="empty-state">
-      <svg class="icon-large" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-              d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+    <div class="flex flex-col items-center justify-center py-20 text-gray-400">
+      <svg class="w-16 h-16 mb-4 text-gray-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.8m5.84-2.58a14.98 14.98 0 006.16-12.12A14.98 14.98 0 009.631 8.41m5.96 5.96a14.926 14.926 0 01-5.841 2.58m-.119-8.54a6 6 0 00-7.381 5.84h4.8m2.581-5.84a14.927 14.927 0 00-2.58 5.84m2.699 2.7c-.103.021-.207.041-.311.06a15.09 15.09 0 01-2.448-2.448 14.9 14.9 0 01.06-.312m-2.24 2.39a4.493 4.493 0 00-1.757 4.306 4.493 4.493 0 004.306-1.758M16.5 9a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
       </svg>
-      <p>暂无自定义部署</p>
-      <p class="hint">创建一个新的自定义部署开始使用</p>
+      <p class="text-[15px] font-medium text-gray-500 mb-1">{t.noDeployments || '暂无自定义部署'}</p>
+      <p class="text-[13px] text-gray-400 mb-4">{t.noDeploymentsHint || '切换到「创建部署」标签页开始你的第一个自定义部署'}</p>
+      <button
+        class="px-4 py-2 text-[13px] font-medium text-white bg-gray-900 rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
+        onclick={() => onTabChange('create')}
+      >
+        {t.createDeployment || '创建部署'}
+      </button>
     </div>
   {:else}
-    <div class="table-container">
-      <!-- Tag Filter Bar -->
-      {#if allTagNames.length > 0}
-        <div class="px-5 py-2.5 border-b border-gray-100 flex items-center gap-2 flex-wrap">
-          <span class="text-[11px] text-gray-400 mr-1">{t.tags || '标签'}:</span>
-          <button
-            class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === '' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
-            onclick={() => { selectedTag = ''; }}
-          >{t.tagFilterAll || '全部'}</button>
-          {#each allTagNames as tag}
-            <button
-              class="px-2 py-0.5 text-[11px] rounded-full transition-colors {selectedTag === tag ? 'bg-gray-900 text-white' : getTagColor(tag)}"
-              onclick={() => { selectedTag = selectedTag === tag ? '' : tag; }}
-            >{tag}</button>
-          {/each}
-        </div>
-      {/if}
-      <table class="deployment-table">
+    <div class="flex-1 overflow-auto">
+      <table class="w-full">
         <thead>
-          <tr>
-            {#if batchMode}
-              <th class="checkbox-col"></th>
-            {/if}
-            <th>{t.name || '名称'}</th>
-            <th>{t.template || '模板'}</th>
-            <th>{t.provider || '云厂商'}</th>
-            <th>{t.region || '地域'}</th>
-            <th>{t.status || '状态'}</th>
-            <th>{t.createdAt || '创建时间'}</th>
-            <th class="text-right">{t.action || '操作'}</th>
+          <tr class="border-b border-gray-100">
+            <th class="text-left pl-4 pr-1 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide w-6">
+              <input
+                type="checkbox"
+                class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
+                checked={visibleDeployments.length > 0 && selectedDeploymentIds.size === visibleDeployments.length}
+                onchange={() => { if (selectedDeploymentIds.size === visibleDeployments.length) { selectedDeploymentIds = new Set(); } else { selectedDeploymentIds = new Set(visibleDeployments.map(d => d.id)); } }}
+              />
+            </th>
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.name || '名称'}</th>
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.template || '模板'}</th>
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.provider || '云厂商'}</th>
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.region || '地域'}</th>
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.status || '状态'}</th>
+            <th class="text-left px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.createdAt || '创建时间'}</th>
+            <th class="text-right px-5 py-3 text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{t.action || '操作'}</th>
           </tr>
         </thead>
         <tbody>
-          {#each filteredDeployments as deployment (deployment.id)}
-            <tr 
-              class:selected={!batchMode && expandedDeploymentId === deployment.id}
-              class:batch-selected={batchMode && selectedDeploymentIds.has(deployment.id)}
+          {#each visibleDeployments as deployment (deployment.id)}
+            <tr
+              class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer {expandedDeploymentId === deployment.id ? 'bg-blue-50/30' : ''} {selectedDeploymentIds.has(deployment.id) ? 'bg-blue-50' : ''}"
               onclick={() => handleSelectDeployment(deployment)}
               oncontextmenu={(e) => openContextMenu(e, deployment)}
             >
-              {#if batchMode}
-                <td class="checkbox-col" onclick={(e) => e.stopPropagation()}>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedDeploymentIds.has(deployment.id)}
-                    onchange={() => toggleDeploymentSelection(deployment.id)}
-                  />
-                </td>
-              {/if}
-              <td class="name-cell">
-                <div class="name-content">
+              <td class="pl-4 pr-1 py-3.5" onclick={(e) => e.stopPropagation()}>
+                <input
+                  type="checkbox"
+                  class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
+                  checked={selectedDeploymentIds.has(deployment.id)}
+                  onchange={() => toggleDeploymentSelection(deployment.id)}
+                />
+              </td>
+              <td class="px-5 py-3.5 max-w-[250px]">
+                <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2">
-                    <svg class="w-4 h-4 text-gray-400 transition-transform {expandedDeploymentId === deployment.id ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-4 h-4 text-gray-400 transition-transform flex-shrink-0 {expandedDeploymentId === deployment.id ? 'rotate-90' : ''}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
-                    <span class="name">{deployment.name}</span>
+                    <span class="text-[13px] font-medium text-gray-900 truncate">{deployment.name}</span>
                     {#each caseTags[deployment.id] || [] as tag}
                       <span class="px-1.5 py-0 text-[10px] rounded-full {getTagColor(tag)}">{tag}</span>
                     {/each}
                   </div>
-                  <code class="id">{getShortId(deployment.id)}</code>
+                  <code class="text-[11px] text-gray-400 font-mono bg-gray-50 px-1.5 py-0.5 rounded w-fit ml-6">{getShortId(deployment.id)}</code>
                 </div>
               </td>
-              <td>{deployment.template_name || '-'}</td>
-              <td>
+              <td class="px-5 py-3.5 text-[13px] text-gray-600">{deployment.template_name || '-'}</td>
+              <td class="px-5 py-3.5 text-[13px] text-gray-600">
                 {deployment.config?.provider ? providerLabels[deployment.config.provider] || deployment.config.provider : '-'}
               </td>
-              <td>{deployment.config?.region || '-'}</td>
-              <td>
+              <td class="px-5 py-3.5 text-[13px] text-gray-600">{deployment.config?.region || '-'}</td>
+              <td class="px-5 py-3.5">
                 <span class="inline-flex items-center gap-1.5 text-[12px] font-medium {stateConfig[deployment.state]?.color || 'text-gray-600'}">
                   <span class="w-1.5 h-1.5 rounded-full {stateConfig[deployment.state]?.dot || 'bg-gray-400'}"></span>
                   {stateConfig[deployment.state]?.label || deployment.state}
@@ -838,7 +879,7 @@
                   </span>
                 {/if}
               </td>
-              <td class="date-cell">
+              <td class="px-5 py-3.5 text-[13px] text-gray-500">
                 {formatDate(deployment.created_at)}
                 {#if deployment.state === 'running' && deployment.updated_at}
                   <span class="ml-1.5 text-[11px] text-emerald-600 font-medium" title={t.runningTime || '运行时间'}>⏱ {formatElapsed(deployment.updated_at)}</span>
@@ -945,7 +986,7 @@
             <!-- Tag edit row -->
             {#if tagEditId === deployment.id}
               <tr class="bg-blue-50/50">
-                <td colspan="8" class="px-5 py-2.5">
+                <td colspan="9" class="px-5 py-2.5">
                   <div class="flex items-center gap-2 flex-wrap pl-6">
                     <span class="text-[11px] text-gray-500">{t.tags || '标签'}:</span>
                     {#each caseTags[deployment.id] || [] as tag}
@@ -981,7 +1022,7 @@
             <!-- Expanded row for outputs or error -->
             {#if expandedDeploymentId === deployment.id}
               <tr class="bg-slate-50">
-                <td colspan="7" class="px-5 py-4">
+                <td colspan="9" class="px-5 py-4">
                   <div class="pl-6">
                     {#if deployment.state === 'error'}
                       <div class="bg-red-50 border border-red-200 rounded-lg p-4">
@@ -1091,307 +1132,7 @@
 {/if}
 
 <style>
-  .deployment-list {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-  }
-
-  .list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 16px 20px;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .header-left {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-  }
-
-  .header-actions {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .list-header h3 {
-    margin: 0;
-    font-size: 18px;
-    font-weight: 600;
-    color: #111827;
-  }
-
-  .selection-count {
-    padding: 4px 12px;
-    background: #dbeafe;
-    color: #1e40af;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 500;
-  }
-
-  .btn-batch-mode {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-batch-mode:hover {
-    background: #f3f4f6;
-  }
-
-  .btn-batch-mode.active {
-    background: #3b82f6;
-    border-color: #3b82f6;
-    color: white;
-  }
-
-  .btn-select-all,
-  .btn-deselect-all {
-    padding: 8px 12px;
-    background: white;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 13px;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-select-all:hover,
-  .btn-deselect-all:hover {
-    background: #f3f4f6;
-  }
-
-  .btn-refresh {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: #f3f4f6;
-    border: 1px solid #d1d5db;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #374151;
-    cursor: pointer;
-    transition: all 0.2s;
-  }
-
-  .btn-refresh:hover:not(:disabled) {
-    background: #e5e7eb;
-  }
-
-  .btn-refresh:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .icon {
-    width: 16px;
-    height: 16px;
-  }
-
-  .loading {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    color: #6b7280;
-  }
-
-  .spinner {
-    width: 40px;
-    height: 40px;
-    border: 3px solid #e5e7eb;
-    border-top-color: #3b82f6;
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-    margin-bottom: 16px;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  .error-message {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 60px 20px;
-    color: #dc2626;
-  }
-
-  .error-message .icon {
-    width: 48px;
-    height: 48px;
-    margin-bottom: 12px;
-  }
-
-  .error-message p {
-    margin: 0 0 16px 0;
-    text-align: center;
-  }
-
-  .btn-retry {
-    padding: 8px 20px;
-    background: #dc2626;
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background 0.2s;
-  }
-
-  .btn-retry:hover {
-    background: #b91c1c;
-  }
-
-  .empty-state {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 80px 20px;
-    color: #6b7280;
-  }
-
-  .icon-large {
-    width: 64px;
-    height: 64px;
-    margin-bottom: 16px;
-    opacity: 0.5;
-  }
-
-  .empty-state p {
-    margin: 0;
-    font-size: 16px;
-  }
-
-  .empty-state .hint {
-    margin-top: 8px;
-    font-size: 14px;
-    color: #9ca3af;
-  }
-
-  .table-container {
-    flex: 1;
-    overflow: auto;
-  }
-
-  .deployment-table {
-    width: 100%;
-    border-collapse: collapse;
-  }
-
-  .deployment-table thead {
-    position: sticky;
-    top: 0;
-    background: #f9fafb;
-    z-index: 1;
-  }
-
-  .deployment-table th {
-    padding: 12px 16px;
-    text-align: left;
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  .deployment-table tbody tr {
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .deployment-table tbody tr:hover {
-    background: #f9fafb;
-  }
-
-  .deployment-table tbody tr.selected {
-    background: #eff6ff;
-  }
-
-  .deployment-table tbody tr.batch-selected {
-    background: #dbeafe;
-  }
-
-  .checkbox-col {
-    width: 40px;
-    text-align: center;
-  }
-
-  .checkbox-col input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-  }
-
-  .deployment-table td {
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #374151;
-    border-bottom: 1px solid #f3f4f6;
-  }
-
-  .name-cell {
-    max-width: 250px;
-  }
-
-  .name-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  .name {
-    font-weight: 500;
-    color: #111827;
-  }
-
-  .id {
-    font-size: 12px;
-    color: #9ca3af;
-    font-family: monospace;
-    background: #f3f4f6;
-    padding: 2px 6px;
-    border-radius: 4px;
-  }
-
-  .state-badge {
-    display: inline-block;
-    padding: 4px 10px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-    background: currentColor;
-    color: white;
-    opacity: 0.9;
-  }
-
-  .date-cell {
-    color: #6b7280;
-    font-size: 13px;
-  }
+  /* All styles moved to Tailwind utility classes */
 </style>
 
 <!-- Batch Delete Confirmation Modal -->
