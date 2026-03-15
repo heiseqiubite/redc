@@ -113,6 +113,24 @@ export function GetAgentMemories():Promise<Array<any>>;
 
 export function GetAuditLogs(arg1:number,arg2:number,arg3:string,arg4:string):Promise<any>;
 
+export function GetF8xCatalog():Promise<Array<any>>;
+
+export function GetF8xCategories():Promise<Array<any>>;
+
+export function GetF8xPresets():Promise<Array<any>>;
+
+export function GetF8xStatus(arg1:string):Promise<any>;
+
+export function EnsureF8x(arg1:string):Promise<any>;
+
+export function RunF8xInstall(arg1:string,arg2:Array<string>):Promise<string>;
+
+export function GetF8xInstallHistory(arg1:string):Promise<Array<any>>;
+
+export function GetF8xRunningTasks():Promise<Array<any>>;
+
+export function RefreshF8xCatalog():Promise<Record<string, any>>;
+
 export function GetAllCaseTags():Promise<Record<string, Array<string>>>;
 
 export function GetAllTagNames():Promise<Array<string>>;

@@ -89,6 +89,8 @@ export function DownloadFile(arg1:string,arg2:string,arg3:string):Promise<main.F
 
 export function EnablePlugin(arg1:string):Promise<void>;
 
+export function EnsureF8x(arg1:string):Promise<main.ExecCommandResult>;
+
 export function EstimateDeploymentCost(arg1:mod.DeploymentConfig):Promise<mod.CostEstimate>;
 
 export function ExecCommand(arg1:string,arg2:string):Promise<main.ExecCommandResult>;
@@ -140,6 +142,18 @@ export function GetDeploymentHistory(arg1:string):Promise<Array<mod.DeploymentCh
 export function GetDeploymentPlanPreview(arg1:string):Promise<main.PlanPreview>;
 
 export function GetDisableRightClick():Promise<boolean>;
+
+export function GetF8xCatalog():Promise<Array<mod.F8xModule>>;
+
+export function GetF8xCategories():Promise<Array<mod.F8xCategoryInfo>>;
+
+export function GetF8xInstallHistory(arg1:string):Promise<Array<main.F8xInstallRecord>>;
+
+export function GetF8xPresets():Promise<Array<mod.F8xPreset>>;
+
+export function GetF8xRunningTasks():Promise<Array<main.F8xInstallRecord>>;
+
+export function GetF8xStatus(arg1:string):Promise<main.F8xStatus>;
 
 export function GetHTTPServerConfig():Promise<Record<string, any>>;
 
@@ -281,6 +295,8 @@ export function PullTemplate(arg1:string,arg2:boolean):Promise<void>;
 
 export function RecommendTemplates(arg1:string):Promise<Array<main.TemplateRecommendation>>;
 
+export function RefreshF8xCatalog():Promise<Record<string, any>>;
+
 export function RemoveCase(arg1:string):Promise<void>;
 
 export function RemoveHTTPServerUser(arg1:string):Promise<void>;
@@ -290,6 +306,8 @@ export function RemoveTemplate(arg1:string):Promise<void>;
 export function RenameRemoteFile(arg1:string,arg2:string,arg3:string):Promise<void>;
 
 export function ResizeTerminal(arg1:string,arg2:number,arg3:number):Promise<void>;
+
+export function RunF8xInstall(arg1:string,arg2:Array<string>):Promise<string>;
 
 export function SaveConfigTemplate(arg1:string,arg2:mod.DeploymentConfig):Promise<void>;
 

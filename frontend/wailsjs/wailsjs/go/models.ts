@@ -350,6 +350,46 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class F8xInstallRecord {
+	    id: string;
+	    caseID: string;
+	    flags: string;
+	    status: string;
+	    output: string;
+	    startedAt: string;
+	    finishedAt?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xInstallRecord(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.caseID = source["caseID"];
+	        this.flags = source["flags"];
+	        this.status = source["status"];
+	        this.output = source["output"];
+	        this.startedAt = source["startedAt"];
+	        this.finishedAt = source["finishedAt"];
+	    }
+	}
+	export class F8xStatus {
+	    deployed: boolean;
+	    version?: string;
+	    error?: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xStatus(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.deployed = source["deployed"];
+	        this.version = source["version"];
+	        this.error = source["error"];
+	    }
+	}
 	export class FileTransferResult {
 	    success: boolean;
 	    error?: string;
@@ -1216,6 +1256,70 @@ export namespace mod {
 		}
 	}
 	
+	export class F8xCategoryInfo {
+	    id: string;
+	    name: string;
+	    nameZh: string;
+	    count: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xCategoryInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.nameZh = source["nameZh"];
+	        this.count = source["count"];
+	    }
+	}
+	export class F8xModule {
+	    id: string;
+	    name: string;
+	    nameZh: string;
+	    flag: string;
+	    category: string;
+	    description: string;
+	    descriptionZh: string;
+	    tags: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xModule(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.nameZh = source["nameZh"];
+	        this.flag = source["flag"];
+	        this.category = source["category"];
+	        this.description = source["description"];
+	        this.descriptionZh = source["descriptionZh"];
+	        this.tags = source["tags"];
+	    }
+	}
+	export class F8xPreset {
+	    id: string;
+	    name: string;
+	    nameZh: string;
+	    description: string;
+	    flags: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xPreset(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.nameZh = source["nameZh"];
+	        this.description = source["description"];
+	        this.flags = source["flags"];
+	    }
+	}
 	export class HTTPUser {
 	    username: string;
 	    token: string;

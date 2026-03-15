@@ -37,12 +37,8 @@ func (c *Case) GetSSHConfigs() ([]*sshutil.SSHConfig, error) {
 		return nil, fmt.Errorf("case instance is nil")
 	}
 
-	// Always refresh terraform output to avoid stale cached data
-	if c.Path != "" {
-		c.TfOutput()
-	}
-
-	// 1. 获取所有 IP（支持数组）
+	// Only refresh terraform output if IP data is not already available
+	// GetInstanceInfoList will lazily call TfOutput() if c.output is nil
 	ipKeys := []string{"public_ip", "ecs_ip", "ip", "main_ip", "instance_ip"}
 	var ips []string
 	var lastErr error
@@ -53,6 +49,18 @@ func (c *Case) GetSSHConfigs() ([]*sshutil.SSHConfig, error) {
 			break
 		}
 		lastErr = err
+	}
+	// If no IPs found from cached data, force refresh and retry
+	if len(ips) == 0 && c.Path != "" {
+		c.TfOutput()
+		for _, key := range ipKeys {
+			list, err := c.GetInstanceInfoList(key)
+			if err == nil && len(list) > 0 {
+				ips = list
+				break
+			}
+			lastErr = err
+		}
 	}
 	if len(ips) == 0 {
 		return nil, fmt.Errorf("无法获取实例 IP (尝试了: %v, path=%s, lastErr=%v)", ipKeys, c.Path, lastErr)

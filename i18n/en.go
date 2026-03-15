@@ -567,4 +567,6 @@ var enMessages = map[string]string{
 	"app_quit_confirm_message": "There are active operations (deploy/destroy/compose). Are you sure you want to exit? Force quitting may leave resources in an inconsistent state.",
 	"app_quit_btn_confirm":     "Force Quit",
 	"app_quit_btn_cancel":      "Cancel",
+
+	"f8x_deploy_failed": "Failed to deploy f8x, please check the target host network connection",
 }

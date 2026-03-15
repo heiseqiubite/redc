@@ -130,6 +130,9 @@ var methodMinRole = map[string]string{
 	"ListScheduledTasks": "viewer", "ListCaseScheduledTasks": "viewer",
 	"ListAllScheduledTasks": "viewer", "GetScheduledTask": "viewer",
 	"GetAgentMemories": "viewer",
+	"GetF8xCatalog": "viewer", "GetF8xCategories": "viewer", "GetF8xPresets": "viewer",
+	"GetF8xStatus": "viewer", "GetF8xInstallHistory": "viewer", "GetF8xRunningTasks": "viewer",
+	"RefreshF8xCatalog": "viewer",
 	"GetSSHInfoForCase": "viewer", "GetSSHInfosForCase": "viewer",
 	"ListPortForwards": "viewer", "ListRemoteFiles": "viewer",
 	"GetRemoteFileContent": "viewer",
@@ -189,6 +192,7 @@ var methodMinRole = map[string]string{
 	"MCPSwitchProject": "operator", "MCPSetActiveProfile": "operator",
 	"MCPScheduleTask": "operator", "MCPCancelScheduledTask": "operator",
 	"MCPSaveTemplateFiles": "operator", "MCPSaveComposeFile": "operator",
+	"EnsureF8x": "operator", "RunF8xInstall": "operator",
 
 	// === Admin: destructive + system config ===
 	// RemoveCase, Delete*, Clear*, Batch*Delete*, system config, user management

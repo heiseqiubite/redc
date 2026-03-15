@@ -567,4 +567,6 @@ var zhMessages = map[string]string{
 	"app_quit_confirm_message": "有正在进行的操作（部署/销毁/编排），确定要退出吗？强制退出可能导致资源状态不一致。",
 	"app_quit_btn_confirm":     "强制退出",
 	"app_quit_btn_cancel":      "取消",
+
+	"f8x_deploy_failed": "f8x 部署失败，请检查目标主机网络连接",
 }

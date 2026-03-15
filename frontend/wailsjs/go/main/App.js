@@ -214,6 +214,42 @@ export function GetAuditLogs(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['GetAuditLogs'](arg1, arg2, arg3, arg4);
 }
 
+export function GetF8xCatalog() {
+  return window['go']['main']['App']['GetF8xCatalog']();
+}
+
+export function GetF8xCategories() {
+  return window['go']['main']['App']['GetF8xCategories']();
+}
+
+export function GetF8xPresets() {
+  return window['go']['main']['App']['GetF8xPresets']();
+}
+
+export function GetF8xStatus(arg1) {
+  return window['go']['main']['App']['GetF8xStatus'](arg1);
+}
+
+export function EnsureF8x(arg1) {
+  return window['go']['main']['App']['EnsureF8x'](arg1);
+}
+
+export function RunF8xInstall(arg1, arg2) {
+  return window['go']['main']['App']['RunF8xInstall'](arg1, arg2);
+}
+
+export function GetF8xInstallHistory(arg1) {
+  return window['go']['main']['App']['GetF8xInstallHistory'](arg1);
+}
+
+export function GetF8xRunningTasks() {
+  return window['go']['main']['App']['GetF8xRunningTasks']();
+}
+
+export function RefreshF8xCatalog() {
+  return window['go']['main']['App']['RefreshF8xCatalog']();
+}
+
 export function GetAllCaseTags() {
   return window['go']['main']['App']['GetAllCaseTags']();
 }

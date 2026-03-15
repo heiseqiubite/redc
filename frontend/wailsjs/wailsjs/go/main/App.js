@@ -166,6 +166,10 @@ export function EnablePlugin(arg1) {
   return window['go']['main']['App']['EnablePlugin'](arg1);
 }
 
+export function EnsureF8x(arg1) {
+  return window['go']['main']['App']['EnsureF8x'](arg1);
+}
+
 export function EstimateDeploymentCost(arg1) {
   return window['go']['main']['App']['EstimateDeploymentCost'](arg1);
 }
@@ -268,6 +272,30 @@ export function GetDeploymentPlanPreview(arg1) {
 
 export function GetDisableRightClick() {
   return window['go']['main']['App']['GetDisableRightClick']();
+}
+
+export function GetF8xCatalog() {
+  return window['go']['main']['App']['GetF8xCatalog']();
+}
+
+export function GetF8xCategories() {
+  return window['go']['main']['App']['GetF8xCategories']();
+}
+
+export function GetF8xInstallHistory(arg1) {
+  return window['go']['main']['App']['GetF8xInstallHistory'](arg1);
+}
+
+export function GetF8xPresets() {
+  return window['go']['main']['App']['GetF8xPresets']();
+}
+
+export function GetF8xRunningTasks() {
+  return window['go']['main']['App']['GetF8xRunningTasks']();
+}
+
+export function GetF8xStatus(arg1) {
+  return window['go']['main']['App']['GetF8xStatus'](arg1);
 }
 
 export function GetHTTPServerConfig() {
@@ -550,6 +578,10 @@ export function RecommendTemplates(arg1) {
   return window['go']['main']['App']['RecommendTemplates'](arg1);
 }
 
+export function RefreshF8xCatalog() {
+  return window['go']['main']['App']['RefreshF8xCatalog']();
+}
+
 export function RemoveCase(arg1) {
   return window['go']['main']['App']['RemoveCase'](arg1);
 }
@@ -568,6 +600,10 @@ export function RenameRemoteFile(arg1, arg2, arg3) {
 
 export function ResizeTerminal(arg1, arg2, arg3) {
   return window['go']['main']['App']['ResizeTerminal'](arg1, arg2, arg3);
+}
+
+export function RunF8xInstall(arg1, arg2) {
+  return window['go']['main']['App']['RunF8xInstall'](arg1, arg2);
 }
 
 export function SaveConfigTemplate(arg1, arg2) {
