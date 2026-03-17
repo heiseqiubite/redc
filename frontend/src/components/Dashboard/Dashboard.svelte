@@ -361,11 +361,9 @@
     {/each}
   </div>
   
-  <!-- Main Content Grid (unified single grid) -->
+  <!-- Main Content Grid (3 equal columns) -->
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-3">
-    <!-- Left Column: Recent Cases + Balance/Bill -->
-    <div class="lg:col-span-2 space-y-3">
-    <!-- Recent Cases -->
+    <!-- Column 1: Recent Cases -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
         <h3 class="text-[13px] font-semibold text-gray-900">{t.recentScenes || '最近场景'}</h3>
@@ -460,8 +458,8 @@
       </div>
     </div>
 
-    <!-- Balance + Version Check sub-grid under Recent Cases -->
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <!-- Column 2: Balance + Version Check (stacked) -->
+    <div class="flex flex-col gap-3">
       <!-- Account Balances -->
       <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -502,7 +500,7 @@
       </div>
 
       <!-- Version Check -->
-      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
+      <div class="bg-white rounded-xl border border-gray-100 overflow-hidden flex-1">
         <div class="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
           <h3 class="text-[13px] font-semibold text-gray-900">{t.versionCheck || '版本检查'}</h3>
           <button 
@@ -590,9 +588,8 @@
         </div>
       </div>
     </div>
-    </div> <!-- close left column wrapper -->
-    
-    <!-- Right column: Network + Quick Links -->
+
+    <!-- Column 3: Network + Quick Links (stacked) -->
     <div class="flex flex-col gap-3">
       <!-- Network Diagnostics -->
       <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
@@ -637,9 +634,9 @@
               <div class="mt-2 pt-2 border-t border-gray-100">
                 <button
                   class="text-[10px] text-gray-500 hover:text-gray-700 font-medium cursor-pointer"
-                  onclick={navigateToCredentials}
+                  onclick={() => onTabChange('settings')}
                 >
-                  {t.goToCredentials || '前往凭据管理'} →
+                  {t.goToSettings || '前往设置页面'} →
                 </button>
               </div>
             {/if}
