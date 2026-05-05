@@ -46,6 +46,10 @@ Redc is built on Terraform, further simplifying the complete lifecycle (create, 
 
 Redc is not just a machine provisioning tool, but an automated cloud resource scheduler!
 
+## WgpSec Infra Ecosystem
+
+From an ecosystem perspective, Redc is the control plane of WgpSec Infra. It consumes scenarios, base templates, userdata modules, and plugin assets from [redc-template](https://github.com/wgpsec/redc-template), uses Terraform to operate multi-cloud resources, and relies on [f8x](https://github.com/ffffffff0x/f8x) for software installation and environment provisioning inside target hosts. For users, Redc is the entry point, redc-template is the scenario repository, and f8x is the provisioning engine.
+
 - **One-command deployment**, from purchasing machines to running services, fully automated without manual intervention
 - **Multi-cloud support**, compatible with Alibaba Cloud, Tencent Cloud, AWS and other mainstream cloud providers
 - **Pre-configured scenarios**, red team environment ready-to-use templates, no more hunting for resources
