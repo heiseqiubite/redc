@@ -484,7 +484,7 @@
       onClose={() => showUpdateDialog = false} />
 
     <!-- Global Toast -->
-    <Toast />
+    <Toast {t} />
   </div>
 </div>
 
