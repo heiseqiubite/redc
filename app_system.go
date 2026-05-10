@@ -136,6 +136,16 @@ func (a *App) CheckAllUpdates() (UpdateCheckResult, error) {
 	// 3. List installed plugins (version info)
 	result.Plugins = a.checkPluginVersions()
 
+	// 4. Check f8x latest version from remote catalog
+	if catalog, f8xErr := redc.FetchF8xRemoteCatalog(); f8xErr != nil {
+		result.F8x = F8xVersionInfo{Error: i18n.T("f8x_catalog_fetch_failed")}
+	} else {
+		result.F8x = F8xVersionInfo{
+			LatestVersion: catalog.Version,
+			UpdatedAt:     catalog.UpdatedAt,
+		}
+	}
+
 	return result, nil
 }
 

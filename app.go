@@ -437,9 +437,17 @@ type VersionCheckResult struct {
 
 // UpdateCheckResult aggregates version checks for redc, templates, and plugins
 type UpdateCheckResult struct {
-	Redc      VersionCheckResult    `json:"redc"`
-	Templates []TemplateUpdateInfo  `json:"templates"`
-	Plugins   []PluginUpdateInfo    `json:"plugins"`
+	Redc      VersionCheckResult   `json:"redc"`
+	F8x       F8xVersionInfo       `json:"f8x"`
+	Templates []TemplateUpdateInfo `json:"templates"`
+	Plugins   []PluginUpdateInfo   `json:"plugins"`
+}
+
+// F8xVersionInfo represents the latest f8x version from remote catalog
+type F8xVersionInfo struct {
+	LatestVersion string `json:"latestVersion"`
+	UpdatedAt     string `json:"updatedAt"`
+	Error         string `json:"error"`
 }
 
 // TemplateUpdateInfo represents a template that may have an update

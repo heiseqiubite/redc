@@ -574,7 +574,8 @@ var enMessages = map[string]string{
 	"app_quit_btn_confirm":     "Force Quit",
 	"app_quit_btn_cancel":      "Cancel",
 
-	"f8x_deploy_failed": "Failed to deploy f8x, please check the target host network connection",
+	"f8x_deploy_failed":        "Failed to deploy f8x, please check the target host network connection",
+	"f8x_catalog_fetch_failed": "Failed to fetch f8x version info",
 
 	// Timeline
 	"app_timeline_app_started": "Application started",

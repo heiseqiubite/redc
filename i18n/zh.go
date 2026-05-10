@@ -574,7 +574,8 @@ var zhMessages = map[string]string{
 	"app_quit_btn_confirm":     "强制退出",
 	"app_quit_btn_cancel":      "取消",
 
-	"f8x_deploy_failed": "f8x 部署失败，请检查目标主机网络连接",
+	"f8x_deploy_failed":        "f8x 部署失败，请检查目标主机网络连接",
+	"f8x_catalog_fetch_failed": "获取 f8x 版本信息失败",
 
 	// Timeline
 	"app_timeline_app_started": "应用启动",
