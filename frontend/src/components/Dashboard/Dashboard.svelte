@@ -384,19 +384,23 @@
         </div>
       {/each}
     {:else}
-      <div class="bg-white rounded-xl border border-gray-100 p-4">
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
         <div class="text-[11px] text-gray-500 mb-1">{t.totalScenes || '总场景数'}</div>
         <div class="text-[22px] font-bold text-gray-900">{stats.totalCases}</div>
       </div>
-      <div class="bg-white rounded-xl border border-gray-100 p-4">
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
         <div class="text-[11px] text-gray-500 mb-1">{t.runningScenes || '运行中'}</div>
         <div class="text-[22px] font-bold text-emerald-600">{stats.runningCases}</div>
       </div>
-      <div class="bg-white rounded-xl border border-gray-100 p-4">
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
         <div class="text-[11px] text-gray-500 mb-1">{t.stoppedScenes || '已停止'}</div>
         <div class="text-[22px] font-bold text-gray-400">{stats.stoppedCases}</div>
       </div>
-      <div class="bg-white rounded-xl border border-gray-100 p-4">
+      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+      <div class="bg-white rounded-xl border border-gray-100 p-4 cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all" onclick={() => onTabChange('cases')}>
         <div class="text-[11px] text-gray-500 mb-1">{t.errorScenes || '异常'}</div>
         <div class="text-[22px] font-bold text-red-500">{stats.errorCases}</div>
       </div>
