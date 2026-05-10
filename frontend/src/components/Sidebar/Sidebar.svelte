@@ -1,9 +1,10 @@
 <script>
 
   import Modal from '../UI/Modal.svelte';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { Environment } from '../../../wailsjs/runtime/runtime.js';
-  import { ListProjects, GetCurrentProject, SwitchProject, CreateProject } from '../../../wailsjs/go/main/App.js';
+  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
+  import { ListProjects, GetCurrentProject, SwitchProject, CreateProject, ListCases, ListCustomDeployments, ListAllScheduledTasks } from '../../../wailsjs/go/main/App.js';
   import { toast } from '../../lib/toast.js';
 
 let {
@@ -29,6 +30,26 @@ let {
   let isMac = $state(false);
   let isFullscreen = $state(false);
 
+  // Running cases badge
+  let runningCount = $state(0);
+  let runningDeployments = $state(0);
+  let activeTasks = $state(0);
+
+  async function loadRunningCount() {
+    try {
+      const cases = await ListCases();
+      runningCount = (cases || []).filter(c => c.state === 'running').length;
+    } catch { runningCount = 0; }
+    try {
+      const deployments = await ListCustomDeployments();
+      runningDeployments = (deployments || []).filter(d => d.state === 'running').length;
+    } catch { runningDeployments = 0; }
+    try {
+      const tasks = await ListAllScheduledTasks();
+      activeTasks = (tasks || []).filter(t => t.status === 'pending' || t.status === 'executing').length;
+    } catch { activeTasks = 0; }
+  }
+
   // Project switching state (projects and currentProject are already declared in props)
   let showProjectDropdown = $state(false);
   let showNewProjectModal = $state(false);
@@ -46,20 +67,30 @@ let {
         isMac = navigator.platform.toLowerCase().includes('mac');
       }
 
-      // Load projects
+      // Load projects and running count
       await loadProjects();
+      await loadRunningCount();
     })();
-    
+
+    // Listen for refresh events to update running count
+    EventsOn('refresh', loadRunningCount);
+
     const checkFullscreen = () => {
       isFullscreen = window.innerHeight === window.screen.height && window.innerWidth === window.screen.width;
     };
-    
+
     checkFullscreen();
     window.addEventListener('resize', checkFullscreen);
-    
+
     return () => {
       window.removeEventListener('resize', checkFullscreen);
+      EventsOff('refresh');
     };
+  });
+
+  $effect(() => {
+    activeTab;
+    loadRunningCount();
   });
   
   // Compute left padding: only add padding on macOS when not fullscreen
@@ -257,7 +288,7 @@ let {
           <!-- Group items -->
           {#if !collapsedGroups[section.key]}
             {#each section.items as item}
-              <button 
+              <button
                 class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap
                   {activeTab === item.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 cursor-pointer'}"
                 onclick={() => handleNavClick(item)}
@@ -265,7 +296,14 @@ let {
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d={icons[item.icon]} />
                 </svg>
-                {t[item.labelKey]}
+                <span class="flex-1 text-left">{t[item.labelKey]}</span>
+                {#if item.id === 'cases' && runningCount > 0}
+                  <span class="min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold {activeTab === 'cases' ? 'bg-emerald-400 text-white' : 'bg-emerald-100 text-emerald-700'}">{runningCount}</span>
+                {:else if item.id === 'customDeployment' && runningDeployments > 0}
+                  <span class="min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold {activeTab === 'customDeployment' ? 'bg-emerald-400 text-white' : 'bg-emerald-100 text-emerald-700'}">{runningDeployments}</span>
+                {:else if item.id === 'taskCenter' && activeTasks > 0}
+                  <span class="min-w-[18px] h-[18px] flex items-center justify-center rounded-full text-[9px] font-bold {activeTab === 'taskCenter' ? 'bg-sky-400 text-white' : 'bg-sky-100 text-sky-700'}">{activeTasks}</span>
+                {/if}
               </button>
             {/each}
           {/if}

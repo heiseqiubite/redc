@@ -152,7 +152,7 @@
   // 状态颜色配置（与创建部署页面一致）
   const stateConfig = $derived<Record<string, { label: string; color: string; bg: string; dot: string }>>({
     'pending': { label: t.pending || '待部署', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' },
-    'starting': { label: t.starting || '启动中', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500 animate-pulse' },
+    'starting': { label: t.starting || '启动中', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500 animate-pulse' },
     'running': { label: t.running || '运行中', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' },
     'stopping': { label: t.stopping || '停止中', color: 'text-orange-600', bg: 'bg-orange-50', dot: 'bg-orange-500 animate-pulse' },
     'stopped': { label: t.stopped || '已停止', color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' },

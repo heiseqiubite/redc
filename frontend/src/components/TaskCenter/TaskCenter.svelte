@@ -432,7 +432,7 @@
         <!-- Case Select -->
         <div>
           <label class="block text-[12px] font-medium text-gray-700 mb-1.5">{t.taskSelectCase || '选择场景'}</label>
-          <select class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" onchange={onCaseSelect}>
+          <select class="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formCaseId} onchange={onCaseSelect}>
             <option value="">{t.taskSelectCasePlaceholder || '-- 请选择 --'}</option>
             {#each cases as c}
               <option value={c.id || c.Id}>{c.name || c.Name} ({c.id || c.Id})</option>
@@ -501,22 +501,22 @@
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[11px] text-gray-500 mb-1">{t.hour || '小时'}</label>
-                <input type="number" min="0" max="72" class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formRelativeHours} />
+                <input type="number" min="0" max="72" class="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formRelativeHours} />
               </div>
               <div>
                 <label class="block text-[11px] text-gray-500 mb-1">{t.minute || '分钟'}</label>
-                <input type="number" min="0" max="59" class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formRelativeMinutes} />
+                <input type="number" min="0" max="59" class="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formRelativeMinutes} />
               </div>
             </div>
           {:else}
             <div class="grid grid-cols-2 gap-3">
               <div>
                 <label class="block text-[11px] text-gray-500 mb-1">{t.date || '日期'}</label>
-                <input type="date" class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formAbsoluteDate} />
+                <input type="date" class="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formAbsoluteDate} />
               </div>
               <div>
                 <label class="block text-[11px] text-gray-500 mb-1">{t.time || '时间'}</label>
-                <input type="time" class="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formAbsoluteTime} />
+                <input type="time" class="w-full px-3 py-2 text-[13px] text-gray-900 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-gray-900" bind:value={formAbsoluteTime} />
               </div>
             </div>
           {/if}
