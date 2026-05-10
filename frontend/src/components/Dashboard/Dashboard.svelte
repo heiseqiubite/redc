@@ -1,7 +1,7 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
   import { ListCases, GetResourceSummary, GetBalances, ListTemplates, ListProjects, TestTerraformEndpoints, GetTotalRuntime, ListScheduledTasks, ListAllScheduledTasks, GetMCPStatus, CheckAllUpdates, StartCase, StopCase, GetSpotMonitorEnabled } from '../../../wailsjs/go/main/App.js';
-  import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
+  import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
   import Modal from '../UI/Modal.svelte';
   import GettingStarted from './GettingStarted.svelte';
@@ -580,6 +580,24 @@
                   </span>
                 {:else}
                   <span class="text-[11px] text-emerald-600">✓ {updateResult.redc.currentVersion}</span>
+                {/if}
+              </div>
+              <!-- f8x version -->
+              <div class="flex items-center justify-between py-1.5">
+                <span class="text-[11px] text-gray-500">f8x</span>
+                {#if updateResult.f8x && updateResult.f8x.error}
+                  <span class="text-[10px] text-gray-400">{updateResult.f8x.error}</span>
+                {:else if updateResult.f8x && updateResult.f8x.latestVersion}
+                  <button
+                    class="text-[11px] text-gray-600 hover:text-blue-600 transition-colors cursor-pointer inline-flex items-center gap-1"
+                    onclick={() => BrowserOpenURL('https://github.com/ffffffff0x/f8x/releases')}
+                  >
+                    <span>{updateResult.f8x.latestVersion}</span>
+                    <span class="text-gray-400">({updateResult.f8x.updatedAt})</span>
+                    <svg class="w-3 h-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" /></svg>
+                  </button>
+                {:else}
+                  <span class="text-[10px] text-gray-400">-</span>
                 {/if}
               </div>
               <!-- Templates -->
