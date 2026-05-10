@@ -1094,7 +1094,9 @@ func (a *App) AddHTTPServerUser(username string, role string) (redc.HTTPUser, er
 	}
 	// Hot-reload users if server is running
 	if a.httpSrv != nil {
+		a.httpSrv.userMu.Lock()
 		a.httpSrv.users = settings.HTTPServerUsers
+		a.httpSrv.userMu.Unlock()
 	}
 	return user, nil
 }
@@ -1122,7 +1124,9 @@ func (a *App) RemoveHTTPServerUser(username string) error {
 		return err
 	}
 	if a.httpSrv != nil {
+		a.httpSrv.userMu.Lock()
 		a.httpSrv.users = settings.HTTPServerUsers
+		a.httpSrv.userMu.Unlock()
 	}
 	return nil
 }
@@ -1156,7 +1160,9 @@ func (a *App) UpdateHTTPServerUser(username string, role string, regenerateToken
 		return redc.HTTPUser{}, err
 	}
 	if a.httpSrv != nil {
+		a.httpSrv.userMu.Lock()
 		a.httpSrv.users = settings.HTTPServerUsers
+		a.httpSrv.userMu.Unlock()
 	}
 	return updated, nil
 }

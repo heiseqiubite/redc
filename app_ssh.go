@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -287,7 +289,9 @@ func (a *App) UploadUserdataScript(caseID string, scriptContent string, fileName
 
 	session.Stdin = strings.NewReader(scriptContent)
 
-	remotePath := fmt.Sprintf("/tmp/%s", fileName)
+	safeFileName := filepath.Base(fileName)
+	safeFileName = regexp.MustCompile(`[^a-zA-Z0-9._\-]`).ReplaceAllString(safeFileName, "_")
+	remotePath := fmt.Sprintf("/tmp/%s", safeFileName)
 	command := fmt.Sprintf("cat > %s && chmod +x %s", remotePath, remotePath)
 
 	var stdoutBuf, stderrBuf strings.Builder

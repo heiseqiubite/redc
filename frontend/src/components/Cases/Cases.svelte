@@ -2,7 +2,7 @@
 
   import { onMount, onDestroy } from 'svelte';
   import { ListCases, ListTemplates, StartCase, StopCase, RemoveCase, CreateCase, CreateAndRunCase, GetCaseOutputs, GetTemplateVariables, GetCostEstimate, GetCasePlanPreview, SetCaseTags, GetAllTagNames, DeleteTagByName, CloneCase, ListPlugins, FetchCaseReadmeInfo } from '../../../wailsjs/go/main/App.js';
-  import { EventsOn, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
+  import { EventsOn, EventsOff, BrowserOpenURL } from '../../../wailsjs/runtime/runtime.js';
   import { toast } from '../../lib/toast.js';
   import { parseReadmeMarkdown, handleReadmeLinkClick } from '../../lib/readme.js';
   import SSHModal from './SSHModal.svelte';
@@ -149,6 +149,7 @@ let { t, lang = 'zh', onTabChange = () => {} } = $props();
   // Running time ticker
   let nowTick = $state(Date.now());
   let tickTimer = null;
+  let _handleKeydown = null;
 
   function formatElapsed(fromStr) {
     if (!fromStr) return '';
@@ -258,10 +259,10 @@ let { t, lang = 'zh', onTabChange = () => {} } = $props();
   onMount(async () => {
     await refresh();
     tickTimer = setInterval(() => { nowTick = Date.now(); }, 60000);
-    
+
     // Close context menu on Escape
-    const handleKeydown = (e) => { if (e.key === 'Escape' && contextMenu.show) closeContextMenu(); };
-    window.addEventListener('keydown', handleKeydown);
+    _handleKeydown = (e) => { if (e.key === 'Escape' && contextMenu.show) closeContextMenu(); };
+    window.addEventListener('keydown', _handleKeydown);
     
     EventsOn('spot-terminated', (data) => {
       console.log('[SpotMonitor] Instance terminated:', data);
@@ -318,6 +319,13 @@ let { t, lang = 'zh', onTabChange = () => {} } = $props();
       clearTimeout(costEstimateDebounceTimer);
       costEstimateDebounceTimer = null;
     }
+    if (_handleKeydown) {
+      window.removeEventListener('keydown', _handleKeydown);
+    }
+    EventsOff('spot-terminated');
+    EventsOff('spot-recovering');
+    EventsOff('spot-recovered');
+    EventsOff('spot-recover-failed');
   });
   
   function stripAnsi(value) {

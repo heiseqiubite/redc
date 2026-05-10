@@ -80,13 +80,14 @@ func (h *SSEHub) broadcast(name string, data interface{}) {
 
 // HTTPServer handles HTTP mode
 type HTTPServer struct {
-	app   *App
-	hub   *SSEHub
-	srv   *http.Server
-	token string
-	host  string
-	port  int
-	users []redc.HTTPUser
+	app    *App
+	hub    *SSEHub
+	srv    *http.Server
+	token  string
+	host   string
+	port   int
+	userMu sync.RWMutex
+	users  []redc.HTTPUser
 }
 
 // RoleLevel returns the numeric level for a role (higher = more permissions)
@@ -219,6 +220,8 @@ func (s *HTTPServer) resolveUser(r *http.Request) (string, string, bool) {
 		return "admin", "admin", true
 	}
 	// Check user tokens
+	s.userMu.RLock()
+	defer s.userMu.RUnlock()
 	for _, u := range s.users {
 		if u.Token == token {
 			return u.Username, u.Role, true

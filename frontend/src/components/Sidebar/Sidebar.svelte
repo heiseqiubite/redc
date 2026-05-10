@@ -131,19 +131,18 @@ let {
     }
   }
 
-  // Create a new project
   async function handleCreateProject() {
-    if (!newProjectName.trim()) {
+    const name = newProjectName.trim();
+    if (!name) {
       toast.warning(t.pleaseEnterProjectName || '请输入项目名称');
       return;
     }
     try {
-      await CreateProject(newProjectName.trim());
+      await CreateProject(name);
       showNewProjectModal = false;
       newProjectName = '';
       await loadProjects();
-      // Switch to the new project
-      await handleSwitchProject(newProjectName.trim());
+      await handleSwitchProject(name);
     } catch (err) {
       console.error('Failed to create project:', err);
       toast.error((t.createProjectFailed || '创建项目失败') + ': ' + err.message);

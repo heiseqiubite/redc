@@ -827,19 +827,37 @@ func (a *App) ImportTemplates(zipPath string) ([]string, error) {
 }
 
 func (a *App) CopyFileTo(sourcePath string, destPath string) error {
-	sourceFile, err := os.Open(sourcePath)
+	absSource, err := filepath.Abs(sourcePath)
+	if err != nil {
+		return fmt.Errorf("invalid source path: %w", err)
+	}
+	absDest, err := filepath.Abs(destPath)
+	if err != nil {
+		return fmt.Errorf("invalid dest path: %w", err)
+	}
+	allowedBase, _ := filepath.Abs(redc.RedcPath)
+	if allowedBase == "" {
+		return fmt.Errorf("redc path not configured")
+	}
+	if !strings.HasPrefix(absSource, allowedBase+string(filepath.Separator)) && absSource != allowedBase {
+		return fmt.Errorf("source path outside allowed directory")
+	}
+	if !strings.HasPrefix(absDest, allowedBase+string(filepath.Separator)) && absDest != allowedBase {
+		return fmt.Errorf("dest path outside allowed directory")
+	}
+
+	sourceFile, err := os.Open(absSource)
 	if err != nil {
 		return err
 	}
 	defer sourceFile.Close()
 
-	// Create destination directory if not exists
-	destDir := filepath.Dir(destPath)
+	destDir := filepath.Dir(absDest)
 	if err := os.MkdirAll(destDir, 0755); err != nil {
 		return err
 	}
 
-	destFile, err := os.Create(destPath)
+	destFile, err := os.Create(absDest)
 	if err != nil {
 		return err
 	}

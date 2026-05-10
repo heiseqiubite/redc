@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"red-cloud/i18n"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 )
@@ -64,7 +65,9 @@ func (nm *NotificationManager) Send(title, message string) {
 }
 
 func (nm *NotificationManager) sendMacOSNotification(title, message string) {
-	script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`, message, title)
+	safeTitle := strings.ReplaceAll(title, `"`, `\"`)
+	safeMessage := strings.ReplaceAll(message, `"`, `\"`)
+	script := fmt.Sprintf(`display notification "%s" with title "%s" sound name "Glass"`, safeMessage, safeTitle)
 	cmd := exec.Command("osascript", "-e", script)
 	if err := cmd.Run(); err != nil {
 		fmt.Println(i18n.Tf("notify_macos_failed", err))
@@ -72,7 +75,9 @@ func (nm *NotificationManager) sendMacOSNotification(title, message string) {
 }
 
 func (nm *NotificationManager) sendWindowsNotification(title, message string) {
-	powershell := fmt.Sprintf(`[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null; $template = @"<toast><visual><binding template=""ToastGeneric""><text>%s</text><text>%s</text></binding></visual></toast>"; $xml = New-Object Windows.Data.Xml.Dom.XmlDocument; $xml.LoadXml($template); $toast = New-Object Windows.UI.Notifications.ToastNotification $xml; $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("redc-gui"); $notifier.Show($toast)`, title, message)
+	safeTitle := strings.ReplaceAll(strings.ReplaceAll(title, `"`, `""`), `'`, `''`)
+	safeMessage := strings.ReplaceAll(strings.ReplaceAll(message, `"`, `""`), `'`, `''`)
+	powershell := fmt.Sprintf(`[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; [Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] | Out-Null; $template = @"<toast><visual><binding template=""ToastGeneric""><text>%s</text><text>%s</text></binding></visual></toast>"; $xml = New-Object Windows.Data.Xml.Dom.XmlDocument; $xml.LoadXml($template); $toast = New-Object Windows.UI.Notifications.ToastNotification $xml; $notifier = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier("redc-gui"); $notifier.Show($toast)`, safeTitle, safeMessage)
 	cmd := exec.Command("powershell", "-NoProfile", "-Command", powershell)
 	if err := cmd.Run(); err != nil {
 		fmt.Println(i18n.Tf("notify_windows_failed", err))

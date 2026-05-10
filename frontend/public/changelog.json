@@ -7,7 +7,13 @@
         "新增：Sidebar 导航 badge — 预定义场景、自定义部署显示运行中数量，任务中心显示活跃任务数，切换 Tab 自动刷新",
         "修复：Toast 组件 aria-label 硬编码 zh，改为响应当前语言",
         "修复：自定义部署「启动中」状态颜色与预定义场景不一致（蓝→橙），统一为 amber",
-        "修复：任务中心创建表单 select/input 文字不可见，补充显式 text-gray-900 及 bind:value"
+        "修复：任务中心创建表单 select/input 文字不可见，补充显式 text-gray-900 及 bind:value",
+        "安全：通知推送标题/消息转义特殊字符，防止命令注入",
+        "安全：上传脚本文件名 sanitize，防止路径遍历",
+        "安全：HTTP Server 用户列表读写加 RWMutex，修复并发竞态",
+        "安全：CopyFileTo 校验源/目标路径必须在 RedcPath 内，防止任意文件读写",
+        "修复：Cases 页面 onDestroy 清理 keydown 监听器和 Wails 事件订阅，防止内存泄漏",
+        "修复：Sidebar 创建项目后无法自动切换 — 变量清空顺序错误导致传入空字符串"
       ]
     },
     {
