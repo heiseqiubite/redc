@@ -6,7 +6,8 @@
       "changes": [
         "新增：关于页面展示 WgpSec Infra 生态系统架构（RedC / redc-template / f8x 三者关系及链接）",
         "新增：首次启动引导新增生态介绍页，帮助新用户快速理解工具链协作方式",
-        "新增：Dashboard 版本检查面板展示 f8x 最新版本号及更新时间，点击可跳转 GitHub Releases"
+        "新增：Dashboard 版本检查面板展示 f8x 最新版本号及更新时间，点击可跳转 GitHub Releases",
+        "优化：Dashboard 面板加载状态改为骨架屏动画，替代纯文字「加载中」，提升感知性能"
       ]
     },
     {
