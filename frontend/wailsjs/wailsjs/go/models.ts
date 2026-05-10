@@ -475,6 +475,22 @@ export namespace main {
 	        this.error = source["error"];
 	    }
 	}
+	export class F8xVersionInfo {
+	    latestVersion: string;
+	    updatedAt: string;
+	    error: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new F8xVersionInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.latestVersion = source["latestVersion"];
+	        this.updatedAt = source["updatedAt"];
+	        this.error = source["error"];
+	    }
+	}
 	export class FileTransferResult {
 	    success: boolean;
 	    error?: string;
@@ -1064,6 +1080,7 @@ export namespace main {
 	}
 	export class UpdateCheckResult {
 	    redc: VersionCheckResult;
+	    f8x: F8xVersionInfo;
 	    templates: TemplateUpdateInfo[];
 	    plugins: PluginUpdateInfo[];
 	
@@ -1074,6 +1091,7 @@ export namespace main {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.redc = this.convertValues(source["redc"], VersionCheckResult);
+	        this.f8x = this.convertValues(source["f8x"], F8xVersionInfo);
 	        this.templates = this.convertValues(source["templates"], TemplateUpdateInfo);
 	        this.plugins = this.convertValues(source["plugins"], PluginUpdateInfo);
 	    }

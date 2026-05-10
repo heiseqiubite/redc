@@ -20,6 +20,9 @@ redc.log
 red-cloud
 redc
 
+# Superpowers
+docs/superpowers/
+
 # Wails
 build/bin/
 frontend/node_modules/
