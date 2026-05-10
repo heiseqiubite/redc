@@ -340,7 +340,7 @@ let { t, lang } = $props();
 </script>
 
 <div class="space-y-4">
-  <PageGuide text={t.pgRegistry} dismissKey="registry" />
+  <PageGuide text={t.pgRegistry} dismissKey="registry" {t} />
   <!-- Toolbar: search + actions -->
   <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3">
     <div class="flex-1 relative w-full sm:w-auto">

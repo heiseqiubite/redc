@@ -591,7 +591,7 @@
                   <p class="text-[12px] font-medium text-gray-900 truncate">
                     {session.caseName || session.host || 'SSH'}
                     {#if session.isExternal}
-                      <span class="text-[10px] text-purple-500 ml-1">(外部)</span>
+                      <span class="text-[10px] text-purple-500 ml-1">({t.externalLabel || '外部'})</span>
                     {/if}
                   </p>
                   <p class="text-[10px] text-gray-400 truncate">

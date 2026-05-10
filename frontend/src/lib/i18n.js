@@ -84,7 +84,7 @@ export const i18n = {
     transportMode: '传输模式', listenAddr: '监听地址', protocolVersion: '协议版本', msgEndpoint: '消息端点',
     stopServer: '停止服务器', startServer: '启动服务器', stoppingServer: '停止中...', startingServer: '启动中...',
     claudeCodeIntegration: 'Claude Code 集成', claudeCodeIntegrationDesc: '复制以下命令在终端中执行，将 MCP 服务器添加到 Claude Code',
-    addToClaudeCode: '添加到 Claude Code', removeFromClaudeCode: '从 Claude Code 移除', copied: '已复制',
+    addToClaudeCode: '添加到 Claude Code', removeFromClaudeCode: '从 Claude Code 移除',
     aboutMcp: '关于 MCP', mcpInfo: 'Model Context Protocol (MCP) 是一种开放协议，允许 AI 助手与外部工具和数据源进行交互。启用 MCP 服务器后，您可以通过 Claude、Cursor 等支持 MCP 的 AI 工具直接管理 RedC 基础设施。',
     availableTools: '可用工具',
     stdioHint: 'STDIO 通过 stdin/stdout 交换数据，无需在 GUI 启动或停止。',
@@ -594,6 +594,18 @@ export const i18n = {
     updateRestartLater: '稍后重启',
     updateError: '更新失败',
     updateUpToDate: '已是最新版本',
+    // Window accessibility
+    windowMinimize: '最小化', windowMaximize: '最大化', windowRestore: '还原', windowClose: '关闭',
+    closeErrorTip: '关闭错误提示', closeGuide: '关闭引导', externalLabel: '外部',
+    // Parity keys
+    action: '操作', userdataHint: '实例启动时执行的脚本', tips: '提示',
+    bashTip1: '脚本必须以 #!/bin/bash 开头', bashTip2: '使用 -y 参数避免交互确认', bashTip3: '可使用 echo 输出日志到 /var/log/cloud-init-output.log',
+    psTip1: '脚本需用 <powershell></powershell> 标签包裹', psTip2: '使用 Write-Host 输出日志', psTip3: '部分云厂商可能需要 base64 编码',
+    spotInstanceDesc: '竞价实例价格更低但可能被随时回收',
+    selectProviderAndRegionFirst: '请先选择云厂商和地域', searchInstanceType: '搜索实例规格...', noInstanceTypesAvailable: '暂无可用实例规格', selectInstanceType: '选择实例规格...',
+    noMatchingInstanceTypes: '未找到匹配的实例规格', selectedInstanceType: '已选实例规格',
+    noRunningCases: '暂无运行中的场景', completeConfigToPreview: '请完成配置以预览',
+    openTerminal: '打开终端', openFileManager: '文件管理', executing: '执行中...', webTerminal: 'Web 终端',
     // WgpSec Infra Ecosystem
     ecosystemTitle: 'WgpSec Infra 生态系统', ecosystemRedcName: 'RedC', ecosystemRedcDesc: '控制面 — 编排和管理云基础设施的 GUI 工具', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: '场景仓库 — 提供预配置的多云 Terraform 模板', ecosystemF8xName: 'f8x', ecosystemF8xDesc: '装配引擎 — 在目标主机上自动安装工具和配置环境', ecosystemFlow: 'RedC 拉取模板 → 部署云资源 → f8x 装配环境，全程自动化',
     welcomeEcosystemTitle: 'WgpSec Infra 生态', welcomeEcosystemDesc: '了解 RedC 背后的工具生态',
@@ -695,7 +707,7 @@ export const i18n = {
     transportMode: 'Transport Mode', listenAddr: 'Listen Address', protocolVersion: 'Protocol Version', msgEndpoint: 'Message Endpoint',
     stopServer: 'Stop Server', startServer: 'Start Server', stoppingServer: 'Stopping...', startingServer: 'Starting...',
     claudeCodeIntegration: 'Claude Code Integration', claudeCodeIntegrationDesc: 'Copy and run the following commands in your terminal to add/remove the MCP server in Claude Code',
-    addToClaudeCode: 'Add to Claude Code', removeFromClaudeCode: 'Remove from Claude Code', copied: 'Copied',
+    addToClaudeCode: 'Add to Claude Code', removeFromClaudeCode: 'Remove from Claude Code',
     aboutMcp: 'About MCP', mcpInfo: 'Model Context Protocol (MCP) is an open protocol that allows AI assistants to interact with external tools and data sources. With MCP server enabled, you can manage RedC infrastructure directly via Claude, Cursor and other MCP-compatible AI tools.',
     availableTools: 'Available Tools',
     stdioHint: 'STDIO uses stdin/stdout for data exchange. No GUI start/stop required.',
@@ -1204,6 +1216,11 @@ export const i18n = {
     updateRestartLater: 'Restart Later',
     updateError: 'Update Failed',
     updateUpToDate: 'Already up to date',
+    // Window accessibility
+    windowMinimize: 'Minimize', windowMaximize: 'Maximize', windowRestore: 'Restore', windowClose: 'Close',
+    closeErrorTip: 'Close error', closeGuide: 'Close guide', externalLabel: 'External',
+    // Parity keys
+    saveAsTemplate: 'Save as Template', noRecentActivity: 'No recent activity',
     // WgpSec Infra Ecosystem
     ecosystemTitle: 'WgpSec Infra Ecosystem', ecosystemRedcName: 'RedC', ecosystemRedcDesc: 'Control Plane — GUI tool for orchestrating and managing cloud infrastructure', ecosystemTemplateName: 'redc-template', ecosystemTemplateDesc: 'Scenario Repository — Pre-configured multi-cloud Terraform templates', ecosystemF8xName: 'f8x', ecosystemF8xDesc: 'Provisioning Engine — Automated tool installation and environment setup on target hosts', ecosystemFlow: 'RedC pulls templates → deploys cloud resources → f8x provisions environment, fully automated',
     welcomeEcosystemTitle: 'WgpSec Infra Ecosystem', welcomeEcosystemDesc: 'Understand the tooling ecosystem behind RedC',

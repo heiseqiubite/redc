@@ -287,7 +287,7 @@
 </script>
 
 <div class="space-y-4">
-    <PageGuide text={t.pgSettings} dismissKey="settings" />
+    <PageGuide text={t.pgSettings} dismissKey="settings" {t} />
     <!-- 基本信息 + 开关 -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100">

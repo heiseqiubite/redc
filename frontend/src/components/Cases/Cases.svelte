@@ -1261,7 +1261,7 @@ let { t, lang = 'zh', onTabChange = () => {} } = $props();
 </script>
 
 <div class="space-y-5">
-  <PageGuide text={t.pgCases} dismissKey="cases" />
+  <PageGuide text={t.pgCases} dismissKey="cases" {t} />
   {#if error}
     <div class="flex items-center gap-3 px-4 py-3 bg-red-50 border border-red-100 rounded-lg">
       <svg class="w-4 h-4 text-red-500 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

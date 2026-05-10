@@ -304,7 +304,7 @@
 </script>
 
 <div class="space-y-4 sm:space-y-5">
-  <PageGuide text={t.pgAI} dismissKey="ai" />
+  <PageGuide text={t.pgAI} dismissKey="ai" {t} />
   <!-- Error display -->
   {#if error}
     <div class="flex items-center gap-3 px-3 sm:px-4 py-2.5 sm:py-3 bg-red-50 border border-red-100 rounded-lg">

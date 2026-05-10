@@ -272,7 +272,7 @@
 </script>
 
 <div class="space-y-5">
-  <PageGuide text={t.pgCustomDeploy} dismissKey="customDeploy" />
+  <PageGuide text={t.pgCustomDeploy} dismissKey="customDeploy" {t} />
   <!-- Tabs -->
   <div class="flex items-center gap-3 flex-wrap">
     <div class="flex gap-1 bg-gray-100 rounded-lg p-1">

@@ -333,7 +333,7 @@
 </script>
 
 <div class="space-y-4">
-  <PageGuide text={t.pgCompose} dismissKey="compose" />
+  <PageGuide text={t.pgCompose} dismissKey="compose" {t} />
   <!-- No templates hint -->
   {#if !templatesLoading && composeTemplates.length === 0}
     <div class="bg-blue-50 border border-blue-100 rounded-xl p-5">

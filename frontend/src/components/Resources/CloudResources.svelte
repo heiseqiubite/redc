@@ -101,7 +101,7 @@
 </script>
 
 <div class="space-y-4">
-  <PageGuide text={t.pgResources} dismissKey="resources" />
+  <PageGuide text={t.pgResources} dismissKey="resources" {t} />
   <!-- Resource Summary -->
   <div class="bg-white rounded-xl border border-gray-100 p-5">
     <div class="flex items-center justify-between mb-4">

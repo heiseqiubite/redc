@@ -260,7 +260,7 @@
 </script>
 
 <div class="space-y-4">
-  <PageGuide text={t.pgHttpServer} dismissKey="httpServer" />
+  <PageGuide text={t.pgHttpServer} dismissKey="httpServer" {t} />
   <!-- Status Banner -->
   {#if httpStatus.running}
   <div class="bg-emerald-50 border border-emerald-100 rounded-xl px-5 py-3 flex items-center justify-between flex-wrap gap-2">
