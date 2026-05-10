@@ -376,32 +376,41 @@
   <GettingStarted {t} onTabChange={onTabChange} />
   <!-- Stats Row: 4 scene stats + 4 quick stats in one row -->
   <div class="grid grid-cols-4 sm:grid-cols-8 gap-3">
-    <div class="bg-white rounded-xl border border-gray-100 p-4">
-      <div class="text-[11px] text-gray-500 mb-1">{t.totalScenes || '总场景数'}</div>
-      <div class="text-[22px] font-bold text-gray-900">{stats.totalCases}</div>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-100 p-4">
-      <div class="text-[11px] text-gray-500 mb-1">{t.runningScenes || '运行中'}</div>
-      <div class="text-[22px] font-bold text-emerald-600">{stats.runningCases}</div>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-100 p-4">
-      <div class="text-[11px] text-gray-500 mb-1">{t.stoppedScenes || '已停止'}</div>
-      <div class="text-[22px] font-bold text-gray-400">{stats.stoppedCases}</div>
-    </div>
-    <div class="bg-white rounded-xl border border-gray-100 p-4">
-      <div class="text-[11px] text-gray-500 mb-1">{t.errorScenes || '异常'}</div>
-      <div class="text-[22px] font-bold text-red-500">{stats.errorCases}</div>
-    </div>
-    {#each quickStats as stat}
-      <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-      <div 
-        class="bg-white rounded-xl border border-gray-100 p-4 {stat.tab ? 'cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all' : ''}"
-        onclick={() => stat.tab && onTabChange(stat.tab)}
-      >
-        <div class="text-[11px] text-gray-500 mb-1">{stat.label}</div>
-        <div class="text-[22px] font-bold text-gray-900">{stat.value}</div>
+    {#if loading}
+      {#each Array(8) as _}
+        <div class="bg-white rounded-xl border border-gray-100 p-4">
+          <div class="h-3 w-14 bg-gray-100 rounded animate-pulse mb-2"></div>
+          <div class="h-7 w-10 bg-gray-100 rounded animate-pulse"></div>
+        </div>
+      {/each}
+    {:else}
+      <div class="bg-white rounded-xl border border-gray-100 p-4">
+        <div class="text-[11px] text-gray-500 mb-1">{t.totalScenes || '总场景数'}</div>
+        <div class="text-[22px] font-bold text-gray-900">{stats.totalCases}</div>
       </div>
-    {/each}
+      <div class="bg-white rounded-xl border border-gray-100 p-4">
+        <div class="text-[11px] text-gray-500 mb-1">{t.runningScenes || '运行中'}</div>
+        <div class="text-[22px] font-bold text-emerald-600">{stats.runningCases}</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-100 p-4">
+        <div class="text-[11px] text-gray-500 mb-1">{t.stoppedScenes || '已停止'}</div>
+        <div class="text-[22px] font-bold text-gray-400">{stats.stoppedCases}</div>
+      </div>
+      <div class="bg-white rounded-xl border border-gray-100 p-4">
+        <div class="text-[11px] text-gray-500 mb-1">{t.errorScenes || '异常'}</div>
+        <div class="text-[22px] font-bold text-red-500">{stats.errorCases}</div>
+      </div>
+      {#each quickStats as stat}
+        <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
+        <div
+          class="bg-white rounded-xl border border-gray-100 p-4 {stat.tab ? 'cursor-pointer hover:border-gray-200 hover:shadow-sm transition-all' : ''}"
+          onclick={() => stat.tab && onTabChange(stat.tab)}
+        >
+          <div class="text-[11px] text-gray-500 mb-1">{stat.label}</div>
+          <div class="text-[22px] font-bold text-gray-900">{stat.value}</div>
+        </div>
+      {/each}
+    {/if}
   </div>
   
   <!-- Main Content Grid (3 equal columns) -->
@@ -428,8 +437,18 @@
       </div>
       <div class="divide-y divide-gray-50">
         {#if loading}
-          <div class="px-5 py-8 text-center text-[13px] text-gray-400">
-            {t.loading || '加载中...'}
+          <div class="divide-y divide-gray-50">
+            {#each Array(3) as _}
+              <div class="px-4 py-2.5">
+                <div class="flex items-center justify-between">
+                  <div class="flex-1">
+                    <div class="h-3 w-32 bg-gray-100 rounded animate-pulse"></div>
+                    <div class="h-2.5 w-20 bg-gray-50 rounded animate-pulse mt-1.5"></div>
+                  </div>
+                  <div class="h-6 w-6 bg-gray-100 rounded animate-pulse"></div>
+                </div>
+              </div>
+            {/each}
           </div>
         {:else if recentCases.length === 0}
           <div class="px-5 py-10 text-center">
@@ -667,8 +686,19 @@
         </div>
         <div class="px-4 py-3">
           {#if networkCheckLoading}
-            <div class="text-center py-6 text-[12px] text-gray-400">
-              {t.loading || '加载中...'}
+            <div class="space-y-2 py-1">
+              {#each Array(4) as _}
+                <div class="flex items-center justify-between py-1.5">
+                  <div class="flex items-center gap-2">
+                    <div class="w-1.5 h-1.5 rounded-full bg-gray-200 animate-pulse"></div>
+                    <div class="h-3 w-28 bg-gray-100 rounded animate-pulse"></div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <div class="h-3 w-8 bg-gray-100 rounded animate-pulse"></div>
+                    <div class="h-3 w-6 bg-gray-100 rounded animate-pulse"></div>
+                  </div>
+                </div>
+              {/each}
             </div>
           {:else if networkChecks.length === 0}
             <div class="text-center py-6 text-[12px] text-gray-400">
