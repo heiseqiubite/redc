@@ -291,7 +291,12 @@
     <!-- 基本信息 + 开关 -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.settingsGeneral || '通用设置'}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-gray-100 flex items-center justify-center">
+            <svg class="w-3 h-3 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.241-.438.613-.43.992a7.723 7.723 0 010 .255c-.008.378.137.75.43.991l1.004.827c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.281c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.991a6.932 6.932 0 010-.255c.007-.38-.138-.751-.43-.992l-1.004-.827a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.086.22-.128.332-.183.582-.495.644-.869l.214-1.28z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </div>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.settingsGeneral || '通用设置'}</h3>
+        </div>
       </div>
       <!-- Path info -->
       <div class="px-5 py-3 border-b border-gray-50">
@@ -388,7 +393,12 @@
     <!-- 代理配置 -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.proxyConfig}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-blue-50 flex items-center justify-center">
+            <svg class="w-3 h-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21a9.004 9.004 0 008.716-6.747M12 21a9.004 9.004 0 01-8.716-6.747M12 21c2.485 0 4.5-4.03 4.5-9S14.485 3 12 3m0 18c-2.485 0-4.5-4.03-4.5-9S9.515 3 12 3m0 0a8.997 8.997 0 017.843 4.582M12 3a8.997 8.997 0 00-7.843 4.582m15.686 0A11.953 11.953 0 0112 10.5c-2.998 0-5.74-1.1-7.843-2.918m15.686 0A8.959 8.959 0 0121 12c0 .778-.099 1.533-.284 2.253m0 0A17.919 17.919 0 0112 16.5c-3.162 0-6.133-.815-8.716-2.247m0 0A9.015 9.015 0 013 12c0-1.605.42-3.113 1.157-4.418" /></svg>
+          </div>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.proxyConfig}</h3>
+        </div>
       </div>
       <div class="px-5 py-4">
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -442,8 +452,13 @@
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <div>
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.terraformMirror} <HelpTooltip text={t.helpTfMirror} /></h3>
-          <p class="text-[11px] text-gray-500 mt-0.5">{t.mirrorConfigHint}</p>
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded-md bg-amber-50 flex items-center justify-center">
+              <svg class="w-3 h-3 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z" /></svg>
+            </div>
+            <h3 class="text-[13px] font-semibold text-gray-900">{t.terraformMirror} <HelpTooltip text={t.helpTfMirror} /></h3>
+          </div>
+          <p class="text-[11px] text-gray-500 mt-0.5 ml-7">{t.mirrorConfigHint}</p>
         </div>
         <button
           class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
@@ -529,7 +544,12 @@
     <!-- 网络诊断 -->
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
-        <h3 class="text-[13px] font-semibold text-gray-900">{t.networkCheck}</h3>
+        <div class="flex items-center gap-2">
+          <div class="w-5 h-5 rounded-md bg-emerald-50 flex items-center justify-center">
+            <svg class="w-3 h-3 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9.348 14.652a3.75 3.75 0 010-5.304m5.304 0a3.75 3.75 0 010 5.304m-7.425 2.121a6.75 6.75 0 010-9.546m9.546 0a6.75 6.75 0 010 9.546M5.106 18.894c-3.808-3.808-3.808-9.98 0-13.788m13.788 0c3.808 3.808 3.808 9.98 0 13.788M12 12h.008v.008H12V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" /></svg>
+          </div>
+          <h3 class="text-[13px] font-semibold text-gray-900">{t.networkCheck}</h3>
+        </div>
         <button
           class="h-7 px-3 text-gray-700 bg-white border border-gray-200 hover:bg-gray-50 text-[11px] font-medium rounded-lg transition-colors disabled:opacity-50 cursor-pointer inline-flex items-center gap-1.5"
           onclick={runTerraformNetworkCheck}
@@ -552,7 +572,7 @@
                   <span class="text-[12px] text-gray-700 truncate">{item.name}</span>
                 </div>
                 <div class="flex items-center gap-3 flex-shrink-0">
-                  <span class="text-[11px] text-gray-400 tabular-nums">{item.latencyMs}ms</span>
+                  <span class="text-[11px] tabular-nums {item.latencyMs < 100 ? 'text-emerald-500' : item.latencyMs < 300 ? 'text-amber-500' : item.latencyMs < 1000 ? 'text-orange-500' : 'text-red-500'}">{item.latencyMs}ms</span>
                   <span class="text-[11px] font-medium w-8 text-right {item.ok ? 'text-emerald-500' : 'text-red-500'}">
                     {item.ok ? 'OK' : 'FAIL'}
                   </span>
@@ -575,8 +595,13 @@
     <div class="bg-white rounded-xl border border-gray-100 overflow-hidden">
       <div class="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
         <div>
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.webhookNotification || 'Webhook 通知'}</h3>
-          <p class="text-[11px] text-gray-500 mt-0.5">{t.webhookNotificationDesc || '场景状态变化时推送消息'}</p>
+          <div class="flex items-center gap-2">
+            <div class="w-5 h-5 rounded-md bg-violet-50 flex items-center justify-center">
+              <svg class="w-3 h-3 text-violet-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" /></svg>
+            </div>
+            <h3 class="text-[13px] font-semibold text-gray-900">{t.webhookNotification || 'Webhook 通知'}</h3>
+          </div>
+          <p class="text-[11px] text-gray-500 mt-0.5 ml-7">{t.webhookNotificationDesc || '场景状态变化时推送消息'}</p>
         </div>
         <button
           class="relative inline-flex h-6 w-11 flex-shrink-0 items-center rounded-full transition-colors cursor-pointer"

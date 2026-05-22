@@ -1714,12 +1714,13 @@ let { t, lang = 'zh', onTabChange = () => {} } = $props();
       </thead>
       <tbody>
         {#each paginatedCases || [] as c, i}
-          <tr 
-            class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer"
+          <tr
+            class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer relative"
             onclick={() => toggleCaseExpand(c.id, c.state)}
             oncontextmenu={(e) => openContextMenu(e, c)}
           >
-            <td class="pl-4 pr-1 py-3.5" onclick={(e) => e.stopPropagation()}>
+            <td class="pl-4 pr-1 py-3.5 relative" onclick={(e) => e.stopPropagation()}>
+              <div class="absolute left-0 top-1 bottom-1 w-0.5 rounded-full {c.state === 'running' ? 'bg-emerald-400' : c.state === 'error' || c.state === 'terminated' ? 'bg-red-400' : c.state === 'stopped' ? 'bg-gray-300' : 'bg-blue-300'}"></div>
               <input
                 type="checkbox"
                 class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"
