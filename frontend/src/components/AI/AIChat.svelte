@@ -822,9 +822,21 @@
     <div class="flex gap-0.5 bg-gray-100 rounded-lg p-0.5 flex-wrap">
       {#each modes as m}
         <button
-          class="px-2.5 py-1 text-[11px] rounded-md transition-colors cursor-pointer whitespace-nowrap {mode === m.id ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+          class="flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] rounded-md transition-all cursor-pointer whitespace-nowrap
+            {mode === m.id
+              ? m.id === 'free' ? 'bg-white text-emerald-700 shadow-sm font-medium ring-1 ring-emerald-200'
+                : m.id === 'agent' ? 'bg-white text-blue-700 shadow-sm font-medium ring-1 ring-blue-200'
+                : 'bg-white text-purple-700 shadow-sm font-medium ring-1 ring-purple-200'
+              : 'text-gray-500 hover:text-gray-700'}"
           onclick={() => switchMode(m.id)}
-        >{t[m.labelKey] || m.id}</button>
+        >
+          <svg class="w-3.5 h-3.5 {mode === m.id
+            ? m.id === 'free' ? 'text-emerald-500' : m.id === 'agent' ? 'text-blue-500' : 'text-purple-500'
+            : 'text-gray-400'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d={m.icon} />
+          </svg>
+          {t[m.labelKey] || m.id}
+        </button>
       {/each}
     </div>
     <div class="flex-1"></div>
@@ -882,18 +894,35 @@
       <div class="w-56 flex-shrink-0 bg-white border border-gray-100 rounded-xl flex flex-col overflow-hidden">
         <div class="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between">
           <span class="text-[12px] font-medium text-gray-700">{t.aiChatHistory || '对话历史'}</span>
-          <span class="text-[10px] text-gray-400">{conversations.length}</span>
+          <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-500 font-medium">{conversations.length}</span>
         </div>
         <div class="flex-1 overflow-y-auto">
           {#if conversations.length === 0}
-            <div class="px-3 py-6 text-center text-[11px] text-gray-400">
-              {t.aiChatNoHistory || '暂无对话历史'}
+            <div class="px-3 py-8 text-center">
+              <div class="w-8 h-8 mx-auto mb-2 rounded-full bg-gray-100 flex items-center justify-center">
+                <svg class="w-4 h-4 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 8.511c.884.284 1.5 1.128 1.5 2.097v4.286c0 1.136-.847 2.1-1.98 2.193-.34.027-.68.052-1.02.072v3.091l-3-3c-1.354 0-2.694-.055-4.02-.163a2.115 2.115 0 01-.825-.242m9.345-8.334a2.126 2.126 0 00-.476-.095 48.64 48.64 0 00-8.048 0c-1.131.094-1.976 1.057-1.976 2.192v4.286c0 .837.46 1.58 1.155 1.951m9.345-8.334V6.637c0-1.621-1.152-3.026-2.76-3.235A48.455 48.455 0 0011.25 3c-2.115 0-4.198.137-6.24.402-1.608.209-2.76 1.614-2.76 3.235v6.226c0 1.621 1.152 3.026 2.76 3.235.577.075 1.157.14 1.74.194V21l4.155-4.155" /></svg>
+              </div>
+              <p class="text-[11px] text-gray-400">{t.aiChatNoHistory || '暂无对话历史'}</p>
             </div>
           {:else}
-            {#each conversations as conv (conv.id)}
+            {#each conversations as conv, i (conv.id)}
+              {@const prevConv = i > 0 ? conversations[i - 1] : null}
+              {@const convDate = new Date(conv.updatedAt)}
+              {@const prevDate = prevConv ? new Date(prevConv.updatedAt) : null}
+              {@const today = new Date()}
+              {@const isToday = convDate.toDateString() === today.toDateString()}
+              {@const isYesterday = convDate.toDateString() === new Date(today.getTime() - 86400000).toDateString()}
+              {@const showDateHeader = i === 0 || (prevDate && prevDate.toDateString() !== convDate.toDateString())}
+              {#if showDateHeader}
+                <div class="px-3 pt-3 pb-1">
+                  <span class="text-[10px] font-semibold uppercase tracking-wider text-gray-400">
+                    {isToday ? (t.today || '今天') : isYesterday ? (t.yesterday || '昨天') : convDate.toLocaleDateString(lang === 'en' ? 'en-US' : 'zh-CN', { month: 'short', day: 'numeric' })}
+                  </span>
+                </div>
+              {/if}
               <div
-                class="w-full text-left px-3 py-2.5 border-b border-gray-50 hover:bg-gray-50 transition-colors cursor-pointer group
-                  {conv.id === activeConvId ? 'bg-gray-50' : ''}"
+                class="w-full text-left px-3 py-2.5 hover:bg-gray-50 transition-colors cursor-pointer group
+                  {conv.id === activeConvId ? 'bg-gray-50 border-l-2 border-l-gray-900' : 'border-l-2 border-l-transparent'}"
                 onclick={() => switchConversation(conv.id)}
                 role="button"
                 onkeydown={(e) => e.key === 'Enter' && switchConversation(conv.id)}
@@ -903,7 +932,7 @@
                   <div class="min-w-0 flex-1">
                     <p class="text-[12px] font-medium text-gray-800 truncate {conv.id === activeConvId ? 'text-gray-900 font-semibold' : ''}">{conv.title}</p>
                     <div class="flex items-center gap-1.5 mt-0.5">
-                      <span class="text-[10px] px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">{t[modeLabels[conv.mode]] || conv.mode}</span>
+                      <span class="text-[10px] px-1.5 py-0.5 rounded {conv.mode === 'free' ? 'bg-emerald-50 text-emerald-600' : conv.mode === 'agent' ? 'bg-blue-50 text-blue-600' : 'bg-purple-50 text-purple-600'}">{t[modeLabels[conv.mode]] || conv.mode}</span>
                       <span class="text-[10px] text-gray-400">{formatTime(conv.updatedAt)}</span>
                     </div>
                   </div>
@@ -938,10 +967,11 @@
             <div class="grid grid-cols-2 gap-2">
               {#each getQuickPrompts(mode) as prompt}
                 <button
-                  class="text-left px-3 py-2.5 text-[12px] text-gray-600 bg-white border border-gray-100 rounded-xl hover:border-gray-300 hover:shadow-sm transition-all cursor-pointer leading-relaxed"
+                  class="text-left px-3 py-2.5 text-[12px] text-gray-600 bg-white border border-gray-100 rounded-xl hover:shadow-sm transition-all cursor-pointer leading-relaxed group
+                    {mode === 'free' ? 'hover:border-emerald-200' : mode === 'agent' ? 'hover:border-blue-200' : 'hover:border-purple-200'}"
                   onclick={() => { inputText = prompt.text; sendMessage(); }}
                 >
-                  <span class="text-gray-400 mr-1">→</span> {prompt.label}
+                  <span class="{mode === 'free' ? 'text-emerald-400 group-hover:text-emerald-500' : mode === 'agent' ? 'text-blue-400 group-hover:text-blue-500' : 'text-purple-400 group-hover:text-purple-500'} mr-1">→</span> {prompt.label}
                 </button>
               {/each}
             </div>

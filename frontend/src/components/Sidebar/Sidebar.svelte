@@ -259,9 +259,9 @@ let {
     <div class="space-y-0.5">
       {#each navSections as section}
         {#if section.type === 'item'}
-          <button 
+          <button
             class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap
-              {activeTab === section.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 cursor-pointer'}"
+              {activeTab === section.id ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:translate-x-0.5 cursor-pointer'}"
             onclick={() => handleNavClick(section)}
           >
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -289,7 +289,7 @@ let {
             {#each section.items as item}
               <button
                 class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all whitespace-nowrap
-                  {activeTab === item.id ? 'bg-gray-900 text-white' : 'text-gray-600 hover:bg-gray-50 cursor-pointer'}"
+                  {activeTab === item.id ? 'bg-gray-900 text-white shadow-sm' : 'text-gray-600 hover:bg-gray-50 hover:translate-x-0.5 cursor-pointer'}"
                 onclick={() => handleNavClick(item)}
               >
                 <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
@@ -316,13 +316,15 @@ let {
     <div class="relative">
       <button
         class="w-full flex items-center gap-2 px-2.5 py-2 rounded-lg text-[12px] font-medium transition-all
-          bg-gray-50 hover:bg-gray-100 text-gray-700 border border-gray-100 cursor-pointer"
+          bg-gradient-to-r from-gray-50 to-white hover:from-gray-100 hover:to-gray-50 text-gray-700 border border-gray-200 cursor-pointer shadow-sm"
         onclick={() => showProjectDropdown = !showProjectDropdown}
         title={t.switchProject || '切换项目'}
       >
-        <svg class="w-4 h-4 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
-        </svg>
+        <div class="w-5 h-5 rounded-md bg-rose-100 flex items-center justify-center flex-shrink-0">
+          <svg class="w-3 h-3 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12.75V12A2.25 2.25 0 014.5 9.75h15A2.25 2.25 0 0121.75 12v.75m-8.69-6.44l-2.12-2.12a1.5 1.5 0 00-1.061-.44H4.5A2.25 2.25 0 002.25 6v12a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9a2.25 2.25 0 00-2.25-2.25h-5.379a1.5 1.5 0 01-1.06-.44z" />
+          </svg>
+        </div>
         <span class="flex-1 text-left truncate">{currentProject || (t.selectProject || '选择项目...')}</span>
         <svg class="w-3 h-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
