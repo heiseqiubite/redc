@@ -40,13 +40,29 @@
 
 <Modal show={show} onclose={handleClose}>
     <!-- Dialog -->
-    <div class="relative bg-white rounded-xl border border-gray-100 max-w-md w-full mx-4 overflow-hidden">
-      <!-- Header -->
-      <div class="px-5 py-4 border-b border-gray-100">
-        <h2 class="text-[15px] font-medium text-gray-900">
-          {currentPage === 0 ? (t.welcomeTitle || '欢迎使用 RedC') : currentPage === 1 ? (t.welcomeEcosystemTitle || 'WgpSec Infra 生态') : currentPage === 2 ? (t.welcomeWindowsIssue || 'Windows 控制台窗口说明') : (t.welcomeProxyTitle || '代理配置说明')}
-        </h2>
-      </div>
+    <div class="relative bg-white rounded-2xl border border-gray-100 max-w-md w-full mx-4 overflow-hidden shadow-xl">
+      <!-- Header with brand area -->
+      {#if currentPage === 0}
+        <div class="px-5 pt-6 pb-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
+              <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
+              </svg>
+            </div>
+            <div>
+              <h2 class="text-[15px] font-semibold">{t.welcomeTitle || '欢迎使用 RedC'}</h2>
+              <p class="text-[11px] text-gray-300 mt-0.5">{t.welcomeSubtitle || 'Red Team Cloud Infrastructure Manager'}</p>
+            </div>
+          </div>
+        </div>
+      {:else}
+        <div class="px-5 py-4 border-b border-gray-100">
+          <h2 class="text-[15px] font-medium text-gray-900">
+            {currentPage === 1 ? (t.welcomeEcosystemTitle || 'WgpSec Infra 生态') : currentPage === 2 ? (t.welcomeWindowsIssue || 'Windows 控制台窗口说明') : (t.welcomeProxyTitle || '代理配置说明')}
+          </h2>
+        </div>
+      {/if}
       
       <!-- Content - Page 0: Features -->
       {#if currentPage === 0}
@@ -175,7 +191,14 @@
       {/if}
       
       <!-- Footer -->
-      <div class="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
+      <div class="px-5 py-3 border-t border-gray-100">
+        <!-- Step indicators -->
+        <div class="flex items-center justify-center gap-1.5 mb-3">
+          {#each [0, 1, 2, 3] as step}
+            <div class="h-1 rounded-full transition-all duration-300 {step === currentPage ? 'w-5 bg-gray-900' : 'w-1.5 bg-gray-200'}"></div>
+          {/each}
+        </div>
+        <div class="flex items-center justify-between">
         {#if currentPage === 0}
           <label class="flex items-center gap-2 cursor-pointer">
             <input
@@ -186,38 +209,39 @@
             <span class="text-[12px] text-gray-500">{t.welcomeDontShow || '下次不显示'}</span>
           </label>
           <button
-            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
             onclick={nextPage}
           >
             {t.welcomeNext || '下一步'}
           </button>
         {:else if currentPage < 3}
           <button
-            class="h-9 px-4 text-gray-700 bg-white border border-gray-300 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            class="h-9 px-4 text-gray-700 bg-white border border-gray-200 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
             onclick={prevPage}
           >
             {t.welcomePrev || '上一步'}
           </button>
           <button
-            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
             onclick={nextPage}
           >
             {t.welcomeNext || '下一步'}
           </button>
         {:else}
           <button
-            class="h-9 px-4 text-gray-700 bg-white border border-gray-300 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors"
+            class="h-9 px-4 text-gray-700 bg-white border border-gray-200 text-[13px] font-medium rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
             onclick={prevPage}
           >
             {t.welcomePrev || '上一步'}
           </button>
           <button
-            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors"
+            class="h-9 px-4 bg-gray-900 text-white text-[13px] font-medium rounded-lg hover:bg-gray-800 transition-colors cursor-pointer"
             onclick={handleClose}
           >
             {t.welcomeGotIt || '知道了'}
           </button>
         {/if}
+        </div>
       </div>
     </div>
 </Modal>

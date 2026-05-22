@@ -391,23 +391,33 @@ let { t, lang } = $props();
   <!-- Filter tabs -->
   <div class="flex items-center gap-4">
     <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-0.5">
-      <button 
+      <button
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'all' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'all'; selectedTemplates = new Set(); }}
       >{t.filterAll || '全部'} ({registryTemplates.length})</button>
-      <button 
-        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'installed' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
+      <button
+        class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'installed' ? 'bg-white text-emerald-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'installed'; selectedTemplates = new Set(); }}
-      >{t.installed} ({installedCount})</button>
-      <button 
+      >
+        <span class="inline-flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          {t.installed} ({installedCount})
+        </span>
+      </button>
+      <button
         class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'notInstalled' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => { filterTab = 'notInstalled'; selectedTemplates = new Set(); }}
       >{t.notInstalled || '未安装'} ({notInstalledCount})</button>
       {#if updatableCount > 0}
-        <button 
-          class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'updatable' ? 'bg-white text-gray-900 shadow-sm' : 'text-amber-600 hover:text-amber-700'}"
+        <button
+          class="px-3 py-1.5 text-[12px] font-medium rounded-md transition-colors cursor-pointer {filterTab === 'updatable' ? 'bg-white text-amber-700 shadow-sm' : 'text-amber-600 hover:text-amber-700'}"
           onclick={() => { filterTab = 'updatable'; selectedTemplates = new Set(); }}
-        >{t.updatable || '可更新'} ({updatableCount})</button>
+        >
+          <span class="inline-flex items-center gap-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
+            {t.updatable || '可更新'} ({updatableCount})
+          </span>
+        </button>
       {/if}
     </div>
   </div>
@@ -477,7 +487,9 @@ let { t, lang } = $props();
     <!-- Template Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
       {#each filteredRegistryTemplates as tmpl}
-        <div class="bg-white rounded-xl border {justPulled[tmpl.name] ? 'border-emerald-400 ring-2 ring-emerald-200' : tmpl.installed ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'} p-4 hover:shadow-md transition-all duration-500">
+        <div class="relative bg-white rounded-xl border {justPulled[tmpl.name] ? 'border-emerald-400 ring-2 ring-emerald-200' : tmpl.installed ? 'border-emerald-200 bg-emerald-50/30' : 'border-gray-100'} p-4 pl-5 hover:shadow-md transition-all duration-500 overflow-hidden">
+          <!-- Left status bar -->
+          <div class="absolute left-0 top-0 bottom-0 w-[3px] rounded-l-xl {justPulled[tmpl.name] ? 'bg-emerald-500' : tmpl.installed && hasUpdate(tmpl) ? 'bg-amber-400' : tmpl.installed ? 'bg-emerald-400' : 'bg-gray-200'}"></div>
           <div class="flex gap-3">
             <!-- Checkbox -->
             <div class="pt-0.5 flex-shrink-0">

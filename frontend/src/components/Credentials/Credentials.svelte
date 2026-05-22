@@ -853,8 +853,11 @@ let { t } = $props();
     <!-- Provider header with search and stats -->
     <div class="flex items-center justify-between">
       <div class="flex items-center gap-3">
+        <div class="w-6 h-6 rounded-md bg-blue-100 flex items-center justify-center">
+          <svg class="w-3.5 h-3.5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15a4.5 4.5 0 004.5 4.5H18a3.75 3.75 0 001.332-7.257 3 3 0 00-3.758-3.848 5.25 5.25 0 00-10.233 2.33A4.502 4.502 0 002.25 15z" /></svg>
+        </div>
         <h3 class="text-[14px] font-semibold text-gray-900">{t.cloudCredentials || '云厂商凭据'}</h3>
-        <span class="text-[11px] text-gray-400">{configuredCount}/{(providersConfig.providers || []).length} {t.configured || '已配置'}</span>
+        <span class="text-[11px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 font-medium">{configuredCount}/{(providersConfig.providers || []).length}</span>
       </div>
       <div class="relative">
         <svg class="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
