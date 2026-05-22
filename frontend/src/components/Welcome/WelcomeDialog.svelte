@@ -41,18 +41,18 @@
 <Modal show={show} onclose={handleClose}>
     <!-- Dialog -->
     <div class="relative bg-white rounded-2xl border border-gray-100 max-w-md w-full mx-4 overflow-hidden shadow-xl">
-      <!-- Header with brand area -->
+      <!-- Header -->
       {#if currentPage === 0}
-        <div class="px-5 pt-6 pb-4 bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
+        <div class="px-5 py-4 border-b border-gray-100">
           <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-white/10 backdrop-blur flex items-center justify-center ring-1 ring-white/20">
-              <svg class="w-5 h-5 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <div class="w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center">
+              <svg class="w-4 h-4 text-rose-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5.25 14.25h13.5m-13.5 0a3 3 0 01-3-3m3 3a3 3 0 100 6h13.5a3 3 0 100-6m-16.5-3a3 3 0 013-3h13.5a3 3 0 013 3m-19.5 0a4.5 4.5 0 01.9-2.7L5.737 5.1a3.375 3.375 0 012.7-1.35h7.126c1.062 0 2.062.5 2.7 1.35l2.587 3.45a4.5 4.5 0 01.9 2.7m0 0a3 3 0 01-3 3m0 3h.008v.008h-.008v-.008zm0-6h.008v.008h-.008v-.008z" />
               </svg>
             </div>
             <div>
-              <h2 class="text-[15px] font-semibold">{t.welcomeTitle || '欢迎使用 RedC'}</h2>
-              <p class="text-[11px] text-gray-300 mt-0.5">{t.welcomeSubtitle || 'Red Team Cloud Infrastructure Manager'}</p>
+              <h2 class="text-[15px] font-semibold text-gray-900">{t.welcomeTitle || '欢迎使用 RedC'}</h2>
+              <p class="text-[11px] text-gray-400">{t.welcomeSubtitle || 'Red Team Cloud Infrastructure Manager'}</p>
             </div>
           </div>
         </div>
