@@ -848,7 +848,14 @@
     {#if rightPanel === 'userdata' && activeSession}
       <div class="w-80 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.execUserdata || '命令片段'}</h3>
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-amber-50 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-1.043 3.296 3.745 3.745 0 01-3.296 1.043A3.745 3.745 0 0112 21c-1.268 0-2.39-.63-3.068-1.593a3.746 3.746 0 01-3.296-1.043 3.745 3.745 0 01-1.043-3.296A3.745 3.745 0 013 12c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 011.043-3.296 3.746 3.746 0 013.296-1.043A3.746 3.746 0 0112 3c1.268 0 2.39.63 3.068 1.593a3.746 3.746 0 013.296 1.043 3.746 3.746 0 011.043 3.296A3.745 3.745 0 0121 12z" />
+              </svg>
+            </div>
+            <h3 class="text-[13px] font-semibold text-gray-900">{t.execUserdata || '命令片段'}</h3>
+          </div>
           <button
             class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             onclick={() => rightPanel = 'none'}
@@ -943,7 +950,17 @@
     {#if rightPanel === 'portForward'}
       <div class="w-80 flex-shrink-0 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
         <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-          <h3 class="text-[13px] font-semibold text-gray-900">{t.sshPortForward || '端口转发'}</h3>
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-md bg-blue-50 flex items-center justify-center">
+              <svg class="w-3.5 h-3.5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+              </svg>
+            </div>
+            <h3 class="text-[13px] font-semibold text-gray-900">{t.sshPortForward || '端口转发'}</h3>
+            {#if portForwards.length > 0}
+              <span class="text-[11px] font-medium text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded-full">{portForwards.length}</span>
+            {/if}
+          </div>
           <button
             class="w-6 h-6 flex items-center justify-center rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors cursor-pointer"
             onclick={() => rightPanel = 'none'}
@@ -959,10 +976,11 @@
             <p class="text-[12px] text-gray-400 text-center py-4">{t.sshNoForwards || '暂无活跃的端口转发'}</p>
           {/if}
           {#each portForwards as pf}
-            <div class="bg-gray-50 rounded-lg p-3 border border-gray-200">
+            <div class="relative bg-gray-50 rounded-lg p-3 border border-gray-200 overflow-hidden">
+              <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-emerald-400 rounded-l-lg"></div>
               <div class="flex items-center justify-between">
-                <div class="min-w-0">
-                  <p class="text-[12px] font-mono text-red-600 truncate">
+                <div class="min-w-0 pl-1">
+                  <p class="text-[12px] font-mono text-blue-600 truncate">
                     localhost:{pf.localPort} → {pf.remoteHost}:{pf.remotePort}
                   </p>
                   <p class="text-[10px] text-gray-400 mt-0.5 truncate">Case: {pf.caseId?.substring(0, 12)}</p>
@@ -1041,7 +1059,14 @@
 <!-- New session dialog -->
 <Modal show={showNewSessionDialog} onclose={() => showNewSessionDialog = false}>
     <div class="bg-white rounded-xl border border-gray-100 w-full max-w-md p-5 shadow-2xl">
-      <h3 class="text-[15px] font-semibold text-gray-900 mb-3">{t.sshNewSession || '新建会话'}</h3>
+      <div class="flex items-center gap-2.5 mb-3">
+        <div class="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center">
+          <svg class="w-3.5 h-3.5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" />
+          </svg>
+        </div>
+        <h3 class="text-[15px] font-semibold text-gray-900">{t.sshNewSession || '新建会话'}</h3>
+      </div>
 
       <!-- Dialog mode tabs: 场景 / 外部服务器 -->
       {#if multiInstances.length === 0 && !showManualInput}

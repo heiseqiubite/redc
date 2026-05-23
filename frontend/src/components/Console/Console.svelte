@@ -261,12 +261,18 @@
       <div class="flex gap-0.5 bg-[#1e1e1e] rounded-md p-0.5 ml-2">
         <button
           onclick={() => switchView('logs')}
-          class="px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer {activeView === 'logs' ? 'bg-[#3c3c3c] text-gray-200 font-medium shadow-sm' : 'text-gray-500 hover:text-gray-300'}"
-        >{t.consoleTabLogs || '终端日志'}</button>
+          class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer {activeView === 'logs' ? 'bg-[#3c3c3c] text-gray-200 font-medium shadow-sm' : 'text-gray-500 hover:text-gray-300'}"
+        >
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 7.5l3 2.25-3 2.25m4.5 0h3m-9 8.25h13.5A2.25 2.25 0 0021 18V6a2.25 2.25 0 00-2.25-2.25H5.25A2.25 2.25 0 003 6v12a2.25 2.25 0 002.25 2.25z" /></svg>
+          {t.consoleTabLogs || '终端日志'}
+        </button>
         <button
           onclick={() => switchView('timeline')}
-          class="px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer {activeView === 'timeline' ? 'bg-[#3c3c3c] text-gray-200 font-medium shadow-sm' : 'text-gray-500 hover:text-gray-300'}"
-        >{t.consoleTabTimeline || '事件时间线'}</button>
+          class="flex items-center gap-1 px-2.5 py-0.5 text-[11px] rounded transition-colors cursor-pointer {activeView === 'timeline' ? 'bg-[#3c3c3c] text-gray-200 font-medium shadow-sm' : 'text-gray-500 hover:text-gray-300'}"
+        >
+          <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+          {t.consoleTabTimeline || '事件时间线'}
+        </button>
       </div>
       <!-- Log counts (only show in logs view) -->
       {#if activeView === 'logs' && logs.length > 0}
