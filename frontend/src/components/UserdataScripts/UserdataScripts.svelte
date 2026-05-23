@@ -71,6 +71,31 @@
     return categoryIconPaths[cat] || categoryIconPaths.other;
   }
 
+  function categoryColor(cat) {
+    const colors = {
+      all: 'bg-gray-400',
+      vulhub: 'bg-amber-400',
+      c2: 'bg-red-400',
+      ai: 'bg-purple-400',
+      basic: 'bg-blue-400',
+      security: 'bg-emerald-400',
+      other: 'bg-gray-400'
+    };
+    return colors[cat] || 'bg-gray-400';
+  }
+
+  function categoryBorderColor(cat) {
+    const colors = {
+      vulhub: 'border-l-amber-400',
+      c2: 'border-l-red-400',
+      ai: 'border-l-purple-400',
+      basic: 'border-l-blue-400',
+      security: 'border-l-emerald-400',
+      other: 'border-l-gray-400'
+    };
+    return colors[cat] || 'border-l-gray-400';
+  }
+
   function selectTemplate(tmpl) {
     selectedTemplate = tmpl;
     copied = false;
@@ -125,10 +150,11 @@
       {#each categories() as cat}
         <button
           onclick={() => { activeCategory = cat.key; selectedTemplate = null; }}
-          class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeCategory === cat.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+          class="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeCategory === cat.key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
         >
+          <span class="w-1.5 h-1.5 rounded-full {categoryColor(cat.key)}"></span>
           {cat.label}
-          <span class="ml-1 opacity-60">{cat.count}</span>
+          <span class="ml-0.5 opacity-60">{cat.count}</span>
         </button>
       {/each}
     </div>
@@ -148,7 +174,7 @@
             {#each filteredTemplates() as tmpl}
               <button
                 onclick={() => selectTemplate(tmpl)}
-                class="w-full px-3 py-2.5 text-left border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer {selectedTemplate?.name === tmpl.name ? 'bg-gray-50 border-l-2 border-l-gray-900' : 'border-l-2 border-l-transparent'}"
+                class="w-full px-3 py-2.5 text-left border-b border-gray-50 hover:bg-gray-50/50 transition-colors cursor-pointer border-l-2 {selectedTemplate?.name === tmpl.name ? 'bg-gray-50 ' + categoryBorderColor(tmpl.category) : 'border-l-transparent'}"
               >
                 <div class="flex items-center gap-2">
                   <svg class="w-3.5 h-3.5 text-gray-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">

@@ -272,17 +272,26 @@
   <!-- View Tabs -->
   <div class="flex items-center gap-1">
     <button
-      class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'modules' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+      class="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'modules' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
       onclick={() => activeView = 'modules'}
-    >{t.f8xModules || '模块'} ({catalog.length})</button>
+    >
+      <span class="w-1.5 h-1.5 rounded-full {activeView === 'modules' ? 'bg-red-400' : 'bg-red-300'}"></span>
+      {t.f8xModules || '模块'} ({catalog.length})
+    </button>
     <button
-      class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'tools' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+      class="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'tools' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
       onclick={() => { activeView = 'tools'; if (Object.keys(installedTools).length === 0) loadInstalledTools(); }}
-    >{t.f8xSingleTools || '单工具'} ({tools.length})</button>
+    >
+      <span class="w-1.5 h-1.5 rounded-full {activeView === 'tools' ? 'bg-cyan-400' : 'bg-cyan-300'}"></span>
+      {t.f8xSingleTools || '单工具'} ({tools.length})
+    </button>
     <button
-      class="px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'presets' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
+      class="flex items-center gap-1.5 px-3 py-1.5 text-[12px] font-medium rounded-lg transition-colors cursor-pointer {activeView === 'presets' ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}"
       onclick={() => activeView = 'presets'}
-    >{t.f8xPresets || '预设'} ({presets.length})</button>
+    >
+      <span class="w-1.5 h-1.5 rounded-full {activeView === 'presets' ? 'bg-purple-400' : 'bg-purple-300'}"></span>
+      {t.f8xPresets || '预设'} ({presets.length})
+    </button>
   </div>
 
   {#if activeView === 'modules'}
@@ -365,7 +374,10 @@
         {@const isBatch = (mod.tags || []).includes('batch')}
         {@const hasIncludes = isBatch && mod.includes && mod.includes.length > 0}
         {@const isExpanded = expandedIncludes.has(mod.id)}
-        <div class="group bg-white rounded-xl border transition-all cursor-pointer {isSelected ? 'border-red-400 ring-1 ring-red-200 bg-red-50/30' : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'}" onclick={() => toggleModule(mod.id)}>
+        <div class="group relative bg-white rounded-xl border transition-all cursor-pointer overflow-hidden {isSelected ? 'border-red-400 ring-1 ring-red-200 bg-red-50/30' : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'}" onclick={() => toggleModule(mod.id)}>
+          {#if isSelected}
+            <div class="absolute left-0 top-0 bottom-0 w-[3px] bg-red-400 rounded-l-xl"></div>
+          {/if}
           <div class="p-3">
             <div class="flex items-start justify-between mb-1.5">
               <div class="flex items-center gap-1.5">

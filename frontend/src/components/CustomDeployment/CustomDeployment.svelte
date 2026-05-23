@@ -277,15 +277,21 @@
   <div class="flex items-center gap-3 flex-wrap">
     <div class="flex gap-1 bg-gray-100 rounded-lg p-1">
       <button
-        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {activeTab === 'create' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+        class="flex items-center gap-1.5 px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {activeTab === 'create' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => activeTab = 'create'}
       >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+        </svg>
         {t.createDeployment || '创建部署'}
       </button>
       <button
-        class="px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {activeTab === 'manage' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
+        class="flex items-center gap-1.5 px-3 py-1 text-[12px] rounded-md transition-colors cursor-pointer {activeTab === 'manage' ? 'bg-white text-gray-900 shadow-sm font-medium' : 'text-gray-500 hover:text-gray-700'}"
         onclick={() => activeTab = 'manage'}
       >
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 010 3.75H5.625a1.875 1.875 0 010-3.75z" />
+        </svg>
         {t.deploymentManagement || '部署管理'}
       </button>
     </div>
