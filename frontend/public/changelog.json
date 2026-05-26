@@ -1,6 +1,16 @@
 {
   "changelog": [
     {
+      "version": "3.3.4",
+      "date": "2026-05-27",
+      "changes": [
+        "修复：SSH 多实例连接 — 后端 sessionID 碰撞导致同一秒内建立的会话互相覆盖，改用原子递增序列号保证唯一",
+        "修复：SSH 全部连接交替失败 — 前端自定义 tick() 与 Svelte 5 DOM 更新时序不同步，改用 svelteTick + containerEl 重试机制",
+        "修复：移除 connectSession 中多余的 sessions=[...sessions] 数组重建，消除与并发 createSession 的渲染竞态",
+        "新增：SSH 终端「重连失败」按钮 — 有连接失败会话时自动显示，一键批量重试超时/断连的会话"
+      ]
+    },
+    {
       "version": "3.3.3",
       "date": "2026-05-23",
       "changes": [

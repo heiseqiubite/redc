@@ -8,6 +8,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"red-cloud/i18n"
@@ -56,6 +57,7 @@ type PortForwardInfo struct {
 var (
 	terminalSessions   = make(map[string]*sshutil.TerminalSession)
 	terminalSessionsMu sync.Mutex
+	terminalSessionSeq atomic.Int64
 
 	portForwardSessions   = make(map[string]*PortForwardSession)
 	portForwardSessionsMu sync.Mutex
@@ -494,7 +496,7 @@ func (a *App) StartSSHTerminalInstance(caseID string, instanceIndex int, rows, c
 		return "", fmt.Errorf(i18n.Tf("app_terminal_session_failed", err))
 	}
 
-	sessionID := fmt.Sprintf("%s-%d", caseID, time.Now().Unix())
+	sessionID := fmt.Sprintf("%s-%d-%d", caseID, instanceIndex, terminalSessionSeq.Add(1))
 
 	terminalSessionsMu.Lock()
 	terminalSessions[sessionID] = session
@@ -534,7 +536,7 @@ func (a *App) StartSSHTerminalDirect(host string, port int, user, password, keyP
 		return "", fmt.Errorf(i18n.Tf("app_terminal_session_failed", err))
 	}
 
-	sessionID := fmt.Sprintf("ext-%s-%d-%d", host, port, time.Now().Unix())
+	sessionID := fmt.Sprintf("ext-%s-%d-%d", host, port, terminalSessionSeq.Add(1))
 
 	terminalSessionsMu.Lock()
 	terminalSessions[sessionID] = session

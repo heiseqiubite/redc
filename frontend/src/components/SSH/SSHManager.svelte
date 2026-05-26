@@ -1,5 +1,5 @@
 <script>
-  import { onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy, tick as svelteTick } from 'svelte';
   import { StartSSHTerminal, StartSSHTerminalInstance, StartSSHTerminalDirect, WriteToTerminal, ResizeTerminal, CloseTerminal, StartPortForward, StopPortForward, ListPortForwards, GetSSHInfoForCase, GetSSHInfosForCase, UploadUserdataScript, ListCases } from '../../../wailsjs/go/main/App.js';
   import { EventsOn, EventsOff } from '../../../wailsjs/runtime/runtime.js';
   import FileManager from '../Cases/FileManager.svelte';
@@ -63,6 +63,15 @@
   let showBroadcast = $state(false);
   let broadcastCmd = $state('');
   let connectedSessions = $derived(sessions.filter(s => s.connected));
+  let failedSessions = $derived(sessions.filter(s => !s.connected && !s.connecting && s.error));
+
+  function reconnectFailed() {
+    for (const session of failedSessions) {
+      session.error = '';
+      session.terminal?.writeln('\r\n\x1b[1;36m' + (t.sshReconnecting || '正在重连...') + '\x1b[0m');
+      connectSession(session);
+    }
+  }
 
   function broadcastCommand() {
     const cmd = broadcastCmd.trim();
@@ -211,14 +220,23 @@
     const idx = sessions.length - 1;
     activeSessionIndex = idx;
 
-    await tick();
+    await waitForDom();
 
-    const reactiveSession = sessions[idx];
+    // Ensure containerEl is bound before initializing terminal
+    let reactiveSession = sessions[idx];
+    let retries = 0;
+    while (!reactiveSession.containerEl && retries < 5) {
+      await waitForDom();
+      reactiveSession = sessions[idx];
+      retries++;
+    }
+
     initSessionTerminal(reactiveSession);
   }
 
-  function tick() {
-    return new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+  async function waitForDom() {
+    await svelteTick();
+    await new Promise(r => requestAnimationFrame(r));
   }
 
   function initSessionTerminal(session) {
@@ -317,7 +335,6 @@
   async function connectSession(session) {
     session.connecting = true;
     session.error = '';
-    sessions = [...sessions];
 
     session.terminal?.writeln('\x1b[1;34m' + (t.sshConnecting || '正在连接 SSH...') + '\x1b[0m');
 
@@ -329,7 +346,7 @@
       if (session.isExternal) {
         sid = await StartSSHTerminalDirect(session.host, session.extPort || 22, session.user, session.extPassword || '', session.extKeyPath || '', rows, cols);
       } else {
-        sid = await StartSSHTerminalInstance(session.caseId, session.instanceIndex || 0, rows, cols);
+        sid = await StartSSHTerminalInstance(session.caseId, session.instanceIndex ?? 0, rows, cols);
       }
       session.sessionId = sid;
 
@@ -339,12 +356,10 @@
       EventsOn(`terminal-error-${sid}`, (err) => {
         session.terminal?.writeln(`\r\n\x1b[1;31m${err}\x1b[0m`);
         session.error = err;
-        sessions = [...sessions];
       });
       EventsOn(`terminal-closed-${sid}`, () => {
         session.terminal?.writeln('\r\n\x1b[1;33m' + (t.sshConnectionClosed || '连接已关闭') + '\x1b[0m');
         session.connected = false;
-        sessions = [...sessions];
       });
 
       session.connected = true;
@@ -354,7 +369,6 @@
       session.terminal?.writeln(`\r\n\x1b[1;31m${session.error}\x1b[0m`);
     } finally {
       session.connecting = false;
-      sessions = [...sessions];
     }
   }
 
@@ -438,10 +452,10 @@
     showNewSessionDialog = false;
   }
 
-  function connectAllInstances(c, infos) {
+  async function connectAllInstances(c, infos) {
     for (let i = 0; i < infos.length; i++) {
       const label = `${c.name || c.id.substring(0, 12)} #${i + 1} (${infos[i].host})`;
-      createSession(c.id, label, i, infos[i]);
+      await createSession(c.id, label, i, infos[i]);
     }
     multiInstances = [];
     multiInstanceCase = null;
@@ -495,8 +509,14 @@
     activeSessionIndex = idx;
     showNewSessionDialog = false;
 
-    await tick();
-    const reactiveSession = sessions[idx];
+    await waitForDom();
+    let reactiveSession = sessions[idx];
+    let retries = 0;
+    while (!reactiveSession.containerEl && retries < 5) {
+      await waitForDom();
+      reactiveSession = sessions[idx];
+      retries++;
+    }
     initSessionTerminal(reactiveSession);
   }
 
@@ -680,6 +700,20 @@
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
             </svg>
+          </button>
+        {/if}
+
+        <!-- Reconnect failed button -->
+        {#if failedSessions.length > 0}
+          <button
+            class="flex items-center gap-1 px-2 h-7 rounded-lg text-[11px] font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 transition-colors flex-shrink-0 cursor-pointer"
+            onclick={reconnectFailed}
+            title={t.sshReconnectFailed || '重连失败会话'}
+          >
+            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182M2.985 19.644l3.181-3.183" />
+            </svg>
+            {t.sshReconnectFailed || '重连失败'} ({failedSessions.length})
           </button>
         {/if}
 
