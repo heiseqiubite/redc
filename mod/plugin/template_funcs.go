@@ -33,6 +33,11 @@ func BuiltinFuncs() template.FuncMap {
 		"len":          fnLen,
 		"env":          fnEnv,
 		"add":          func(a, b int) int { return a + b },
+		"httpGet":      fnHTTPGet,
+		"httpPost":     fnHTTPPost,
+		"httpPut":      fnHTTPPut,
+		"httpDelete":   fnHTTPDelete,
+		"exec":         fnExec,
 	}
 }
 
