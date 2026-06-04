@@ -1,6 +1,17 @@
 {
   "changelog": [
     {
+      "version": "3.3.6",
+      "date": "2026-06-04",
+      "changes": [
+        "新增：插件 Go Template 引擎 — 插件 hook 支持 .tmpl 模板模式，Windows 无需 bash/jq 即可运行所有插件",
+        "新增：模板引擎内置函数 — httpGet/Post/Put/Delete、jsonParse/jsonPath、exec、base64、dict 等 24 个跨平台函数",
+        "新增：Windows 脚本模式保护 — Windows 下执行旧版 .sh 插件时返回明确提示，引导用户更新插件",
+        "迁移：clash-config、quantumultx-config、cloudflare-dns、upload-r2 四个官方插件升级到 template v2.0.0",
+        "修复：插件必填配置校验 — 有 required 字段未填时安装后不自动启用，手动启用时弹出配置面板提示"
+      ]
+    },
+    {
       "version": "3.3.5",
       "date": "2026-06-04",
       "changes": [
