@@ -134,3 +134,17 @@ func isEnabled(dir string) bool {
 	_, err := os.Stat(filepath.Join(dir, ".disabled"))
 	return err != nil // enabled if .disabled does NOT exist
 }
+
+// shouldAutoEnable returns false if the plugin has required config fields with no value configured.
+func shouldAutoEnable(manifest PluginManifest, config map[string]interface{}) bool {
+	for key, field := range manifest.ConfigSchema {
+		if !field.Required {
+			continue
+		}
+		val, ok := config[key]
+		if !ok || val == nil || val == "" {
+			return false
+		}
+	}
+	return true
+}

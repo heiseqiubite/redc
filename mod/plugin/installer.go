@@ -73,12 +73,17 @@ func (pm *PluginManager) installFromGit(url string) (string, error) {
 	}
 
 	// Reload
+	cfg := loadPluginConfig(destDir)
+	enabled := shouldAutoEnable(manifest, cfg)
+	if !enabled {
+		os.WriteFile(filepath.Join(destDir, ".disabled"), []byte("disabled"), 0644)
+	}
 	pm.mu.Lock()
 	pm.plugins[manifest.Name] = &Plugin{
 		Manifest: manifest,
 		Dir:      destDir,
-		Enabled:  true,
-		Config:   loadPluginConfig(destDir),
+		Enabled:  enabled,
+		Config:   cfg,
 	}
 	pm.mu.Unlock()
 
@@ -142,12 +147,17 @@ func (pm *PluginManager) installFromZipURL(url string) (string, error) {
 		}
 	}
 
+	cfg2 := loadPluginConfig(destDir)
+	enabled2 := shouldAutoEnable(manifest, cfg2)
+	if !enabled2 {
+		os.WriteFile(filepath.Join(destDir, ".disabled"), []byte("disabled"), 0644)
+	}
 	pm.mu.Lock()
 	pm.plugins[manifest.Name] = &Plugin{
 		Manifest: manifest,
 		Dir:      destDir,
-		Enabled:  true,
-		Config:   loadPluginConfig(destDir),
+		Enabled:  enabled2,
+		Config:   cfg2,
 	}
 	pm.mu.Unlock()
 
@@ -220,12 +230,17 @@ func (pm *PluginManager) installFromLocal(srcPath string) (string, error) {
 		return "", fmt.Errorf("cannot copy plugin: %w", err)
 	}
 
+	cfg3 := loadPluginConfig(destDir)
+	enabled3 := shouldAutoEnable(manifest, cfg3)
+	if !enabled3 {
+		os.WriteFile(filepath.Join(destDir, ".disabled"), []byte("disabled"), 0644)
+	}
 	pm.mu.Lock()
 	pm.plugins[manifest.Name] = &Plugin{
 		Manifest: manifest,
 		Dir:      destDir,
-		Enabled:  true,
-		Config:   loadPluginConfig(destDir),
+		Enabled:  enabled3,
+		Config:   cfg3,
 	}
 	pm.mu.Unlock()
 
@@ -260,6 +275,20 @@ func (pm *PluginManager) Enable(name string) error {
 	p, ok := pm.plugins[name]
 	if !ok {
 		return fmt.Errorf("plugin %s not found", name)
+	}
+
+	if !shouldAutoEnable(p.Manifest, p.Config) {
+		var missing []string
+		for key, field := range p.Manifest.ConfigSchema {
+			if !field.Required {
+				continue
+			}
+			val, has := p.Config[key]
+			if !has || val == nil || val == "" {
+				missing = append(missing, key)
+			}
+		}
+		return fmt.Errorf("plugin %s has unconfigured required fields: %s", name, strings.Join(missing, ", "))
 	}
 
 	os.Remove(filepath.Join(p.Dir, ".disabled"))
