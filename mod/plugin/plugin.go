@@ -27,7 +27,7 @@ type PluginManifest struct {
 type PluginCapabilities struct {
 	Templates []string          `json:"templates,omitempty"` // glob patterns relative to plugin dir
 	Userdata  []string          `json:"userdata,omitempty"`  // glob patterns
-	Hooks     map[string]string `json:"hooks,omitempty"`     // hookPoint → script path
+	Hooks     map[string]interface{} `json:"hooks,omitempty"` // hookPoint → script path (string) or config (object)
 }
 
 // ConfigField describes a single config parameter

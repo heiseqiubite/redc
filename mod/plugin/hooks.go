@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"time"
@@ -128,6 +129,23 @@ func (pm *PluginManager) RunHooks(hookPoint string, ctx *HookContext) error {
 }
 
 func executeHook(hook HookEntry, hookPoint string, hctx *HookContext) (map[string]string, error) {
+	switch hook.Type {
+	case "template":
+		return executeTemplateHook(hook, hctx)
+	default:
+		return executeScriptHook(hook, hookPoint, hctx)
+	}
+}
+
+func executeScriptHook(hook HookEntry, hookPoint string, hctx *HookContext) (map[string]string, error) {
+	if runtime.GOOS == "windows" {
+		return nil, fmt.Errorf(
+			"plugin '%s' uses script hooks which require bash (not available on Windows); "+
+				"please update the plugin to template mode",
+			hook.PluginName,
+		)
+	}
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
 	defer cancel()
 

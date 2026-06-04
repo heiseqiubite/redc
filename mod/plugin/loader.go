@@ -93,7 +93,7 @@ func (pm *PluginManager) GetUserdataPaths() []string {
 	return paths
 }
 
-// GetHooks returns all hook scripts for a given hook point from enabled plugins
+// GetHooks returns all hook entries for a given hook point from enabled plugins
 func (pm *PluginManager) GetHooks(hookPoint string) []HookEntry {
 	pm.mu.RLock()
 	defer pm.mu.RUnlock()
@@ -103,20 +103,57 @@ func (pm *PluginManager) GetHooks(hookPoint string) []HookEntry {
 		if !p.Enabled {
 			continue
 		}
-		scriptRel, ok := p.Manifest.Capabilities.Hooks[hookPoint]
+		hookVal, ok := p.Manifest.Capabilities.Hooks[hookPoint]
 		if !ok {
 			continue
 		}
-		scriptPath := filepath.Join(p.Dir, scriptRel)
-		if _, err := os.Stat(scriptPath); err != nil {
-			continue
-		}
-		entries = append(entries, HookEntry{
+
+		entry := HookEntry{
 			PluginName: p.Manifest.Name,
-			ScriptPath: scriptPath,
 			PluginDir:  p.Dir,
 			Config:     p.Config,
-		})
+		}
+
+		switch v := hookVal.(type) {
+		case string:
+			// Legacy format: "hooks/post-apply.sh"
+			entry.Type = "script"
+			entry.ScriptPath = filepath.Join(p.Dir, v)
+			if _, err := os.Stat(entry.ScriptPath); err != nil {
+				continue
+			}
+		case map[string]interface{}:
+			// New format: {"type": "template", "template": "...", "output": "..."}
+			hookType, _ := v["type"].(string)
+			entry.Type = hookType
+			switch hookType {
+			case "template":
+				tmplRel, _ := v["template"].(string)
+				if tmplRel == "" {
+					continue
+				}
+				entry.TemplatePath = filepath.Join(p.Dir, tmplRel)
+				if _, err := os.Stat(entry.TemplatePath); err != nil {
+					continue
+				}
+				entry.OutputPath, _ = v["output"].(string)
+			default:
+				// Unknown type or "script" with object format
+				scriptRel, _ := v["script"].(string)
+				if scriptRel == "" {
+					continue
+				}
+				entry.Type = "script"
+				entry.ScriptPath = filepath.Join(p.Dir, scriptRel)
+				if _, err := os.Stat(entry.ScriptPath); err != nil {
+					continue
+				}
+			}
+		default:
+			continue
+		}
+
+		entries = append(entries, entry)
 	}
 	return entries
 }
