@@ -26,10 +26,13 @@ const (
 
 // HookEntry represents a single hook script to execute
 type HookEntry struct {
-	PluginName string
-	ScriptPath string
-	PluginDir  string
-	Config     map[string]interface{}
+	PluginName   string
+	ScriptPath   string
+	PluginDir    string
+	Config       map[string]interface{}
+	Type         string // "script" or "template"
+	TemplatePath string // for template type
+	OutputPath   string // for template type: output file path template
 }
 
 // HookContext provides case information to hook scripts via environment variables
