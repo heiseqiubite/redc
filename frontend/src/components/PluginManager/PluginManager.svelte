@@ -67,10 +67,31 @@
     }
   }
 
+  function getMissingRequiredFields(p) {
+    if (!p.config_schema) return [];
+    const missing = [];
+    for (const [key, field] of Object.entries(p.config_schema)) {
+      if (!field.required) continue;
+      const val = p.config?.[key];
+      if (val === undefined || val === null || val === '') missing.push(key);
+    }
+    return missing;
+  }
+
   async function handleToggle(p) {
     actionLoading = p.name;
     try {
-      if (p.enabled) { await DisablePlugin(p.name); } else { await EnablePlugin(p.name); }
+      if (p.enabled) {
+        await DisablePlugin(p.name);
+      } else {
+        const missing = getMissingRequiredFields(p);
+        if (missing.length > 0) {
+          toast.error((t.pluginRequiredFieldsMissing || '请先配置必填项: ') + missing.join(', '));
+          showConfig(p);
+          return;
+        }
+        await EnablePlugin(p.name);
+      }
       await loadPlugins();
     } catch (e) {
       error = e?.message || String(e);
