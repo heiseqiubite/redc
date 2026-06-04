@@ -730,14 +730,13 @@
         <tbody>
           {#each filteredLocalTemplates as tmpl}
             {@const tmplType = getTemplateType(tmpl)}
-            <tr class="relative border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-              <td class="pl-4 pr-1 py-3" onclick={(e) => e.stopPropagation()}>
-                <div class="absolute left-0 top-0 bottom-0 w-[3px] {
-                  tmplType === 'preset' ? 'bg-blue-400' :
-                  tmplType === 'custom' ? 'bg-amber-400' :
-                  tmplType === 'userdata' ? 'bg-purple-400' :
-                  'bg-teal-400'
-                }"></div>
+            <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+              <td class="pl-4 pr-1 py-3 border-l-[3px] {
+                  tmplType === 'preset' ? 'border-l-blue-400' :
+                  tmplType === 'custom' ? 'border-l-amber-400' :
+                  tmplType === 'userdata' ? 'border-l-purple-400' :
+                  'border-l-teal-400'
+                }" onclick={(e) => e.stopPropagation()}>
                 <input
                   type="checkbox"
                   class="w-4 h-4 rounded border-gray-300 text-gray-900 focus:ring-2 focus:ring-gray-900 focus:ring-offset-1 cursor-pointer"

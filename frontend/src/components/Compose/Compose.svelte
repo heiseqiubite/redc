@@ -497,9 +497,8 @@
               <tbody>
                 {#each composeSummary.services as svc}
                   {@const badge = getStatusBadge(svc.status)}
-                  <tr class="relative border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td class="px-4 py-3 text-gray-800 font-medium">
-                      <div class="absolute left-0 top-0 bottom-0 w-[3px] {svc.status === 'running' ? 'bg-emerald-400' : svc.status === 'stopped' ? 'bg-red-400' : svc.status === 'created' ? 'bg-blue-400' : 'bg-gray-200'}"></div>
+                  <tr class="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <td class="px-4 py-3 text-gray-800 font-medium border-l-[3px] {svc.status === 'running' ? 'border-l-emerald-400' : svc.status === 'stopped' ? 'border-l-red-400' : svc.status === 'created' ? 'border-l-blue-400' : 'border-l-gray-200'}">
                       {svc.name}
                     </td>
                     <td class="px-4 py-3 text-gray-600 font-mono text-[11px]">{svc.template}</td>
