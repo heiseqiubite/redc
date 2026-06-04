@@ -18,7 +18,7 @@ var (
 func GetInstanceInfoFromTF(id string) (*sshutil.SSHConfig, error) {
 	c, err := redcProject.GetCase(id)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("case_not_found", id, err))
+		return nil, fmt.Errorf("%s", i18n.Tf("case_not_found", id, err))
 	}
 	s, err := c.GetSSHConfig()
 	return s, nil
@@ -45,7 +45,7 @@ var execCmd = &cobra.Command{
 				PrintJSONError(err)
 				return
 			}
-			gologger.Error().Msgf(i18n.Tf("exec_connect_failed", err))
+			gologger.Error().Msgf("%s", i18n.Tf("exec_connect_failed", err))
 			return
 		}
 		defer client.Close()
@@ -55,7 +55,7 @@ var execCmd = &cobra.Command{
 				PrintJSONError(fmt.Errorf("interactive mode not supported with --output json"))
 				return
 			}
-			gologger.Info().Msgf(i18n.T("exec_interactive_starting"))
+			gologger.Info().Msgf("%s", i18n.T("exec_interactive_starting"))
 			err = client.RunInteractiveShell(commandStr)
 		} else {
 			err = client.RunCommand(commandStr)
@@ -66,7 +66,7 @@ var execCmd = &cobra.Command{
 				PrintJSONError(err)
 				return
 			}
-			gologger.Error().Msgf(i18n.Tf("exec_error", err))
+			gologger.Error().Msgf("%s", i18n.Tf("exec_error", err))
 		}
 	},
 }
@@ -116,7 +116,7 @@ var cpCmd = &cobra.Command{
 					PrintJSONError(err)
 					return
 				}
-				gologger.Error().Msgf(i18n.Tf("cp_connect_failed", err))
+				gologger.Error().Msgf("%s", i18n.Tf("cp_connect_failed", err))
 				return
 			}
 			defer client.Close()
@@ -126,7 +126,7 @@ var cpCmd = &cobra.Command{
 					PrintJSONError(err)
 					return
 				}
-				gologger.Error().Msgf(i18n.Tf("cp_upload_failed", err))
+				gologger.Error().Msgf("%s", i18n.Tf("cp_upload_failed", err))
 			} else {
 				if IsJSON() {
 					PrintJSON(map[string]string{"action": "upload", "src": srcArg, "dest": destID + ":" + destPath})
@@ -147,7 +147,7 @@ var cpCmd = &cobra.Command{
 					PrintJSONError(err)
 					return
 				}
-				gologger.Error().Msgf(i18n.Tf("cp_connect_failed", err))
+				gologger.Error().Msgf("%s", i18n.Tf("cp_connect_failed", err))
 				return
 			}
 			defer client.Close()
@@ -157,7 +157,7 @@ var cpCmd = &cobra.Command{
 					PrintJSONError(err)
 					return
 				}
-				gologger.Error().Msgf(i18n.Tf("cp_download_failed", err))
+				gologger.Error().Msgf("%s", i18n.Tf("cp_download_failed", err))
 			} else {
 				if IsJSON() {
 					PrintJSON(map[string]string{"action": "download", "src": srcID + ":" + srcPath, "dest": destArg})

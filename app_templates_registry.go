@@ -80,7 +80,7 @@ func (a *App) GetTemplateVariables(templateName string) ([]TemplateVariable, err
 	if _, err := os.Stat(variablesFile); err == nil {
 		vars, err := parseVariablesTf(variablesFile)
 		if err != nil {
-			return nil, fmt.Errorf(i18n.Tf("app_parse_variables_failed", err))
+			return nil, fmt.Errorf("%s", i18n.Tf("app_parse_variables_failed", err))
 		}
 		for _, v := range vars {
 			variables[v.Name] = v
@@ -91,7 +91,7 @@ func (a *App) GetTemplateVariables(templateName string) ([]TemplateVariable, err
 	if _, err := os.Stat(tfvarsFile); err == nil {
 		defaults, err := parseTfvars(tfvarsFile)
 		if err != nil {
-			return nil, fmt.Errorf(i18n.Tf("app_parse_tfvars_failed", err))
+			return nil, fmt.Errorf("%s", i18n.Tf("app_parse_tfvars_failed", err))
 		}
 		for name, value := range defaults {
 			if v, ok := variables[name]; ok {
@@ -244,17 +244,17 @@ func (a *App) FetchRegistryTemplates(registryURL string) ([]RegistryTemplate, er
 	client := redc.NewProxyHTTPClient(30 * time.Second)
 	resp, err := client.Get(indexURL)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_registry_connect_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_registry_connect_failed", err))
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf(i18n.Tf("app_registry_status_error", resp.Status))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_registry_status_error", resp.Status))
 	}
 
 	var idx remoteIndexResponse
 	if err := json.NewDecoder(resp.Body).Decode(&idx); err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_registry_parse_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_registry_parse_failed", err))
 	}
 
 	// Build result list
@@ -348,7 +348,7 @@ func (a *App) FetchCaseReadmeInfo(caseID string, lang string) (CaseReadmeInfo, e
 
 	if project == nil {
 		if initError != "" {
-			return CaseReadmeInfo{}, fmt.Errorf(initError)
+			return CaseReadmeInfo{}, fmt.Errorf("%s", initError)
 		}
 		return CaseReadmeInfo{}, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
@@ -817,7 +817,7 @@ func (a *App) ImportTemplates(zipPath string) ([]string, error) {
 		if i18n.GetLang() == "en" {
 			docURL = "https://github.com/wgpsec/redc-template/blob/master/WRITING_TEMPLATES_EN.md"
 		}
-		return nil, fmt.Errorf(i18n.Tf("app_template_import_invalid", strings.Join(invalid, ", "), docURL))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_template_import_invalid", strings.Join(invalid, ", "), docURL))
 	}
 	if len(invalid) > 0 {
 		gologger.Warning().Msgf("import: skipped invalid templates: %s", strings.Join(invalid, ", "))
@@ -874,19 +874,19 @@ var validTemplateNameRe = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9_\-/]*[a-zA-
 func (a *App) CreateLocalTemplate(name string, scaffold string) error {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return fmt.Errorf(i18n.T("app_template_name_empty"))
+		return fmt.Errorf("%s", i18n.T("app_template_name_empty"))
 	}
 	if !validTemplateNameRe.MatchString(name) {
-		return fmt.Errorf(i18n.T("app_template_name_invalid"))
+		return fmt.Errorf("%s", i18n.T("app_template_name_invalid"))
 	}
 	// Block path traversal
 	if strings.Contains(name, "..") {
-		return fmt.Errorf(i18n.T("app_template_name_invalid"))
+		return fmt.Errorf("%s", i18n.T("app_template_name_invalid"))
 	}
 
 	tmplPath := filepath.Join(redc.TemplateDir, name)
 	if _, err := os.Stat(tmplPath); err == nil {
-		return fmt.Errorf(i18n.T("app_template_already_exists"))
+		return fmt.Errorf("%s", i18n.T("app_template_already_exists"))
 	}
 
 	if err := os.MkdirAll(tmplPath, 0755); err != nil {

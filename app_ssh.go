@@ -487,13 +487,13 @@ func (a *App) StartSSHTerminalInstance(caseID string, instanceIndex int, rows, c
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return "", fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 
 	session, err := client.NewTerminalSession(rows, cols)
 	if err != nil {
 		client.Close()
-		return "", fmt.Errorf(i18n.Tf("app_terminal_session_failed", err))
+		return "", fmt.Errorf("%s", i18n.Tf("app_terminal_session_failed", err))
 	}
 
 	sessionID := fmt.Sprintf("%s-%d-%d", caseID, instanceIndex, terminalSessionSeq.Add(1))
@@ -527,13 +527,13 @@ func (a *App) StartSSHTerminalDirect(host string, port int, user, password, keyP
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return "", fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 
 	session, err := client.NewTerminalSession(rows, cols)
 	if err != nil {
 		client.Close()
-		return "", fmt.Errorf(i18n.Tf("app_terminal_session_failed", err))
+		return "", fmt.Errorf("%s", i18n.Tf("app_terminal_session_failed", err))
 	}
 
 	sessionID := fmt.Sprintf("ext-%s-%d-%d", host, port, terminalSessionSeq.Add(1))
@@ -620,7 +620,7 @@ func (a *App) ListRemoteFiles(caseID string, remotePath string) ([]sshutil.FileI
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -636,7 +636,7 @@ func (a *App) CreateRemoteDirectory(caseID string, remotePath string) error {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -656,7 +656,7 @@ func (a *App) DeleteRemoteFile(caseID string, remotePath string) error {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -676,7 +676,7 @@ func (a *App) RenameRemoteFile(caseID string, oldPath, newPath string) error {
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -696,7 +696,7 @@ func (a *App) GetRemoteFileContent(caseID string, remotePath string) (string, er
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return "", fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return "", fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 
@@ -721,7 +721,7 @@ func (a *App) WriteRemoteFileContent(caseID string, remotePath string, content s
 
 	client, err := sshutil.NewClient(sshConfig)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_ssh_connect_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ssh_connect_failed", err))
 	}
 	defer client.Close()
 

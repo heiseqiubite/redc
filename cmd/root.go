@@ -39,16 +39,16 @@ var rootCmd = &cobra.Command{
 		i18n.Init("")
 		// Load configuration
 		if err := redc.LoadConfig(cfgFile); err != nil {
-			gologger.Fatal().Msgf(i18n.Tf("config_load_failed", err.Error()) + "\n")
+			gologger.Fatal().Msgf("%s", i18n.Tf("config_load_failed", err.Error()) + "\n")
 		}
 		if redc.Debug {
 			gologger.DefaultLogger.SetMaxLevel(levels.LevelDebug)
-			gologger.Debug().Msgf(i18n.T("debug_mode_enabled"))
+			gologger.Debug().Msgf("%s", i18n.T("debug_mode_enabled"))
 		}
 		if p, err := redc.ProjectParse(redc.Project, redc.U); err == nil {
 			redcProject = p
 		} else {
-			gologger.Fatal().Msgf(i18n.Tf("project_load_failed", err))
+			gologger.Fatal().Msgf("%s", i18n.Tf("project_load_failed", err))
 		}
 	},
 	Run: func(cmd *cobra.Command, args []string) {
@@ -68,7 +68,7 @@ var rootCmd = &cobra.Command{
 // Execute 是 main.go 调用的入口
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		gologger.Error().Msgf(err.Error())
+		gologger.Error().Msgf("%s", err.Error())
 		os.Exit(1)
 	}
 }

@@ -122,7 +122,7 @@ func Command2(cmd string) string {
 	c2 := exec.Command("bash", "-c", cmd)
 	out, err := c2.Output()
 	if err != nil {
-		fmt.Printf(cmd + " 运行失败")
+		fmt.Printf("%s", cmd + " 运行失败")
 		os.Exit(3)
 	}
 	return string(out)

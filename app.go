@@ -229,7 +229,7 @@ func (a *App) startup(ctx context.Context) {
 			}
 			return err
 		}
-		return fmt.Errorf(i18n.Tf("app_unknown_action", action))
+		return fmt.Errorf("%s", i18n.Tf("app_unknown_action", action))
 	})
 
 	// SSH command callback for task center

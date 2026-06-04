@@ -49,7 +49,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 				logger.Close()
 			}
 		}
-		return nil, fmt.Errorf(i18n.Tf("app_template_not_found", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_template_not_found", err))
 	}
 
 	if logMgr != nil {
@@ -69,7 +69,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 				logger.Close()
 			}
 		}
-		return nil, fmt.Errorf(i18n.Tf("app_template_parse_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_template_parse_failed", err))
 	}
 
 	if logMgr != nil {
@@ -95,7 +95,7 @@ func (a *App) GetCostEstimate(templateName string, variables map[string]string) 
 				logger.Close()
 			}
 		}
-		return nil, fmt.Errorf(i18n.Tf("app_cost_calculate_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_cost_calculate_failed", err))
 	}
 
 	if logMgr != nil {

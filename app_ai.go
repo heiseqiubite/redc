@@ -37,7 +37,7 @@ func (a *App) RecommendTemplates(query string) ([]TemplateRecommendation, error)
 
 	results, err := redc.Search(context.Background(), query, opts)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_search_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_search_failed", err))
 	}
 
 	localTemplates, _ := redc.ListLocalTemplates()
@@ -139,7 +139,7 @@ func (a *App) AIRecommendTemplates(query string) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_ai_recommend_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ai_recommend_failed", err))
 	}
 
 	a.emitEvent( "ai-recommend-complete", true)
@@ -186,7 +186,7 @@ func (a *App) AIGenerateTemplate(query string) error {
 	})
 
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_template_gen_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_template_gen_failed", err))
 	}
 
 	a.emitEvent( "ai-template-gen-complete", true)
@@ -222,7 +222,7 @@ func (a *App) AICostOptimization() error {
 
 	cases, err := redc.LoadProjectCases(project.ProjectName)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_case_load_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_case_load_failed", err))
 	}
 
 	if logMgr != nil {
@@ -410,7 +410,7 @@ func (a *App) AICostOptimization() error {
 	})
 
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_ai_cost_analysis_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ai_cost_analysis_failed", err))
 	}
 
 	a.emitEvent( "ai-cost-complete", true)
@@ -460,7 +460,7 @@ func (a *App) AnalyzeDeploymentError(deploymentID, errorMessage, provider, templ
 
 	if err != nil {
 		gologger.Error().Msgf("AI 分析失败: %v", err)
-		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ai_analysis_failed", err))
 	}
 
 	gologger.Info().Msgf("AI 分析完成")
@@ -514,7 +514,7 @@ func (a *App) AnalyzeCaseError(caseName, errorMessage, provider, templateName st
 			"caseId":  caseName,
 			"success": false,
 		})
-		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ai_analysis_failed", err))
 	}
 
 	a.emitEvent( "ai-case-error-complete", map[string]interface{}{

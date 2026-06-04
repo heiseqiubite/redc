@@ -159,7 +159,7 @@ func (a *App) AIChatStream(conversationId, mode string, messages []AIChatMessage
 			"conversationId": conversationId,
 			"success":        false,
 		})
-		return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_ai_analysis_failed", err))
 	}
 
 	a.emitEvent( "ai-chat-complete", map[string]interface{}{
@@ -613,7 +613,7 @@ func (a *App) runAgentLoop(conversationId string, messages []AIChatMessage, prom
 				"success":        false,
 				"usage":          totalUsage,
 			})
-			return fmt.Errorf(i18n.Tf("app_ai_analysis_failed", err))
+			return fmt.Errorf("%s", i18n.Tf("app_ai_analysis_failed", err))
 		}
 
 		// Accumulate token usage

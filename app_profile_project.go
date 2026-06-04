@@ -301,7 +301,7 @@ func (a *App) SaveProvidersConfig(providerName string, fields map[string]string,
 			conf.Cloudflare.APIKey = v
 		}
 	default:
-		return fmt.Errorf(i18n.Tf("app_unknown_provider", providerName))
+		return fmt.Errorf("%s", i18n.Tf("app_unknown_provider", providerName))
 	}
 
 	if err := redc.SaveConfig(conf, customPath); err != nil {
@@ -421,7 +421,7 @@ func (a *App) SwitchProject(projectName string) error {
 	// Parse and load the new project
 	p, err := redc.ProjectParse(projectName, redc.U)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_switch_project_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_switch_project_failed", err))
 	}
 
 	// Update project reference
@@ -443,7 +443,7 @@ func (a *App) SwitchProject(projectName string) error {
 func (a *App) CreateProject(name string) error {
 	_, err := redc.NewProjectConfig(name, redc.U)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_create_project_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_create_project_failed", err))
 	}
 	a.emitLog(i18n.Tf("app_project_created", name))
 	return nil
@@ -455,7 +455,7 @@ func (a *App) ListCases() ([]CaseInfo, error) {
 
 	if a.project == nil {
 		if a.initError != "" {
-			return nil, fmt.Errorf(a.initError)
+			return nil, fmt.Errorf("%s", a.initError)
 		}
 		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
@@ -493,7 +493,7 @@ func (a *App) GetResourceSummary() ([]ResourceSummary, error) {
 
 	if project == nil {
 		if a.initError != "" {
-			return nil, fmt.Errorf(a.initError)
+			return nil, fmt.Errorf("%s", a.initError)
 		}
 		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
@@ -584,7 +584,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 			defer func() {
 				if r := recover(); r != nil {
 					logMsg := fmt.Sprintf("[GetBalances] recovered from panic for provider %s: %v", p, r)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				}
@@ -598,7 +598,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryAliyunBalance(conf.Providers.Alicloud.AccessKey, conf.Providers.Alicloud.SecretKey, conf.Providers.Alicloud.Region)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
@@ -613,7 +613,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryTencentBalance(conf.Providers.Tencentcloud.SecretId, conf.Providers.Tencentcloud.SecretKey, conf.Providers.Tencentcloud.Region)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
@@ -628,7 +628,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryVolcengineBalance(conf.Providers.Volcengine.AccessKey, conf.Providers.Volcengine.SecretKey, conf.Providers.Volcengine.Region)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
@@ -643,7 +643,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryHuaweiBalance(conf.Providers.Huaweicloud.AccessKey, conf.Providers.Huaweicloud.SecretKey, conf.Providers.Huaweicloud.Region)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
@@ -658,7 +658,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryUCloudBalance(conf.Providers.UCloud.PublicKey, conf.Providers.UCloud.PrivateKey, conf.Providers.UCloud.Region)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
@@ -673,7 +673,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryVultrBalance(conf.Providers.Vultr.ApiKey)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {
@@ -688,7 +688,7 @@ func (a *App) GetBalances(providers []string) ([]BalanceInfo, error) {
 				amount, currency, err := redc.QueryAWSBill(conf.Providers.Aws.AccessKey, conf.Providers.Aws.SecretKey, conf.Providers.Aws.Region)
 				if err != nil {
 					logMsg := fmt.Sprintf("[GetBalances] %s error: %v", p, err)
-					log.Printf(logMsg)
+					log.Printf("%s", logMsg)
 					a.emitEvent( "log", logMsg)
 					result.Error = i18n.Tf("app_balance_query_error", getProviderDisplayName(p))
 				} else {

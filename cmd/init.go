@@ -24,7 +24,7 @@ var initCmd = &cobra.Command{
 				PrintJSONError(err)
 				return
 			}
-			gologger.Error().Msgf(i18n.Tf("init_scan_failed", err))
+			gologger.Error().Msgf("%s", i18n.Tf("init_scan_failed", err))
 		}
 
 		type initResult struct {
@@ -39,13 +39,13 @@ var initCmd = &cobra.Command{
 				if IsJSON() {
 					results = append(results, initResult{Dir: v, Status: "failed", Error: err.Error()})
 				} else {
-					gologger.Error().Msgf(i18n.Tf("init_scene_failed", v, err))
+					gologger.Error().Msgf("%s", i18n.Tf("init_scene_failed", v, err))
 				}
 			} else {
 				if IsJSON() {
 					results = append(results, initResult{Dir: v, Status: "ok"})
 				} else {
-					gologger.Info().Msgf(i18n.Tf("init_scene_done", v))
+					gologger.Info().Msgf("%s", i18n.Tf("init_scene_done", v))
 				}
 			}
 		}

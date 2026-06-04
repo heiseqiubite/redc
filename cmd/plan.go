@@ -30,7 +30,7 @@ var runCmd = &cobra.Command{
 					PrintJSONError(err)
 					return
 				}
-				gologger.Error().Msgf(i18n.Tf("scene_start_failed", err.Error()))
+				gologger.Error().Msgf("%s", i18n.Tf("scene_start_failed", err.Error()))
 				return
 			}
 			if IsJSON() {
@@ -66,7 +66,7 @@ var planCmd = &cobra.Command{
 				})
 				return
 			}
-			gologger.Info().Msgf(i18n.Tf("scene_plan_done", c.Name, c.Id))
+			gologger.Info().Msgf("%s", i18n.Tf("scene_plan_done", c.Name, c.Id))
 		}
 	},
 }
@@ -84,11 +84,11 @@ func planLogic(templateName string) (*redc.Case, error) {
 			PrintJSONError(err)
 			return nil, err
 		}
-		gologger.Error().Msgf(i18n.Tf("scene_create_failed", templateName, err.Error()))
+		gologger.Error().Msgf("%s", i18n.Tf("scene_create_failed", templateName, err.Error()))
 		return nil, err
 	}
 	if !IsJSON() {
-		gologger.Info().Msgf(i18n.Tf("scene_create_done", templateName))
+		gologger.Info().Msgf("%s", i18n.Tf("scene_create_done", templateName))
 	}
 	return c, nil
 }

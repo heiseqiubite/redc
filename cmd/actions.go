@@ -23,7 +23,7 @@ func runAction(actionType string, caseID string) {
 			PrintJSONError(fmt.Errorf("%s", i18n.Tf("action_case_not_found", caseID, err)))
 			return
 		}
-		gologger.Error().Msgf(i18n.Tf("action_case_not_found", caseID, err))
+		gologger.Error().Msgf("%s", i18n.Tf("action_case_not_found", caseID, err))
 		return
 	}
 
@@ -54,7 +54,7 @@ func runAction(actionType string, caseID string) {
 			PrintJSONError(actionErr)
 			return
 		}
-		gologger.Error().Msgf(i18n.Tf("action_failed", actionType, actionErr))
+		gologger.Error().Msgf("%s", i18n.Tf("action_failed", actionType, actionErr))
 	} else {
 		if IsJSON() {
 			PrintJSON(map[string]string{
@@ -65,7 +65,7 @@ func runAction(actionType string, caseID string) {
 			})
 			return
 		}
-		gologger.Info().Msgf(i18n.Tf("action_success", actionType, c.Name, c.GetId()))
+		gologger.Info().Msgf("%s", i18n.Tf("action_success", actionType, c.Name, c.GetId()))
 	}
 }
 

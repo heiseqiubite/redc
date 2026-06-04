@@ -33,7 +33,7 @@ var upCmd = &cobra.Command{
 				PrintJSONError(err)
 				return
 			}
-			gologger.Fatal().Msgf(i18n.Tf("compose_up_failed", err))
+			gologger.Fatal().Msgf("%s", i18n.Tf("compose_up_failed", err))
 		}
 
 		if IsJSON() {
@@ -59,7 +59,7 @@ var downCmd = &cobra.Command{
 				PrintJSONError(err)
 				return
 			}
-			gologger.Fatal().Msgf(i18n.Tf("compose_down_failed", err))
+			gologger.Fatal().Msgf("%s", i18n.Tf("compose_down_failed", err))
 		}
 
 		if IsJSON() {
@@ -86,7 +86,7 @@ var configCmd = &cobra.Command{
 				PrintJSONError(err)
 				return
 			}
-			gologger.Fatal().Msgf(i18n.Tf("compose_config_failed", err))
+			gologger.Fatal().Msgf("%s", i18n.Tf("compose_config_failed", err))
 		}
 	},
 }

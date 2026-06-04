@@ -10,20 +10,20 @@ import (
 )
 
 func (a *App) GetBaseTemplates() ([]*redc.BaseTemplate, error) {
-	runtime.LogInfof(a.ctx, i18n.T("app_template_scan_start"))
+	runtime.LogInfof(a.ctx, "%s", i18n.T("app_template_scan_start"))
 
 	a.mu.Lock()
 	templateMgr := a.templateManager
 	a.mu.Unlock()
 
 	if templateMgr == nil {
-		runtime.LogErrorf(a.ctx, i18n.T("app_template_mgr_not_init"))
+		runtime.LogErrorf(a.ctx, "%s", i18n.T("app_template_mgr_not_init"))
 		return []*redc.BaseTemplate{}, nil // 返回空列表而不是错误
 	}
 
 	templates, err := templateMgr.ScanBaseTemplates()
 	if err != nil {
-		runtime.LogErrorf(a.ctx, i18n.Tf("app_template_scan_failed", err))
+		runtime.LogErrorf(a.ctx, "%s", i18n.Tf("app_template_scan_failed", err))
 		return []*redc.BaseTemplate{}, nil // 返回空列表而不是错误
 	}
 
@@ -31,7 +31,7 @@ func (a *App) GetBaseTemplates() ([]*redc.BaseTemplate, error) {
 		templates = []*redc.BaseTemplate{}
 	}
 
-	runtime.LogInfof(a.ctx, i18n.Tf("app_template_scan_done", len(templates)))
+	runtime.LogInfof(a.ctx, "%s", i18n.Tf("app_template_scan_done", len(templates)))
 	return templates, nil
 }
 
@@ -47,7 +47,7 @@ func (a *App) GetTemplateMetadata(name string) (*redc.BaseTemplate, error) {
 	// 获取所有基础模板
 	templates, err := templateMgr.ScanBaseTemplates()
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_template_scan_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_template_scan_failed", err))
 	}
 
 	// 查找指定名称的模板
@@ -57,7 +57,7 @@ func (a *App) GetTemplateMetadata(name string) (*redc.BaseTemplate, error) {
 		}
 	}
 
-	return nil, fmt.Errorf(i18n.Tf("app_template_not_exist", name))
+	return nil, fmt.Errorf("%s", i18n.Tf("app_template_not_exist", name))
 }
 
 func (a *App) GetProviderRegions(provider string) ([]redc.Region, error) {
@@ -71,7 +71,7 @@ func (a *App) GetProviderRegions(provider string) ([]redc.Region, error) {
 
 	regions, err := service.GetProviderRegions(provider)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_region_load_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_region_load_failed", err))
 	}
 
 	return regions, nil
@@ -88,7 +88,7 @@ func (a *App) GetInstanceTypes(provider, region string) ([]redc.InstanceType, er
 
 	types, err := service.GetInstanceTypes(provider, region)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_instance_type_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_instance_type_failed", err))
 	}
 
 	return types, nil
@@ -110,7 +110,7 @@ func (a *App) ValidateDeploymentConfig(config *redc.DeploymentConfig) (*redc.Val
 	validator := redc.NewConfigValidator()
 	result, err := validator.ValidateDeploymentConfig(config)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_validate_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_validate_failed", err))
 	}
 
 	return result, nil
@@ -133,7 +133,7 @@ func (a *App) EstimateDeploymentCost(config *redc.DeploymentConfig) (*redc.CostE
 
 	estimate, err := service.EstimateCost(config, pricingService, costCalculator)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_estimate_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_estimate_failed", err))
 	}
 
 	return estimate, nil
@@ -159,7 +159,7 @@ func (a *App) CreateCustomDeployment(config *redc.DeploymentConfig) (*redc.Custo
 
 	deployment, err := service.CreateCustomDeployment(config, project.ProjectPath, project.ProjectName)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_deploy_create_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_deploy_create_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_deploy_custom_success", deployment.Name))
@@ -184,7 +184,7 @@ func (a *App) ListCustomDeployments() ([]*redc.CustomDeployment, error) {
 
 	deployments, err := service.ListCustomDeployments(project.ProjectName)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_deploy_list_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_deploy_list_failed", err))
 	}
 
 	return deployments, nil
@@ -206,7 +206,7 @@ func (a *App) StartCustomDeployment(id string) error {
 
 	err := service.StartCustomDeployment(project.ProjectName, id, project.ProjectPath)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_deploy_start_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_deploy_start_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_deploy_start_success", id))
@@ -231,7 +231,7 @@ func (a *App) StopCustomDeployment(id string) error {
 
 	err := service.StopCustomDeployment(project.ProjectName, id, project.ProjectPath)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_deploy_stop_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_deploy_stop_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_deploy_stop_success", id))
@@ -256,7 +256,7 @@ func (a *App) DeleteCustomDeployment(id string) error {
 
 	err := service.DeleteCustomDeployment(project.ProjectName, id, project.ProjectPath)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_deploy_delete_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_deploy_delete_failed", err))
 	}
 
 	// Clean up orphaned tags
@@ -304,7 +304,7 @@ func (a *App) getSSHConfig(caseID string) (*sshutil.SSHConfig, error) {
 
 	// 自定义部署服务未初始化
 	fmt.Printf("[DEBUG getSSHConfig] 自定义部署服务未初始化\n")
-	return nil, fmt.Errorf(i18n.Tf("app_case_not_found", caseErr))
+	return nil, fmt.Errorf("%s", i18n.Tf("app_case_not_found", caseErr))
 }
 
 func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, error) {
@@ -331,7 +331,7 @@ func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, e
 	deployments, err := service.ListCustomDeployments(project.ProjectName)
 	if err != nil {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] 加载部署列表失败: %v\n", err)
-		return nil, fmt.Errorf(i18n.Tf("app_deploy_load_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_deploy_load_failed", err))
 	}
 
 	fmt.Printf("[DEBUG getDeploymentSSHConfig] 查找部署 ID: %s, 总共有 %d 个部署\n", deploymentID, len(deployments))
@@ -350,7 +350,7 @@ func (a *App) getDeploymentSSHConfig(deploymentID string) (*sshutil.SSHConfig, e
 
 	if deployment == nil {
 		fmt.Printf("[DEBUG getDeploymentSSHConfig] ✗ 未找到部署: %s\n", deploymentID)
-		return nil, fmt.Errorf(i18n.Tf("app_deploy_not_found", deploymentID))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_deploy_not_found", deploymentID))
 	}
 
 	fmt.Printf("[DEBUG getDeploymentSSHConfig] 找到部署: %s\n", deployment.Name)
@@ -424,7 +424,7 @@ func (a *App) GetDeploymentHistory(id string) ([]*redc.DeploymentChangeHistory, 
 
 	history, err := service.GetDeploymentHistory(project.ProjectName, id)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_deploy_history_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_deploy_history_failed", err))
 	}
 
 	return history, nil
@@ -560,7 +560,7 @@ func (a *App) SaveConfigTemplate(name string, config *redc.DeploymentConfig) err
 
 	err := configStore.SaveConfigTemplate(name, config)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_config_save_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_config_save_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_config_save_success", name))
@@ -583,7 +583,7 @@ func (a *App) LoadConfigTemplate(name string) (*redc.DeploymentConfig, error) {
 
 	config, err := configStore.LoadConfigTemplate(name)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_config_load_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_config_load_failed", err))
 	}
 
 	return config, nil
@@ -600,7 +600,7 @@ func (a *App) ListConfigTemplates() ([]string, error) {
 
 	templates, err := configStore.ListConfigTemplates()
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_config_list_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_config_list_failed", err))
 	}
 
 	return templates, nil
@@ -621,7 +621,7 @@ func (a *App) DeleteConfigTemplate(name string) error {
 
 	err := configStore.DeleteConfigTemplate(name)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_config_delete_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_config_delete_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_config_delete_success", name))
@@ -648,7 +648,7 @@ func (a *App) ExportConfigTemplate(name string, exportPath string) error {
 
 	err := configStore.ExportConfigTemplate(name, exportPath)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_config_export_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_config_export_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_config_export_success", name, exportPath))
@@ -675,7 +675,7 @@ func (a *App) ImportConfigTemplate(name string, importPath string) error {
 
 	err := configStore.ImportConfigTemplate(name, importPath)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_config_import_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_config_import_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_config_import_success", name, importPath))
@@ -700,7 +700,7 @@ func (a *App) CloneCustomDeployment(deploymentID string, cloneName string) (*red
 	// Load all deployments to find source
 	deployments, err := service.ListCustomDeployments(project.ProjectName)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_clone_load_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_clone_load_failed", err))
 	}
 
 	var source *redc.CustomDeployment
@@ -711,7 +711,7 @@ func (a *App) CloneCustomDeployment(deploymentID string, cloneName string) (*red
 		}
 	}
 	if source == nil {
-		return nil, fmt.Errorf(i18n.Tf("app_clone_not_found", deploymentID))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_clone_not_found", deploymentID))
 	}
 
 	// Deep copy config
@@ -735,7 +735,7 @@ func (a *App) CloneCustomDeployment(deploymentID string, cloneName string) (*red
 
 	deployment, err := service.CreateCustomDeployment(cloneConfig, project.ProjectPath, project.ProjectName)
 	if err != nil {
-		return nil, fmt.Errorf(i18n.Tf("app_clone_failed", err))
+		return nil, fmt.Errorf("%s", i18n.Tf("app_clone_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_clone_success", deployment.Name, deployment.ID))

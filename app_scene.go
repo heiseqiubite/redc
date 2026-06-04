@@ -51,7 +51,7 @@ func (a *App) StartCase(caseID string) error {
 
 	c, err := a.project.GetCase(caseID)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_get_case_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_get_case_failed", err))
 	}
 
 	if c == nil {
@@ -787,7 +787,7 @@ func (a *App) CloneCase(caseID string, cloneName string) error {
 
 	cases, err := redc.LoadProjectCases(project.ProjectName)
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_clone_load_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_clone_load_failed", err))
 	}
 
 	var source *redc.Case
@@ -798,7 +798,7 @@ func (a *App) CloneCase(caseID string, cloneName string) error {
 		}
 	}
 	if source == nil {
-		return fmt.Errorf(i18n.Tf("app_clone_not_found", caseID))
+		return fmt.Errorf("%s", i18n.Tf("app_clone_not_found", caseID))
 	}
 
 	// Parse vars from source parameters

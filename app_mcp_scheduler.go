@@ -47,11 +47,11 @@ func (a *App) StartMCPServer(mode string, address string) error {
 	case "stdio":
 		transportMode = mcp.TransportSTDIO
 	default:
-		return fmt.Errorf(i18n.Tf("app_mcp_unknown_mode", mode))
+		return fmt.Errorf("%s", i18n.Tf("app_mcp_unknown_mode", mode))
 	}
 
 	if err := a.mcpManager.Start(transportMode, address); err != nil {
-		return fmt.Errorf(i18n.Tf("app_mcp_start_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_mcp_start_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_mcp_started", mode, address))
@@ -67,7 +67,7 @@ func (a *App) StopMCPServer() error {
 	}
 
 	if err := a.mcpManager.Stop(); err != nil {
-		return fmt.Errorf(i18n.Tf("app_mcp_stop_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_mcp_stop_failed", err))
 	}
 
 	a.emitLog(i18n.T("app_mcp_stopped"))

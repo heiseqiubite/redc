@@ -450,7 +450,7 @@ func (a *App) getSSHConfigForCase(caseID string) (*sshutil.SSHConfig, error) {
 	a.mu.Unlock()
 
 	if project == nil {
-		return nil, fmt.Errorf(i18n.T("app_project_not_loaded"))
+		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
 
 	c, caseErr := project.GetCase(caseID)

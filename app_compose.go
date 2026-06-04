@@ -18,7 +18,7 @@ func (a *App) ComposePreview(filePath string, profiles []string) (ComposeSummary
 
 	if project == nil {
 		if a.initError != "" {
-			return ComposeSummary{}, fmt.Errorf(a.initError)
+			return ComposeSummary{}, fmt.Errorf("%s", a.initError)
 		}
 		return ComposeSummary{}, fmt.Errorf("项目未加载")
 	}
@@ -70,7 +70,7 @@ func (a *App) ComposeUp(filePath string, profiles []string) error {
 
 	if project == nil {
 		if a.initError != "" {
-			return fmt.Errorf(a.initError)
+			return fmt.Errorf("%s", a.initError)
 		}
 		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
@@ -115,7 +115,7 @@ func (a *App) ComposeUpSync(filePath string, profiles []string) (interface{}, er
 
 	if project == nil {
 		if a.initError != "" {
-			return nil, fmt.Errorf(a.initError)
+			return nil, fmt.Errorf("%s", a.initError)
 		}
 		return nil, fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
@@ -159,7 +159,7 @@ func (a *App) ComposeDown(filePath string, profiles []string) error {
 
 	if project == nil {
 		if a.initError != "" {
-			return fmt.Errorf(a.initError)
+			return fmt.Errorf("%s", a.initError)
 		}
 		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}
@@ -203,7 +203,7 @@ func (a *App) ComposeDownSync(filePath string, profiles []string) error {
 
 	if project == nil {
 		if a.initError != "" {
-			return fmt.Errorf(a.initError)
+			return fmt.Errorf("%s", a.initError)
 		}
 		return fmt.Errorf("%s", i18n.T("app_project_not_loaded"))
 	}

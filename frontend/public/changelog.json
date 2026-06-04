@@ -1,6 +1,16 @@
 {
   "changelog": [
     {
+      "version": "3.3.5",
+      "date": "2026-06-04",
+      "changes": [
+        "修复：Terraform 自动下载失败 — hc-install 内嵌的 HashiCorp GPG 签名密钥已过期（2026-04-19），升级 hc-install v0.9.2 → v0.9.4（新密钥有效期至 2030-03-02）",
+        "升级：Go 1.24.0 → 1.25.8，适配 hc-install v0.9.4 依赖要求",
+        "修复：Go 1.25 vet 兼容性 — 全量修复 104 处 non-constant format string 警告",
+        "修复：mod2/error.go 中 fmt.Println 误用为格式化输出，改为 fmt.Printf"
+      ]
+    },
+    {
       "version": "3.3.4",
       "date": "2026-05-27",
       "changes": [

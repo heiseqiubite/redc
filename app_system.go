@@ -249,7 +249,7 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, socks5Proxy, noProxy string
 	// Persist to GUI settings
 	settings, err := redc.LoadGUISettings()
 	if err != nil {
-		return fmt.Errorf(i18n.Tf("app_gui_load_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_gui_load_failed", err))
 	}
 
 	settings.HttpProxy = httpProxy
@@ -258,7 +258,7 @@ func (a *App) SaveProxyConfig(httpProxy, httpsProxy, socks5Proxy, noProxy string
 	settings.NoProxy = noProxy
 
 	if err := redc.SaveGUISettings(settings); err != nil {
-		return fmt.Errorf(i18n.Tf("app_gui_save_failed", err))
+		return fmt.Errorf("%s", i18n.Tf("app_gui_save_failed", err))
 	}
 
 	a.emitLog(i18n.Tf("app_proxy_updated", httpProxy, httpsProxy, socks5Proxy, noProxy))
